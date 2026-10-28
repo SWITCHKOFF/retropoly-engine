@@ -58,3 +58,18 @@ sha256_khrplatform_h = 7b1e01aaa7ad8f6fc34b5c7bdf79ebf5189bb09e2c4d2e79fc5d35062
 path_gl_c           = src/third_party/glad/src/gl.c
 sha256_gl_c         = 2e1975fb262df17fd37d60cece4d21483867c51669ad9d699941984920793309
 license     = MIT
+
+[psn00bsdk-toolchain-linux]
+; Эквивалент psn00bsdk-toolchain-… из §3.2 самодостаточным бандлом релиза v0.24
+; (GCC 12.3.0 cross + libpsn00b + дамп-инструменты). Отдельный
+; gcc-mipsel-none-elf-12.3.0-linux.zip — подмножество бандла (без SDK), не используется.
+repo_asset_gcc   = https://github.com/Lameguy64/PSn00bSDK/releases/download/v0.24/gcc-mipsel-none-elf-12.3.0-linux.zip
+sha256_asset_gcc = 228f031a25cf2687d8845fd1421f625bafc211fa27da428e458e80d030a726f8
+asset_bundle     = https://github.com/Lameguy64/PSn00bSDK/releases/download/v0.24/PSn00bSDK-0.24-Linux.zip
+sha256_bundle    = 5ada7c9478d795b22bde96ee23d6869290c14a740bcde3d57c01c342a26ded35
+install_root     = ~/PSn00bSDK          ; зеркалит C:\PSn00bSDK из §3.2
+env_psn00bsdk_root = $HOME/PSn00bSDK
+env_psn00bsdk_libs = $HOME/PSn00bSDK/lib/libpsn00b
+sdk_cmake        = $PSN00BSDK_LIBS/cmake/sdk.cmake
+compiler         = mipsel-none-elf-gcc (GCC) 12.3.0
+note             = путь НЕ вендорен в репозиторий (env-install); обновление = отдельная задача с ADR

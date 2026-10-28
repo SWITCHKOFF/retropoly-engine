@@ -2,7 +2,7 @@
 
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§3).
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-10-28, Linux-среда):** §3.3–3.7 выполнены (кроме шагов, требующих Windows-среды из §3.1–3.2 и GitHub remote — они помечены в тексте). Гейт сборки/ctest проверен здесь: GCC 15.2, CMake 4.4.4, Ninja 1.13.2.
+> **Статус (2026-10-28, Linux-среда):** §3.3–3.7 и §3.2 (PS1-тулчейн: Linux-бандл `PSn00bSDK-0.24-Linux.zip` → `~/PSn00bSDK`) выполнены; гейт сборки/ctest/ps1-release смок-тест — зелёный. Осталось: §3.1 (Windows-инструменты), GitHub remote/push + зелёный Actions.
 
 ## Карточка спринта
 
@@ -58,16 +58,16 @@
 
 ### 3.2. PS1-тулчейн (pinned PSn00bSDK v0.24)
 
-- [ ] Скачать с github.com/Lameguy64/PSn00bSDK/releases архив `psn00bsdk-toolchain-windows-x64` для **v0.24** (release commit `06e65be`)
-- [ ] Распаковать **целиком** в `C:\PSn00bSDK\` (структура: `bin\`, `lib\libpsn00b\`, `include\`)
-- [ ] Переменные среды:
-  - [ ] `PSN00BSDK_ROOT=C:\PSn00bSDK`
-  - [ ] `PSN00BSDK_LIBS=%PSN00BSDK_ROOT%\lib\libpsn00b`
-  - [ ] `PATH += C:\PSn00bSDK\bin`
-- [ ] Проверки:
-  - [ ] `mipsel-none-elf-gcc --version` выполняется
-  - [ ] `%PSN00BSDK_LIBS%\cmake\sdk.cmake` существует
-  - [ ] Смок-тест: скомпилировать `test.c` (`int main(){return 42;}`) компилятором из пакета; затем проверить сборку минимального target через `cmake --preset ps1-release` канонического пресета (после создания репозитория)
+- [x] Скачать с github.com/Lameguy64/PSn00bSDK/releases архив `psn00bsdk-toolchain-windows-x64` для **v0.24** (release commit `06e65be`) *(Linux-эквивалент: самодостаточный бандл `PSn00bSDK-0.24-Linux.zip` (GCC 12.3.0 + libpsn00b); отдельный `gcc-…-linux.zip` — подмножество, не нужен)*
+- [x] Распаковать **целиком** в `C:\PSn00bSDK\` (структура: `bin\`, `lib\libpsn00b\`, `include\`) *(Linux: `~/PSn00bSDK` — та же структура; хэш-аудит в VERSION.txt [psn00bsdk-toolchain-linux])*
+- [x] Переменные среды: *(на Linux — экспортируются в окружение после команды или в ~/.profile)*
+  - [x] `PSN00BSDK_ROOT=C:\PSn00bSDK` *(Linux: `$HOME/PSn00bSDK`)*
+  - [x] `PSN00BSDK_LIBS=%PSN00BSDK_ROOT%\lib\libpsn00b` *(Linux: `$PSN00BSDK_ROOT/lib/libpsn00b`)*
+  - [x] `PATH += C:\PSn00bSDK\bin` *(Linux: `$PSN00BSDK_ROOT/bin`)*
+- [x] Проверки:
+  - [x] `mipsel-none-elf-gcc --version` выполняется *(12.3.0)*
+  - [x] `$PSN00BSDK_LIBS/cmake/sdk.cmake` существует
+  - [x] Смок-тест: скомпилировать `test.c` (`int main(){return 42;}`) компилятором из пакета; затем проверить сборку минимального target через `cmake --preset ps1-release` канонического пресета *(ELF 32-bit MIPS; пресет ps1-release сконфигурирован и собран — hello_triangle.elf/rotating_cube.elf)*
 - [ ] **Правило:** обновление SDK = отдельная задача с ADR; локальные pull/update после pin запрещены.
 
 ### 3.3. OpenGL-загрузчик (glad)
@@ -139,7 +139,7 @@
 
 ## Критерии приёмки (гейт выхода из M0)
 
-- [ ] Все чек-боксы выше закрыты *(остались: Windows-среда §3.1–3.2 (на Windows-машине), GitHub repo/remote/push, зелёный Actions)*
+- [ ] Все чек-боксы выше закрыты *(остались только Windows-only пункты §3.1 (инструменты Windows) и GitHub remote/push + зелёный Actions; PS1-тулчейн закрыт на Linux)*
 - [x] `cmake --preset pc-debug && cmake --build --preset pc-debug` проходит *(Linux: GCC 15.2, CMake 4.4.4, Ninja 1.13.2)*
 - [ ] `ctest --preset pc-debug` зелёный; CI (`tests.yml`) зелёный на пустом каркасе *(ctest локально зелёный, exit 0; Actions — после первого push)*
-- [ ] `cmake --preset ps1-release` конфигурируется с pinned SDK (смок-тест) *(нет mipsel-тулчейна в Linux-среде — смок-тест по §3.2 на Windows-машине)*
+- [x] `cmake --preset ps1-release` конфигурируется с pinned SDK (смок-тест) *(Linux: PSn00bSDK v0.24 = `06e65bea…`, GCC 12.3.0; configure + build из бандла `PSn00bSDK-0.24-Linux.zip`)*
