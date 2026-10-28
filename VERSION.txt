@@ -1,0 +1,60 @@
+# ============================================================================
+# VERSION.txt — вендоринг зависимостей (Спринт 0 §3.6, docs/plans/sprint_00.md)
+#
+# Для каждого вендоренного компонента фиксируется точный тег/commit и SHA-256.
+# CI проверяет хэши (§3.6). ПРАВИЛО: обновление любого компонента = отдельная
+# задача с ADR; локальные pull/update после pin ЗАПРЕЩЕНЫ.
+#
+# Дата вендоринга: 2026-10-28
+# ============================================================================
+
+[sdl3]
+repo        = https://github.com/libsdl-org/SDL.git
+tag         = release-3.4.18
+commit      = 829a65d769d935c4852f8159e964312c0957260a
+path        = src/third_party/sdl3 (submodule)
+license     = zlib
+
+[googletest]
+repo        = https://github.com/google/googletest.git
+tag         = v1.18.0
+commit      = 063de7e9578f82b369302001269680b4b1553359
+path        = src/third_party/googletest (submodule)
+license     = BSD-3-Clause
+
+[psn00bsdk]
+repo        = https://github.com/Lameguy64/PSn00bSDK.git
+tag         = v0.24
+commit      = 06e65bea3a778b2dae5af77a7935ae3868ddd4d3     ; release commit 06e65be из §3.2
+path        = src/third_party/psn00bsdk (submodule)
+license     = MPL-2.0 (core mkpsxiso/dumpsxiso: GPL-2.0-or-later — сохранять notices)
+note        = вложенные submodules (не инициализируются, pin psn00bsdk-tree):
+                tools/mkpsxiso  = 9f6275f08829ea9de8122c8232a019e8724acbbd
+                tools/tinyxml2  = e05956094c27117f989d22f25b75633123d72a83
+
+[cgltf]
+repo        = https://github.com/jkuhlmann/cgltf.git
+tag         = v1.15
+path        = src/third_party/cgltf/cgltf.h
+sha256      = e378a21c084bf1f288bb799de827bb26906efb024255f1ecf1705ea13f11c6ec
+license     = MIT
+
+[stb]
+repo        = https://github.com/nothings/stb.git
+commit      = 003501f6d7a8668ce8b6d875e34dd97ad0d5d5b5       ; pinned master ("pinned archive")
+path_image        = src/third_party/stb/stb_image.h
+sha256_image      = 594c2fe35d49488b4382dbfaec8f98366defca819d916ac95becf3e75f4200b3
+path_image_write  = src/third_party/stb/stb_image_write.h
+sha256_image_write = cbd5f0ad7a9cf4468affb36354a1d2338034f2c12473cf1a8e32053cb6914a05
+license     = PD/MIT (dual)
+
+[glad]
+generator   = glad2 (официальный генератор, pip-пакет `glad2`)
+parameters  = API=OpenGL, Profile=Core, Version=3.3, Generator=C, Extensions=все (+loader — для загрузки указателей функций GL в Спринтах 7–8)
+path_gl_h           = src/third_party/glad/include/glad/gl.h
+sha256_gl_h         = 0912682af548f852309e757f669bf6092ee8a4d226bd2b1f4e25651255405d15
+path_khrplatform_h  = src/third_party/glad/include/KHR/khrplatform.h
+sha256_khrplatform_h = 7b1e01aaa7ad8f6fc34b5c7bdf79ebf5189bb09e2c4d2e79fc5d350623d11e83
+path_gl_c           = src/third_party/glad/src/gl.c
+sha256_gl_c         = 2e1975fb262df17fd37d60cece4d21483867c51669ad9d699941984920793309
+license     = MIT

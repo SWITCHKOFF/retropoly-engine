@@ -25,6 +25,9 @@ jobs:
           sudo apt-get update
           sudo apt-get install -y cmake ninja-build libgl1-mesa-dev
 
+      - name: Верификация вендоренных зависимостей (§3.6 — CI проверяет хэши)
+        run: sh ci/verify_vendored.sh
+
       - name: Configure (canon: cmake --preset pc-debug)
         run: cmake --preset pc-debug
 

@@ -14,5 +14,9 @@ elseif(PLATFORM_PS1)
 endif()
 
 add_library(retro_engine STATIC)
+
+# Заглушка каркаса — удаляется в Спринте 1–2 вместе с появлением первых TU ядра.
+target_sources(retro_engine PRIVATE core/placeholder.cpp)
+
 target_link_libraries(retro_engine PUBLIC retro_engine_hal)
 retro_engine_apply_flags(retro_engine)

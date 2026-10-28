@@ -1,0 +1,11 @@
+# Вендоренные зависимости — Спринт 0 §3.6 (правило: обновление SDK/зависимостей
+# = отдельная задача с ADR; локальные pull/update после pin запрещены).
+[submodule "src/third_party/sdl3"]
+	path = src/third_party/sdl3
+	url = https://github.com/libsdl-org/SDL.git
+[submodule "src/third_party/googletest"]
+	path = src/third_party/googletest
+	url = https://github.com/google/googletest.git
+[submodule "src/third_party/psn00bsdk"]
+	path = src/third_party/psn00bsdk
+	url = https://github.com/Lameguy64/PSn00bSDK.git
