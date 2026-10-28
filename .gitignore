@@ -1,0 +1,10 @@
+# Канонический .gitignore — Спринт 0 (§3.4, docs/plans/sprint_00.md)
+build/
+.vs/
+.cache/
+*.log
+duckstation_test.log
+coverage.info
+
+# Локальные артефакты агентов/инструментов (не часть движка)
+testsprite_tests/

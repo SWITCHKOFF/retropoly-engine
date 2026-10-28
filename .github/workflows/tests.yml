@@ -1,0 +1,35 @@
+# ============================================================================
+# Первый CI-контур — Спринт 0 §3.7 (docs/plans/sprint_00.md).
+# Цель: зелёный на пустом каркасе (configure + build + ctest через канонические
+# пресеты). Расширение трека CI/CD: docs/DEVELOPMENT_PLAN.md §6.
+name: tests
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  pc-tests:
+    name: PC (ubuntu-latest, pc-debug)
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout (с submodules — SDL3, PSn00bSDK, GoogleTest)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Установка тулчейна (§3.7)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgl1-mesa-dev
+
+      - name: Configure (canon: cmake --preset pc-debug)
+        run: cmake --preset pc-debug
+
+      - name: Build (canon: cmake --build --preset pc-debug)
+        run: cmake --build --preset pc-debug
+
+      - name: Test (canon: ctest --preset pc-debug)
+        run: ctest --preset pc-debug --output-on-failure

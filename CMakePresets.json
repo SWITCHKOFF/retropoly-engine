@@ -1,0 +1,89 @@
+{
+  "version": 6,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 25,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "pc-base",
+      "hidden": true,
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/${presetName}",
+      "cacheVariables": {
+        "PLATFORM_PC": "ON"
+      }
+    },
+    {
+      "name": "pc-debug",
+      "inherits": "pc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "pc-release",
+      "inherits": "pc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_EXAMPLES": "ON"
+      }
+    },
+    {
+      "name": "pc-debug-render",
+      "inherits": "pc-debug",
+      "cacheVariables": {
+        "BUILD_RENDER_INTEGRATION_TESTS": "ON"
+      }
+    },
+    {
+      "name": "pc-asan",
+      "inherits": "pc-debug",
+      "cacheVariables": {
+        "ENABLE_ASAN": "ON"
+      }
+    },
+    {
+      "name": "pc-bench",
+      "inherits": "pc-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_BENCHMARKS": "ON"
+      }
+    },
+    {
+      "name": "pc-coverage",
+      "inherits": "pc-debug",
+      "cacheVariables": {
+        "ENABLE_COVERAGE": "ON"
+      }
+    },
+    {
+      "name": "ps1-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/ps1-release",
+      "toolchainFile": "$env{PSN00BSDK_LIBS}/cmake/sdk.cmake",
+      "cacheVariables": {
+        "PLATFORM_PS1": "ON",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    }
+  ],
+  "buildPresets": [
+    { "name": "pc-debug", "configurePreset": "pc-debug" },
+    { "name": "pc-release", "configurePreset": "pc-release" },
+    { "name": "pc-debug-render", "configurePreset": "pc-debug-render" },
+    { "name": "pc-asan", "configurePreset": "pc-asan" },
+    { "name": "pc-bench", "configurePreset": "pc-bench" },
+    { "name": "pc-coverage", "configurePreset": "pc-coverage" },
+    { "name": "ps1-release", "configurePreset": "ps1-release" }
+  ],
+  "testPresets": [
+    { "name": "pc-debug", "configurePreset": "pc-debug", "output": { "outputOnFailure": true } },
+    { "name": "pc-debug-render", "configurePreset": "pc-debug-render", "output": { "outputOnFailure": true } },
+    { "name": "pc-asan", "configurePreset": "pc-asan", "output": { "outputOnFailure": true } },
+    { "name": "pc-coverage", "configurePreset": "pc-coverage", "output": { "outputOnFailure": true } }
+  ]
+}
