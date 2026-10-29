@@ -23,13 +23,33 @@ jobs:
       - name: Установка тулчейна (§3.7)
         run: |
           sudo apt-get update
-          sudo apt-get install -y cmake ninja-build libgl1-mesa-dev
+          sudo apt-get install -y cmake ninja-build libgl1-mesa-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev
 
       - name: Верификация вендоренных зависимостей (§3.6 — CI проверяет хэши)
         run: sh ci/verify_vendored.sh
 
       - name: "Configure (canon: cmake --preset pc-debug)"
-        run: cmake --preset pc-debug
+        id: configure
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cmake --preset pc-debug 2>&1 | tee configure.log
+
+      - name: "Report configure failure"
+        if: steps.configure.outcome == 'failure'
+        run: |
+          if [ -f configure.log ]; then
+            if grep -q 'CMake Error' configure.log; then
+              grep -n -A 10 'CMake Error' configure.log | head -n 120
+            else
+              tail -n 120 configure.log
+            fi | while IFS= read -r line; do
+              printf '::error title=Configure failure::%s\n' "$line"
+            done
+          fi
+          exit 1
 
       - name: "Build (canon: cmake --build --preset pc-debug)"
         run: cmake --build --preset pc-debug

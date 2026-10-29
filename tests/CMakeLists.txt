@@ -1,7 +1,9 @@
 # ============================================================================
 # tests/ — юнит- и интеграционные тесты (GoogleTest canonical; FetchContent
-# запрещён — §3.6). Нормативно: src/core/math/* (fixed/vec/mat)
-# docs/plans/sprint_01_02.md; рендер-интеграционные (W0-golden) — Спринты 7–8.
+# запрещён — §3.6). Нормативно: src/core/math/* (fixed/vec/mat),
+# src/core/memory/* (linear/pool/stack), src/core/ecs/* (entity/registry) —
+# docs/plans/sprint_01_02.md и sprint_03_04.md; рендер-интеграционные
+# (W0-golden) — Спринты 7–8.
 #
 # GoogleTest подключается ТОЛЬКО после вендоринга (submodule инициализирован)
 # и изолирован от канонических флагов движка (third-party без -Werror, §3.5).
@@ -23,6 +25,12 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         math/vec3_test.cpp
         math/vec4_test.cpp
         math/mat4_test.cpp
+        memory/linear_allocator_test.cpp
+        memory/pool_allocator_test.cpp
+        memory/stack_allocator_test.cpp
+        memory/allocator_integration_test.cpp
+        ecs/entity_test.cpp
+        ecs/registry_test.cpp
     )
     target_compile_features(retro_engine_tests PRIVATE cxx_std_14)
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)
@@ -33,9 +41,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     gtest_discover_tests(retro_engine_tests DISCOVERY_TIMEOUT 60)
 endif()
 
-# Бенчмарки (пресет pc-bench, BUILD_BENCHMARKS; Спринт 1–2 Неделя 4 [M]):
-# tests/benchmark/math_benchmark.cpp (google/benchmark). Подключаются, когда
-# benchmark вендорен; сам vendoring — отдельная задача (pinned release).
+# Бенчмарки (пресет pc-bench, BUILD_BENCHMARKS):
+# - math_benchmark — google/benchmark (подключается после вендоринга);
+# - memory_benchmark — самодостаточный baseline латентности аллокаторов
+#   (sprint_03_04, [H]); не требует внешней зависимости.
 if(BUILD_BENCHMARKS)
     if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/benchmark/CMakeLists.txt")
         add_subdirectory("${CMAKE_SOURCE_DIR}/src/third_party/benchmark"
@@ -45,6 +54,11 @@ if(BUILD_BENCHMARKS)
         target_link_libraries(math_benchmark PRIVATE retro_engine benchmark::benchmark)
         retro_engine_apply_flags(math_benchmark)
     else()
-        message(STATUS "BUILD_BENCHMARKS: src/third_party/benchmark не вендорен — бенчмарки пропущены")
+        message(STATUS "BUILD_BENCHMARKS: benchmark не вендорен — math_benchmark пропущен")
     endif()
+
+    add_executable(memory_benchmark benchmark/memory_benchmark.cpp)
+    target_compile_features(memory_benchmark PRIVATE cxx_std_14)
+    target_link_libraries(memory_benchmark PRIVATE retro_engine)
+    retro_engine_apply_flags(memory_benchmark)
 endif()

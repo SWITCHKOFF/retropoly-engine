@@ -16,9 +16,11 @@ endif()
 add_library(retro_engine STATIC)
 
 # Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
+# ECS (Спринт 3–4): Registry; аллокаторы — header-only (core/memory).
 target_sources(retro_engine PRIVATE
     core/math/fixed.cpp
     core/math/math.cpp
+    core/ecs/registry.cpp
 )
 
 # Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).
