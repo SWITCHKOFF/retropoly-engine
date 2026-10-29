@@ -29,7 +29,21 @@ jobs:
         run: sh ci/verify_vendored.sh
 
       - name: "Configure (canon: cmake --preset pc-debug)"
-        run: cmake --preset pc-debug
+        id: configure
+        continue-on-error: true
+        run: |
+          set -o pipefail
+          cmake --preset pc-debug 2>&1 | tee configure.log
+
+      - name: "Report configure failure"
+        if: steps.configure.outcome == 'failure'
+        run: |
+          if [ -f configure.log ]; then
+            tail -n 60 configure.log | while IFS= read -r line; do
+              printf '::error title=Configure failure::%s\n' "$line"
+            done
+          fi
+          exit 1
 
       - name: "Build (canon: cmake --build --preset pc-debug)"
         run: cmake --build --preset pc-debug
