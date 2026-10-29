@@ -15,8 +15,13 @@ endif()
 
 add_library(retro_engine STATIC)
 
-# Заглушка каркаса — удаляется в Спринте 1–2 вместе с появлением первых TU ядра.
-target_sources(retro_engine PRIVATE core/placeholder.cpp)
+# Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
+target_sources(retro_engine PRIVATE
+    core/math/fixed.cpp
+)
+
+# Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).
+target_include_directories(retro_engine PUBLIC "${CMAKE_SOURCE_DIR}/src")
 
 target_link_libraries(retro_engine PUBLIC retro_engine_hal)
 retro_engine_apply_flags(retro_engine)
