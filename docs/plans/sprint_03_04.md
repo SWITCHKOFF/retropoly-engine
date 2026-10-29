@@ -2,7 +2,7 @@
 
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§4).
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-10-29, Linux-среда):** Недели 5–8 выполнены. 88 юнит-тестов: 88/88 в `pc-debug`, `pc-release` и `pc-asan` (0 findings); `ps1-release` ELF собирается. Baseline латентности аллокаторов зафиксирован в [`docs/benchmarks/memory_baseline.md`](../benchmarks/memory_baseline.md). `sizeof(Registry) = 239 648 B` — в пределах 256 KiB ECS-бюджета. Остался процессный гейт push/merge в GitHub (PR-интерфейс недоступен: `gh` CLI не установлен).
+> **Статус (2026-10-29, Linux-среда):** Недели 5–8 выполнены. 88 юнит-тестов: 88/88 в `pc-debug`, `pc-release` и `pc-asan` (0 findings); `ps1-release` ELF собирается. Baseline латентности аллокаторов зафиксирован в [`docs/benchmarks/memory_baseline.md`](../benchmarks/memory_baseline.md). `sizeof(Registry) = 239 648 B` — в пределах 256 KiB ECS-бюджета. Изменения запушены в `develop` и смержены в `main`; PR-интерфейс недоступен (`gh` CLI не установлен), поэтому merge выполнен локально с сохранением истории.
 
 ## Карточка спринта
 
@@ -37,7 +37,7 @@
   - [x] Reset: used()==0, повторная аллокация работает
   - [x] Rollback: возвращает к marker; foreign-marker → false; marker.offset > m_offset → false
   - [x] **UnalignedArenaBase:** арена с базой+1 байт — возвращаемый адрес всё равно выровнен
-- [x] [H] Зафиксировать baseline allocation latency бенчмарком на reference-машине (<10 нс — НЕ acceptance, только baseline)
+- [x] [H] Зафиксировать baseline allocation latency бенчмарком на reference-машине (<10 нс — НЕ acceptance, только baseline) *(медианы: Linear 2.0, Stack 2.0, Pool alloc+free 5.1 нс/оп; i5-11300H, `pc-bench`; см. [`docs/benchmarks/memory_baseline.md`](../benchmarks/memory_baseline.md))*
 
 **Неделя 6 — PoolAllocator:**
 - [x] [B] `src/core/memory/pool_allocator.h`: `template<typename T, size_t N> class Pool`:
@@ -53,7 +53,7 @@
   - [x] Basic/Reuse (после deallocate тот же адрес), OutOfMemory, Iteration (1+3 после удаления 2)
   - [x] **RejectsForeignAndInteriorPointers:** foreign int, p+1, повторный free → false
   - [x] 256 объектов (сценарий пуль) — стресс цикла alloc/free
-- [x] [M] Адреспроверка под AddressSanitizer (локально `pc-asan`, когда появится CI-job)
+- [x] [M] Адреспроверка под AddressSanitizer (локально `pc-asan`, когда появится CI-job) *(88/88, 0 findings)*
 
 **Неделя 7 — StackAllocator + интеграция:**
 - [x] [B] `src/core/memory/stack_allocator.h`:
@@ -90,7 +90,7 @@
   - [x] **GenerationWrapRetirement:** слот с generation 255 → после destroy слот не переиспользуется
   - [x] **Performance:** 10 000 сущностей, итерация Position+Velocity, корректный count
 - [x] [B] AddressSanitizer прогон тестов (`pc-asan`) — 0 findings
-- [x] [B] CHANGELOG + push + PR + merge
+- [x] [B] CHANGELOG + push + PR + merge *(push в `develop`; merge `develop`→`main` локально с сохранением истории; PR-интерфейс недоступен — `gh` CLI отсутствует)*
 
 ## Критерии приёмки спринта 3–4
 
