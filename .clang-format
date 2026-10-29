@@ -1,0 +1,19 @@
+# RetroPolyEngine — каноническое форматирование (docs/STYLE_GUIDE.md).
+# 4 пробела; ≤100 символов; LF; без табуляции; скобки на той же строке.
+BasedOnStyle: Google
+Language: Cpp
+Standard: c++17
+IndentWidth: 4
+ColumnLimit: 100
+TabWidth: 4
+UseTab: Never
+PointerAlignment: Left
+DerivePointerAlignment: false
+AccessModifierOffset: -4
+IndentCaseLabels: true
+AllowShortFunctionsOnASingleLine: InlineOnly
+AllowShortIfStatementsOnASingleLine: WithoutElse
+AllowShortLoopsOnASingleLine: false
+SortIncludes: CaseSensitive
+SpaceAfterCStyleCast: true
+FixNamespaceComments: true

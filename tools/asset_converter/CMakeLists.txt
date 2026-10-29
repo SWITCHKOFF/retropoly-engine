@@ -10,8 +10,9 @@ add_executable(asset_converter
 )
 retro_engine_apply_flags(asset_converter)
 
-# Вендоренные заголовки конвертера изолируются от канонических флагов.
-if(EXISTS "${CMAKE_SOURCE_DIR}/tools/asset_converter/third_party/cgltf.h")
-    target_include_directories(asset_converter PRIVATE
-        "${CMAKE_SOURCE_DIR}/tools/asset_converter/third_party")
+# Вендоренные заголовки (cgltf — §3.6, src/third_party/cgltf) изолируются
+# от канонических флагов: подключаются как SYSTEM-путь.
+if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/cgltf/cgltf.h")
+    target_include_directories(asset_converter SYSTEM PRIVATE
+        "${CMAKE_SOURCE_DIR}/src/third_party/cgltf")
 endif()

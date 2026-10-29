@@ -14,5 +14,15 @@ elseif(PLATFORM_PS1)
 endif()
 
 add_library(retro_engine STATIC)
+
+# Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
+target_sources(retro_engine PRIVATE
+    core/math/fixed.cpp
+    core/math/math.cpp
+)
+
+# Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).
+target_include_directories(retro_engine PUBLIC "${CMAKE_SOURCE_DIR}/src")
+
 target_link_libraries(retro_engine PUBLIC retro_engine_hal)
 retro_engine_apply_flags(retro_engine)

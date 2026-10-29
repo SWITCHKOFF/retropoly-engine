@@ -73,5 +73,7 @@ if(PLATFORM_PC)
     set_target_properties(hello_triangle rotating_cube PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/game")
 
+    # CTest агрегирует тесты рекурсивно (ctest --preset pc-debug из build/<preset>).
+    enable_testing()
     add_subdirectory(tests)
 endif()
