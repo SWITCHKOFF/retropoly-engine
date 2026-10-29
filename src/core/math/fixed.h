@@ -21,8 +21,6 @@
 #include <limits.h>
 #include <stdint.h>
 
-#include <cmath> // std::isfinite (движок собирается компилятором C++)
-
 /** Знаковый 16.16 fixed-point скаляр движка (engine scalar). */
 typedef int32_t fixed_t;
 
@@ -87,6 +85,17 @@ static inline fixed_t fixed_from_int(int32_t v)
 }
 
 /**
+ * IEEE-754 конечность (finite) для float без <cmath>/<math.h>.
+ * Необходимо для freestanding-сборки PS1 (тулчейн PSn00bSDK: -ffreestanding
+ * -nostdlib, нет host-заголовков). Детерминированная семантика IEEE-754:
+ * NaN не равен самому себе (v != v); ±Inf − ±Inf = NaN (v − v != 0).
+ *
+ * @param v Значение float.
+ * @return 1 — конечное значение (не NaN, не ±Inf); 0 — иначе.
+ */
+static inline int fixed_float_isfinite(float v) { return (v == v) && (v - v == 0.0f); }
+
+/**
  * Формирование fixed_t из числа с плавающей точкой (host-конверсия).
  *
  * Недетерминированные/не-числовые входы: NaN и ±Inf → 0.
@@ -98,7 +107,7 @@ static inline fixed_t fixed_from_int(int32_t v)
  */
 static inline fixed_t fixed_from_float(float v)
 {
-    if (!std::isfinite(v))
+    if (!fixed_float_isfinite(v))
         return 0;
     const double scaled = (double)v * (double)FIXED_ONE;
     if (scaled >= (double)INT32_MAX)

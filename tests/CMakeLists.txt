@@ -22,6 +22,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         math/vec2_test.cpp
         math/vec3_test.cpp
         math/vec4_test.cpp
+        math/mat4_test.cpp
     )
     target_compile_features(retro_engine_tests PRIVATE cxx_std_14)
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)

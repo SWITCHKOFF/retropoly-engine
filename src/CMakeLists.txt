@@ -18,6 +18,7 @@ add_library(retro_engine STATIC)
 # Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
 target_sources(retro_engine PRIVATE
     core/math/fixed.cpp
+    core/math/math.cpp
 )
 
 # Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).
