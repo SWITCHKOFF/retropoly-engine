@@ -39,7 +39,11 @@ jobs:
         if: steps.configure.outcome == 'failure'
         run: |
           if [ -f configure.log ]; then
-            tail -n 60 configure.log | while IFS= read -r line; do
+            if grep -q 'CMake Error' configure.log; then
+              grep -n -A 10 'CMake Error' configure.log | head -n 120
+            else
+              tail -n 120 configure.log
+            fi | while IFS= read -r line; do
               printf '::error title=Configure failure::%s\n' "$line"
             done
           fi
