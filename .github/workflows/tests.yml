@@ -28,11 +28,11 @@ jobs:
       - name: Верификация вендоренных зависимостей (§3.6 — CI проверяет хэши)
         run: sh ci/verify_vendored.sh
 
-      - name: Configure (canon: cmake --preset pc-debug)
+      - name: "Configure (canon: cmake --preset pc-debug)"
         run: cmake --preset pc-debug
 
-      - name: Build (canon: cmake --build --preset pc-debug)
+      - name: "Build (canon: cmake --build --preset pc-debug)"
         run: cmake --build --preset pc-debug
 
-      - name: Test (canon: ctest --preset pc-debug)
+      - name: "Test (canon: ctest --preset pc-debug)"
         run: ctest --preset pc-debug --output-on-failure
