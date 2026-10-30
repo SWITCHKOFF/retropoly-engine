@@ -1,0 +1,33 @@
+# ============================================================================
+# Канонические переводы строк (sprint_05_06.md, неделя 12 [B]: CMake чувствителен
+# к CRLF). Репозиторий — LF для исходников; бинарники — без нормализации.
+# Существующие файлы в LF; правила для будущих файлов фиксируются явно.
+# ============================================================================
+
+* text=auto
+
+# Исходники движка/тестов/тулчейна — строго LF
+*.h   text eol=lf
+*.hpp text eol=lf
+*.c   text eol=lf
+*.cpp text eol=lf
+*.in  text eol=lf
+CMakeLists.txt text eol=lf
+*.cmake        text eol=lf
+
+# Конфигурации и документация
+*.yml  text eol=lf
+*.yaml text eol=lf
+*.json text eol=lf
+*.md   text eol=lf
+*.txt  text eol=lf
+*.sh   text eol=lf
+*.supp text eol=lf
+
+# Вендоренные субмодули и бинарные данные — без изменения содержимого
+src/third_party/** -text
+assets/**          binary
+*.bin              binary
+*.mesh             binary
+*.texture          binary
+*.elf              binary

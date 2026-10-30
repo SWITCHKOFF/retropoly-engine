@@ -46,20 +46,23 @@ endif()
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerFlags)
 
-# --- Ядро движка: src/CMakeLists.txt выбирает ровно один HAL ------------------
-add_subdirectory(src)
-
 # --- Вендоренные зависимости (§3.6) -------------------------------------------
+# SDL3 подключается ДО ядра: HAL (src/hal/pc) линкует target SDL3::SDL3.
 if(PLATFORM_PC)
-    # SDL3 подключается ТОЛЬКО через add_subdirectory (vcpkg — не-канонический fallback).
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/sdl3/CMakeLists.txt")
         add_subdirectory(src/third_party/sdl3 EXCLUDE_FROM_ALL)
     else()
-        message(STATUS
-            "src/third_party/sdl3 пуст (submodule не инициализирован): "
-            "запустите `git submodule update --init --recursive`. Продолжаем каркас без SDL3.")
+        message(FATAL_ERROR
+            "src/third_party/sdl3 пуст (submodule не инициализирован), но HAL PC "
+            "(Спринт 5–6) требует SDL3::SDL3. Запустите "
+            "'git submodule update --init --recursive'.")
     endif()
+endif()
 
+# --- Ядро движка: src/CMakeLists.txt выбирает ровно один HAL ------------------
+add_subdirectory(src)
+
+if(PLATFORM_PC)
     # asset_converter — host-only инструмент, никогда не компилируется MIPS-тулчейном.
     add_subdirectory(tools/asset_converter)
 endif()
