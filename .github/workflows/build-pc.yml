@@ -1,0 +1,50 @@
+# ============================================================================
+# Второй CI-контур — Спринты 5–6 (docs/plans/sprint_05_06.md, неделя 10 [H]):
+# сборка pc-release на трёх ОС (ubuntu / windows / macos) через канонические
+# пресеты CMakePresets.json. Тесты остаются в tests.yml (pc-debug);
+# здесь — матричность сборки и вендор-верификация.
+# ============================================================================
+name: build-pc
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-pc:
+    name: PC (${{ matrix.os }}, pc-release)
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: Checkout (с submodules — SDL3, GoogleTest, PSn00bSDK)
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Тулчейн (ninja + SDL3-dev-подсистемы; posix)
+        if: runner.os != 'Windows'
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y ninja-build libgl1-mesa-dev \
+              libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+              libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev
+          else
+            brew install ninja
+          fi
+
+      - name: Верификация вендоренных зависимостей (§3.6; Windows — Git Bash)
+        shell: bash
+        run: sh ci/verify_vendored.sh
+
+      - name: "Configure (canon: cmake --preset pc-release)"
+        run: cmake --preset pc-release
+
+      - name: "Build (canon: cmake --build --preset pc-release)"
+        run: cmake --build --preset pc-release

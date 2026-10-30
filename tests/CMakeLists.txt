@@ -1,9 +1,9 @@
 # ============================================================================
 # tests/ — юнит- и интеграционные тесты (GoogleTest canonical; FetchContent
 # запрещён — §3.6). Нормативно: src/core/math/* (fixed/vec/mat),
-# src/core/memory/* (linear/pool/stack), src/core/ecs/* (entity/registry) —
-# docs/plans/sprint_01_02.md и sprint_03_04.md; рендер-интеграционные
-# (W0-golden) — Спринты 7–8.
+# src/core/memory/* (linear/pool/stack), src/core/ecs/* (entity/registry),
+# src/hal/* (platform/input/audio/filesystem — sprint_05_06, недели 10–12);
+# рендер-интеграционные (W0-golden) — Спринты 7–8.
 #
 # GoogleTest подключается ТОЛЬКО после вендоринга (submodule инициализирован)
 # и изолирован от канонических флагов движка (third-party без -Werror, §3.5).
@@ -31,6 +31,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         memory/allocator_integration_test.cpp
         ecs/entity_test.cpp
         ecs/registry_test.cpp
+        integration/hal_test.cpp
     )
     target_compile_features(retro_engine_tests PRIVATE cxx_std_14)
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)
