@@ -13,23 +13,32 @@ elseif(PLATFORM_PS1)
     add_subdirectory(hal/ps1)
 endif()
 
+include(EmbedShaders) # cmake/EmbedShaders.cmake (шейдеры → generated/headers).
+
 add_library(retro_engine STATIC)
 
 # Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
 # ECS (Спринт 3–4): Registry; аллокаторы — header-only (core/memory).
 # Логгер (Спринт 7–8, долг Спринтов 3–4): диагностика только через core/log.
+# Рендер-ядро (Спринт 7–8): pipeline + пул текстур; backend — ровно один HAL.
 target_sources(retro_engine PRIVATE
     core/math/fixed.cpp
     core/math/math.cpp
     core/ecs/registry.cpp
     core/log/log.cpp
+    render/texture.cpp
+    render/renderer.cpp
 )
 
 # Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).
 target_include_directories(retro_engine PUBLIC "${CMAKE_SOURCE_DIR}/src")
 
-# Compile-time специализация логгера: file-sink на PC, no-op на PS1 — без
-# platform-ifdef'ов в заголовках ядра (значение задаётся выбором бэкенда).
+# Сгенерированный каталог (shaders_embedded.h) — приватные детали ядра и HAL.
+target_include_directories(retro_engine PRIVATE "${RPE_GENERATED_INCLUDE_DIR}")
+
+# Compile-time specialization формата файлов (log.cpp: FILE-sink на PC,
+# no-op на PS1 — см. заголовок log.h). Значение задаётся выбором бэкенда
+# в src/CMakeLists.txt WITHOUT создания platform-ifdef'ов в заголовках ядра.
 if(PLATFORM_PC)
     target_compile_definitions(retro_engine PRIVATE PLATFORM_PC=1)
 endif()
