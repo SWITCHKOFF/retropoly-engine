@@ -31,6 +31,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         memory/allocator_integration_test.cpp
         ecs/entity_test.cpp
         ecs/registry_test.cpp
+        log/log_test.cpp
         integration/hal_test.cpp
     )
     target_compile_features(retro_engine_tests PRIVATE cxx_std_14)

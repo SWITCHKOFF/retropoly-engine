@@ -17,14 +17,22 @@ add_library(retro_engine STATIC)
 
 # Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
 # ECS (Спринт 3–4): Registry; аллокаторы — header-only (core/memory).
+# Логгер (Спринт 7–8, долг Спринтов 3–4): диагностика только через core/log.
 target_sources(retro_engine PRIVATE
     core/math/fixed.cpp
     core/math/math.cpp
     core/ecs/registry.cpp
+    core/log/log.cpp
 )
 
 # Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).
 target_include_directories(retro_engine PUBLIC "${CMAKE_SOURCE_DIR}/src")
+
+# Compile-time специализация логгера: file-sink на PC, no-op на PS1 — без
+# platform-ifdef'ов в заголовках ядра (значение задаётся выбором бэкенда).
+if(PLATFORM_PC)
+    target_compile_definitions(retro_engine PRIVATE PLATFORM_PC=1)
+endif()
 
 target_link_libraries(retro_engine PUBLIC retro_engine_hal)
 retro_engine_apply_flags(retro_engine)
