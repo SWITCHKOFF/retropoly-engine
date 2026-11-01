@@ -81,14 +81,17 @@ namespace {
 /** Фиксирует рабочие пиксели/палитру теста (детерминированные патерны). */
 struct TestFixtureData
 {
-    uint8_t pixels[64 * 64];
+    // 256×256 = полный max-dim блок: render_texture_acquire читает ровно
+    // w*h байт (контракт), а кейсы 256×256 ниже — иначе было бы
+    // чтение за границу меньшего буфера (heap-overread, гейт pc-asan).
+    uint8_t pixels[256 * 256];
     uint16_t palette[256];
 };
 
 /** Заполняет fixture (rising pattern — проверяется копия, не эталон). */
 void fill_fixture(TestFixtureData* fixture)
 {
-    for (uint32_t i = 0u; i < 64u * 64u; ++i) {
+    for (uint32_t i = 0u; i < 256u * 256u; ++i) {
         fixture->pixels[i] = (uint8_t)(i & 0xFFu);
     }
     for (uint32_t i = 0u; i < 256u; ++i) {

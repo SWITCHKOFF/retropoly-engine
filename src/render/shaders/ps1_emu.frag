@@ -6,7 +6,7 @@
 // на вершинный цвет; прозрачность выключена (alpha = 1).
 #version 330 core
 
-in vec2 v_texcoord;
+noperspective in vec2 v_texcoord; // affine UV (соглашение о vert; §7.4)
 in vec4 v_color;
 
 uniform sampler2D u_texture_index;

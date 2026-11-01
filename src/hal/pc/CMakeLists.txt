@@ -46,4 +46,6 @@ target_include_directories(retro_engine_hal PRIVATE
 
 # Публичные зависимости propagate: examples/tests ссылаются только на
 # retro_engine (docs/DEVELOPMENT_PLAN.md §2.1), SDL3/GL/glad не разбрасываются.
+# core/log — приватная зависимость HAL (диагностика render_opengl.cpp).
 target_link_libraries(retro_engine_hal PUBLIC SDL3::SDL3 OpenGL::GL glad)
+target_link_libraries(retro_engine_hal PRIVATE retro_engine_log)

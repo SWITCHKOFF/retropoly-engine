@@ -48,6 +48,15 @@ foreach(rpe_shader ps1_emu.vert ps1_emu.frag ps1_present.vert ps1_present.frag)
 endforeach()
 set(rpe_meta_out "${CMAKE_BINARY_DIR}/generated/render/shaders_embedded.sha")
 
+# Шейдеры — зависимости КОНФИГУРАЦИИ: правка исходника шейдера заставляет
+# ninja перезапустить cmake (перегенерация заголовка) перед пересборкой
+# рендер-бэкенда (иначе emit-стейдж строит бэкенд по устаревшему embed).
+set_property(DIRECTORY APPEND PROPERTY CMAKE_CONFIGURE_DEPENDS
+    "${RPE_SHADER_DIR}/ps1_emu.vert"
+    "${RPE_SHADER_DIR}/ps1_emu.frag"
+    "${RPE_SHADER_DIR}/ps1_present.vert"
+    "${RPE_SHADER_DIR}/ps1_present.frag")
+
 # Перегенерация — на КАЖДОЙ конфигурации (заголовок ~20 KiB, стоимость
 # пренебрежима; SHA-гард раним к прерванным записям: разманенный header
 # при «валидном» .sha блокировал бы сборку до ручной чистки build/).

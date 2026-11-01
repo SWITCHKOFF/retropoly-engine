@@ -31,8 +31,6 @@
 #include "render/sort_key.h"
 #include "render/texture.h"
 
-#include <algorithm>
-
 #include <assert.h>
 #include <string.h>
 
@@ -288,7 +286,17 @@ void Render_EndFrame(void)
         ref->cmd_index = i;
         ++sorted_count;
     }
-    std::sort(s_sort_refs, s_sort_refs + sorted_count, sort_ref_before);
+    // Вставка-сортировка (без <algorithm>: freestanding PS1; стабильная —
+    // tie-breaker submission_index нормирует порядок равных ключей).
+    for (uint32_t i = 1u; i < sorted_count; ++i) {
+        const SortRef key = s_sort_refs[i];
+        uint32_t j = i;
+        while (j > 0u && sort_ref_before(key, s_sort_refs[j - 1u])) {
+            s_sort_refs[j] = s_sort_refs[j - 1u];
+            --j;
+        }
+        s_sort_refs[j] = key;
+    }
 
     // ---- SUBMIT (после сортировки — детерминированный порядок) ----------
     for (uint32_t i = 0u; i < sorted_count; ++i) {
@@ -453,6 +461,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
     Mat4 mvp;
     mat4_multiply(&mvp, &s_proj, &mv);  // proj·view·model — PACK-константа.
 
+    bool any_reject = false; // last_code сохраняет reject-код вызова.
     for (uint32_t t = 0u; t < index_count; ++t) {
         const Triangle* tri = &indices[t];
         const Vertex* pv[3] = {&vertices[tri->v0], &vertices[tri->v1],
@@ -472,6 +481,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
             if (fixed_sub(depth, s_near) < 0 || fixed_sub(s_far, depth) < 0) {
                 ++s_diag.clip_rejects;
                 render_diag(RENDER_DIAG_CLIP_REJECT);
+                any_reject = true;
                 rejected = true;
                 break;
             }
@@ -488,6 +498,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
             // Backface (A ≥ 0): порядок normative — CULL после CLIP.
             ++s_diag.backface_rejects;
             render_diag(RENDER_DIAG_CULL_REJECT);
+            any_reject = true;
             continue;
         }
 
@@ -503,6 +514,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
             // «invalid depth rejection» — normative конформанс-случай.
             ++s_diag.depth_rejects;
             render_diag(RENDER_DIAG_DEPTH_REJECT);
+            any_reject = true;
             continue;
         }
 
@@ -531,7 +543,10 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
         ++s_submission_counter;
         ++s_diag.submitted;
     }
-    render_diag(RENDER_DIAG_OK);
+    if (!any_reject) {
+        render_diag(RENDER_DIAG_OK); // Полностью успешный DrawMesh → OK.
+    }
+    // При reject'ах last_code сохраняет последний reject-код вызова.
 }
 
 // ---------------------------------------------------------------------------

@@ -44,6 +44,26 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
 
     include(GoogleTest)
     gtest_discover_tests(retro_engine_tests DISCOVERY_TIMEOUT 60)
+
+    # Рендер-интеграционные (W0-golden, неделя 16) — пресет pc-debug-render
+    # (BUILD_RENDER_INTEGRATION_TESTS=ON). Требуют дисплей/GL: headless-CI
+    # пропускает кейсы через GTEST_SKIP (см. render_golden_test.cpp).
+    if(BUILD_RENDER_INTEGRATION_TESTS)
+        add_executable(retro_engine_visual_tests
+            visual/render_golden_test.cpp
+            visual/w0_scene.cpp
+        )
+        target_compile_features(retro_engine_visual_tests PRIVATE cxx_std_14)
+        target_include_directories(retro_engine_visual_tests PRIVATE
+            "${CMAKE_SOURCE_DIR}")
+        target_link_libraries(retro_engine_visual_tests PRIVATE
+            retro_engine GTest::gtest_main)
+        retro_engine_apply_flags(retro_engine_visual_tests)
+        # Путь эталонов (golden reference) — compile-time, getenv-fallback.
+        target_compile_definitions(retro_engine_visual_tests PRIVATE
+            RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+        gtest_discover_tests(retro_engine_visual_tests DISCOVERY_TIMEOUT 60)
+    endif()
 endif()
 
 # Бенчмарки (пресет pc-bench, BUILD_BENCHMARKS):

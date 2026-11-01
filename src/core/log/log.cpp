@@ -46,6 +46,7 @@ void Log_Shutdown(void)
 #endif
 }
 
+#ifdef PLATFORM_PC
 /**
  * Преобразование уровня в детерминированный тег строки журнала.
  * Вне перечисления — "ERROR" (отказ safe-degradation, log.h contract).
@@ -62,6 +63,7 @@ static const char* log_level_tag(LogLevel level)
         return "ERROR";
     }
 }
+#endif // PLATFORM_PC
 
 void Log_Message(LogLevel level, const char* domain, const char* format, ...)
 {
