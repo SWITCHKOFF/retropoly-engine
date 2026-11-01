@@ -74,7 +74,7 @@
 - [x] Ввод клавиатура+геймпад работает (ручной чек) *(2026-10-30: геймпад Xbox360-клон — 14 кнопок + 6 осей через Input_*; клавиатура — тот же state-путь)*
 - [x] ФС грузит файлы; аудио — заглушка
 - [x] Delta time корректен (тест 95–150 мс)
-- [ ] Сборка зелёная на 3 ОС в CI *(workflow создан; подтверждение — первый прогон после push)*
+- [x] Сборка зелёная на 3 ОС в CI *(2026-11-01: `build-pc` = success, run 41302314551 — ubuntu/windows/macos, `pc-release`. Потребовалось два CI-фикса: SDL3 → static (SDL_SHARED OFF/SDL_STATIC ON: gtest_discover_tests на MSVC падал на отсутствии SDL3-shared.dll) и Clang-гвард вокруг GCC-only прагмы `-Wstringop-overflow`)*
 
 ## Риски
 
