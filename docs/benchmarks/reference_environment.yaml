@@ -1,0 +1,67 @@
+# SPDX-License-Identifier: MIT
+# RetroPolyEngine — docs/benchmarks/reference_environment.yaml
+#
+# Каркас метаданных эталонного окружения (docs/plans/sprint_07_08.md,
+# неделя 16). НАЗНАЧЕНИЕ: любой повторный прогон эталонных замеров
+# (W0-golden, benchmarks/memory_baseline.md и буд.) сопровождается
+# снапшотом значений этого файла — числа без окружения недействительны.
+#
+# Политика обновления: при переносе эталонных прогонов на другое окружение
+# ИЛИ при плановом апгрейде тулчейна значения перезаписываются, дата и
+# причина — в notes (без изменения схемы). Полка «measurement» — только
+# сравнение внутри одного снапшота (числа без окружения недействительны).
+#
+# Поля (норматив недель 16): os / cpu / gpu / driver / compiler /
+# build_type / resolutions / vsync / power_mode / measurement_seconds /
+# git_revision / asset_set_sha256.
+
+os: >-
+  Freedesktop SDK 25.08 (Flatpak runtime), Linux 7.0.0-42 x86_64
+
+cpu: >-
+  Intel Core i5-11300H (11th Gen, Tiger Lake-H35, 4C/8T @ 3.10–4.40 GHz)
+
+gpu: >-
+  VMware SVGA II Adapter (виртуализированный SVGA; GL-контекст через
+  Mesa/userspace драйвер)
+
+driver: >-
+  Mesa GL (desktop, GL 3.3 core profile — требование render_opengl.cpp);
+  версия уточняется на повторном прогоне (glxinfo отсутствовал в образе)
+
+compiler: >-
+  GCC 15.2.0 (mipsel-none-elf-g++ 12.3.0 для PS1-пресетов), CMake 4.4.4,
+  Ninja 1.13.2
+
+build_type: >-
+  pc-debug-render для golden-эталонов (BUILD_RENDER_INTEGRATION_TESTS=ON,
+  бинарь retro_engine_visual_tests); pc-release/pc-asan — замеры
+  производительности/подавления диагностики; ps1-release — сборка ELF.
+
+resolutions: >-
+  [320×240 (reference framebuffer; nearest→окно), 1280×960 (окно HAL)]
+
+vsync: >-
+  off в контексте тестового процесса (кадр не ждёт вертикальной
+  синхронизации; детерминизм readback от vsync не зависит).
+
+power_mode: >-
+  AC (сетевое питание); governor/частоты не пинились — «правило честных
+  замеров»: сравнение только внутри одного снапшота этого файла.
+
+measurement_seconds: 120
+
+git_revision: >-
+  9af3ab8 (W0-golden конформанс; ядро рендера — 0139caa). Снапшот окружения
+  снят при фиксации golden-эталонов tests/visual/reference/*.bin.
+
+asset_set_sha256: >-
+  427c8d6664cfbd238265c61ce7bbe6cffd753797a71f9557c5255686e4e3a316 —
+  sha256-сумма (sum over sorted file-hashes) для src/render/shaders/*
+  и tests/visual/*.
+
+notes: >-
+  Снапшот 2026-11-01 (W0-golden): golden-хэши tests/visual/reference/*.bin
+  зафиксированы на этом окружении; перенос на другое OSD/драйвер: перезаписать
+  поля и золотить эталон только через сознательный rebase
+  (RENDER_GOLDEN_REBASE=1) с инженерным обоснованием в журнале.
