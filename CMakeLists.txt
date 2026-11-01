@@ -48,8 +48,14 @@ include(CompilerFlags)
 
 # --- Вендоренные зависимости (§3.6) -------------------------------------------
 # SDL3 подключается ДО ядра: HAL (src/hal/pc) линкует target SDL3::SDL3.
+# SDL — статическая (CI-гейт build-pc: gtest_discover_tests запускает
+# тестовый exe в configure-фазе ПОСЛЕ пост-билда; с SDL3-shared.dll не в
+# PATH discovery падает «Error running test executable» на MSVC).
+# Движок сам static-тополог: SDL3-static вписывается в ту же модель.
 if(PLATFORM_PC)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/sdl3/CMakeLists.txt")
+        set(SDL_SHARED OFF) # Только static: без DLL-развертывания.
+        set(SDL_STATIC ON)
         add_subdirectory(src/third_party/sdl3 EXCLUDE_FROM_ALL)
     else()
         message(FATAL_ERROR
