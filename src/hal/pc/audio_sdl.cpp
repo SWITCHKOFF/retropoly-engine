@@ -109,7 +109,11 @@ static void SDLCALL hal_audio_callback(void* userdata, SDL_AudioStream* stream,
 }
 
 #if defined(__GNUC__)
+// (см. выше: push под GCC-only — pop симметрично исключается из Clang,
+// иначе «pop could not pop, no matching push» под -Werror).
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
+#endif
 #endif
 
 bool Audio_Init(void)
