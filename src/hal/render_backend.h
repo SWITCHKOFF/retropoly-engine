@@ -88,13 +88,15 @@ void hal_render_backend_clear(uint8_t r, uint8_t g, uint8_t b);
 
 /**
  * Подача ОДНОГО треугольника после Painter's-сортировки (кадровый SUBMIT):
- * MVP — GL-представление (column-major float 16); текстура уже должна
- * существовать. GL-ошибка → false (явная ошибка кадра).
+ * MVP — GL-представление (column-major float 16). texture == INVALID —
+ * нетекстурированный Gouraud (flat, без семпла; недели 15–16); валидный
+ * хэндл — привязка CI8-пары, текстуры должны существовать. GL-ошибка →
+ * false (явная ошибка кадра).
  *
  * @param vertices Ровно 3 вершины (view-space float + атрибуты).
  * @param mvp_gl Матрица proj·view·model (float, column-major, 16).
- * @param texture Хэндл ядровой CI8-текстуры.
- * @return true при успехе; false при GL-отказе.
+ * @param texture Хэндл ядровой CI8-текстуры или RENDER_TEXTURE_INVALID.
+ * @return true при успехе; false при GL-отказе/невалидной текстуре.
  */
 bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3],
                                       const float* mvp_gl, TextureHandle texture);

@@ -152,7 +152,8 @@ TextureHandle Render_CreateTexture(uint32_t w, uint32_t h,
 /** Освобождение текстуры по хэндлу (Спринт 7–8). */
 void Render_DestroyTexture(TextureHandle handle);
 
-/** Привязка текстуры к текущему draw (Спринт 7–8). */
+/** Привязка текстуры к текущему draw; RENDER_TEXTURE_INVALID — явный
+ *  unbind: нетекстурированный режим (flat-Gouraud без семпла). */
 void Render_BindTexture(TextureHandle handle);
 
 /**

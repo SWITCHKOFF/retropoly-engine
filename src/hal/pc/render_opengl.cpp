@@ -67,6 +67,7 @@ static GpuTexture s_gpu_textures[RENDER_TEXTURE_MAX];
 static GLint s_emu_u_mvp = -1;
 static GLint s_emu_u_texture_index = -1;
 static GLint s_emu_u_palette = -1;
+static GLint s_emu_u_has_texture = -1;
 static GLint s_present_u_framebuffer = -1;
 
 /** Число float на вершину подачи: pos(3) + uv(2) + rgba(4). */
@@ -286,8 +287,11 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     s_emu_u_texture_index =
         glGetUniformLocation(s_emu_program, "u_texture_index");
     s_emu_u_palette = glGetUniformLocation(s_emu_program, "u_palette");
+    s_emu_u_has_texture =
+        glGetUniformLocation(s_emu_program, "u_has_texture");
     glUniform1i(s_emu_u_texture_index, 0); // unit 0 = CI8-индексы.
     glUniform1i(s_emu_u_palette, 1);       // unit 1 = палитра 256×1.
+    glUniform1i(s_emu_u_has_texture, 0);   // Старт: нетекстурированный Gouraud.
 
     glUseProgram(s_present_program);
     s_present_u_framebuffer =
@@ -540,22 +544,33 @@ bool hal_render_backend_draw_triangle(
     TextureHandle texture)
 {
     if (!s_backend_inited || vertices == NULL || mvp_gl == NULL
-        || texture == RENDER_TEXTURE_INVALID
         || texture > RENDER_TEXTURE_MAX) {
         return false;
     }
-    const uint32_t slot = (uint32_t)texture - 1u;
-    if (s_gpu_textures[slot].index_texture == 0
-        || s_gpu_textures[slot].palette_texture == 0) {
-        return false; // Текстура не создана/gl-клон отсутствует.
+    // texture == RENDER_TEXTURE_INVALID — норма: нетекстурированный
+    // Gouraud (u_has_texture = 0, недели 15–16); семпл не выполняется.
+    const bool textured = (texture != RENDER_TEXTURE_INVALID);
+    uint32_t slot = 0u;
+    if (textured) {
+        slot = (uint32_t)texture - 1u;
+        if (s_gpu_textures[slot].index_texture == 0
+            || s_gpu_textures[slot].palette_texture == 0) {
+            return false; // Текстура не создана/gl-клон отсутствует.
+        }
     }
 
     backend_gl_sweep();
     glUseProgram(s_emu_program);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].index_texture);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].palette_texture);
+    if (textured) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].index_texture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].palette_texture);
+        glUniform1i(s_emu_u_has_texture, 1);
+    } else {
+        // Flat-путь: юниты не перевязываются (ветка семпла не берётся).
+        glUniform1i(s_emu_u_has_texture, 0);
+    }
     glUniformMatrix4fv(s_emu_u_mvp, 1, GL_FALSE, mvp_gl);
 
     // Конверсия вершины в interleaved float-строку (pos3 uv2 rgba4).

@@ -521,6 +521,8 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
         // ---- PACK (per-tri команда; порядок вставки сохраняется) ---------
         RenderTriCmd cmd;
         cmd.mvp = mvp;
+        // s_bound_texture == INVALID — валидный нетекстурированный путь:
+        // бэкенд рисует flat-Gouraud (u_has_texture = 0).
         cmd.texture = s_bound_texture;
         cmd.depth_key = depth_key;
         cmd.submission_index = s_submission_counter;
@@ -605,6 +607,15 @@ void Render_BindTexture(TextureHandle handle)
     if (s_state == RENDER_STATE_UNINITIALIZED) {
         assert(!"Render_BindTexture до Render_Init (Lifecycle contract)");
         render_diag(RENDER_DIAG_NOT_INITIALIZED);
+        return;
+    }
+    // ЯВНЫЙ unbind (RENDER_TEXTURE_INVALID): перевод в нетекстурированный
+    // режим — DrawMesh рисует Gouraud по вершинам без семплирования
+    // (норматив недели 15: «polygon без texture рисуется flat»). Это
+    // валидный путь (diag OK), а не отказ.
+    if (handle == RENDER_TEXTURE_INVALID) {
+        s_bound_texture = RENDER_TEXTURE_INVALID;
+        render_diag(RENDER_DIAG_OK);
         return;
     }
     // Привязка = state ядра, проверяемая на PACK (данные должны существовать).

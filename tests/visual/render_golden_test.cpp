@@ -114,6 +114,27 @@ FrameResult render_frame(const Vertex* vertices, uint32_t vertex_count,
     return result;
 }
 
+/**
+ * Кадр с одной меш-подачей БЕЗ вызова Render_BindTexture (забытая
+ * привязка): flat-Gouraud-путь — валидный нетекстурированный draw.
+ */
+FrameResult render_frame_unbound(const Vertex* vertices, uint32_t vertex_count,
+                                 const Triangle* indices, uint32_t index_count)
+{
+    Mat4 identity;
+    mat4_identity(&identity);
+    FrameResult result;
+    Render_BeginFrame();
+    Render_Clear(RENDER_CLEAR_DEFAULT_R, RENDER_CLEAR_DEFAULT_G,
+                 RENDER_CLEAR_DEFAULT_B);
+    Render_DrawMesh(vertices, vertex_count, indices, index_count, &identity);
+    Render_EndFrame();
+    result.hash = Render_TestReadbackHash();
+    result.diag = render_diagnostics();
+    render_shutdown();
+    return result;
+}
+
 /// Путь эталона @p name: <source_dir>/tests/visual/reference/<name>.bin
 const char* golden_path(const char* name)
 {
@@ -287,6 +308,50 @@ TEST(W0Golden, VisibleTriangleHashes)
     EXPECT_EQ(result.diag.backface_rejects, 0u);
     EXPECT_EQ(result.diag.depth_rejects, 0u);
     EXPECT_TRUE(golden_check("w0_visible.bin", result.hash));
+}
+
+//! [H] Нетекстурированный треугольник (неделя 15): явный unbind
+//! (BindTexture(INVALID) → diag OK) и «забытый bind» — ОДИН flat-Gouraud
+//! путь (unbound texture is simply drawn flat): submitted = 1, пиксельный
+//! результат отличается от текстурированного (ветка CI8-семпла не берётся).
+TEST(W0Golden, UntexturedTriangleFlatGouraud)
+{
+    if (!display_available()) {
+        GTEST_SKIP() << "Дисплей недоступен — W0-golden пропущен (headless)";
+    }
+    Vertex vertices[3];
+    Triangle triangle;
+    w0_build_case(W0_CASE_VISIBLE, vertices, &triangle);
+
+    // Явный unbind: привязка INVALID — валидный путь (diag OK), draw flat.
+    ASSERT_TRUE(render_startup());
+    const FrameResult flat =
+        render_frame(vertices, 3u, &triangle, 1u, RENDER_TEXTURE_INVALID);
+    EXPECT_EQ(flat.diag.submitted, 1u);
+    EXPECT_EQ(flat.diag.clip_rejects, 0u);
+    EXPECT_EQ(flat.diag.backface_rejects, 0u);
+    EXPECT_EQ(flat.diag.depth_rejects, 0u);
+    EXPECT_EQ(flat.diag.last_code, (uint32_t)RENDER_DIAG_OK);
+
+    // «Забытый bind» (BindTexture не вызвана вовсе) — тот же flat путь:
+    // пиксельный результат идентичен явному unbind (нет тихого сбоя).
+    ASSERT_TRUE(render_startup());
+    const FrameResult forgot =
+        render_frame_unbound(vertices, 3u, &triangle, 1u);
+    EXPECT_EQ(forgot.diag.submitted, 1u);
+    EXPECT_EQ(forgot.hash, flat.hash);
+
+    // Тот же треугольник С привязанной CI8-текстурой — другой результат
+    // (заякоривает различимость веток на readback).
+    ASSERT_TRUE(render_startup());
+    const TextureHandle texture = make_checker_texture();
+    ASSERT_NE(texture, RENDER_TEXTURE_INVALID);
+    const FrameResult textured = render_frame(vertices, 3u, &triangle, 1u,
+                                              texture);
+    EXPECT_EQ(textured.diag.submitted, 1u);
+    EXPECT_NE(textured.hash, flat.hash);
+
+    EXPECT_TRUE(golden_check("w0_untextured.bin", flat.hash));
 }
 
 //! Backface-кулинг: зеркальный winding → CULL, кадр = чистый фон.
