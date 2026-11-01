@@ -2,7 +2,7 @@
 
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§3).
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-10-28, Linux-среда):** §3.3–3.7 и §3.2 (PS1-тулчейн: Linux-бандл `PSn00bSDK-0.24-Linux.zip` → `~/PSn00bSDK`) выполнены; гейт сборки/ctest/ps1-release смок-тест — зелёный. Осталось: §3.1 (Windows-инструменты), GitHub remote/push + зелёный Actions.
+> **Статус (2026-11-01, Linux-среда):** §3.3–3.7 и §3.2 (PS1-тулчейн: Linux-бандл `PSn00bSDK-0.24-Linux.zip` → `~/PSn00bSDK`) выполнены; гейт сборки/ctest/ps1-release смок-тест — зелёный. GitHub remote/push + зелёный Actions — закрыты 2026-11-01 (`tests` = success, run 41302314603). Осталось: только §3.1 (Windows-инструменты) — CI от этого не зависит: воркфлоу гоняют GitHub-runner'ы.
 
 ## Карточка спринта
 
@@ -135,11 +135,11 @@
   - [x] checkout@v4 c `submodules: recursive`
   - [x] `apt-get install cmake ninja-build libgl1-mesa-dev`
   - [x] `cmake --preset pc-debug && cmake --build --preset pc-debug && ctest --preset pc-debug --output-on-failure`
-- [ ] Убедиться, что workflow зелёный на пустом каркасе *(требует push на GitHub; на этой Windows-независимой машине нет remote)*
+- [x] Убедиться, что workflow зелёный на пустом каркасе *(2026-11-01: `tests` = success на `ead7021`, run 41302314603)*
 
 ## Критерии приёмки (гейт выхода из M0)
 
-- [ ] Все чек-боксы выше закрыты *(остались только Windows-only пункты §3.1 (инструменты Windows) и GitHub remote/push + зелёный Actions; PS1-тулчейн закрыт на Linux)*
+- [ ] Все чек-боксы выше закрыты *(остались только Windows-only пункты §3.1 (инструменты Windows); PS1-тулчейн закрыт на Linux, GitHub remote/push и зелёный Actions закрыты 2026-11-01)*
 - [x] `cmake --preset pc-debug && cmake --build --preset pc-debug` проходит *(Linux: GCC 15.2, CMake 4.4.4, Ninja 1.13.2)*
-- [ ] `ctest --preset pc-debug` зелёный; CI (`tests.yml`) зелёный на пустом каркасе *(ctest локально зелёный, exit 0; Actions — после первого push)*
+- [x] `ctest --preset pc-debug` зелёный; CI (`tests.yml`) зелёный на пустом каркасе *(выполнено: локальный ctest = 130/130; `tests` = success, run 41302314603, 2026-11-01)*
 - [x] `cmake --preset ps1-release` конфигурируется с pinned SDK (смок-тест) *(Linux: PSn00bSDK v0.24 = `06e65bea…`, GCC 12.3.0; configure + build из бандла `PSn00bSDK-0.24-Linux.zip`)*

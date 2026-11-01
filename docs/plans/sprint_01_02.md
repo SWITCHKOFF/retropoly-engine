@@ -2,7 +2,7 @@
 
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§4).
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-10-29, Linux-среда):** Недели 1–4 выполнены на 49 юнит-тестах (pc-debug и pc-release — 49/49 зелёных; ps1-release — сборка ELF зелёная). Недоделано только CI-гейты, требующие GitHub-remote: GitHub Actions и cross-platform матрица.
+> **Статус (2026-10-29, Linux-среда):** Недели 1–4 выполнены на 49 юнит-тестах (pc-debug и pc-release — 49/49 зелёных; ps1-release — сборка ELF зелёная). CI-гейты закрывались по мере появления GitHub-remote: push-запуск CI `tests` = success 2026-11-01 (run 41302314603), кросс-платформенная сборка — `build-pc` = success 2026-11-01 (run 41302314551, 3 ОС).
 
 ## Карточка спринта
 
@@ -53,7 +53,7 @@
   - [x] **Determinism:** одинаковый вход → идентичный raw-выход; сравнение с независимым ожиданием (123×456 → INT32_MAX: 123·456 = 56088 > 32767.9999 — насыщение, ожидание посчитано вручную)
   - [x] Sqrt: `sqrt(25)==5`, `sqrt(2)≈1.414±0.01`, `sqrt(отрицательного)` → контракт
 - [x] [B] `tests/CMakeLists.txt`: `add_subdirectory(googletest EXCLUDE_FROM_ALL)`, `add_executable(retro_engine_tests ...)`, link `retro_engine` + `GTest::gtest_main`, `gtest_discover_tests` *(плюс корневой `enable_testing()` — CTest-агрегация; заглушка placeholder.cpp удалена)*
-- [x] [B] `ctest --preset pc-debug` зелёный; push; CI зелёный *(ctest: 49/49 зелёных локально; push/CI — блокировано отсутствием GitHub-remote)*
+- [x] [B] `ctest --preset pc-debug` зелёный; push; CI зелёный *(ctest: 49/49 зелёных локально; CI — `tests` = success 2026-11-01, run 41302314603)*
 
 **Неделя 3 — Vec2/Vec3/Vec4:**
 - [x] [B] `src/core/math/vec2.h`, `vec3.h`, `vec4.h`:
@@ -85,12 +85,12 @@
   - [x] **Determinism:** raw-матрицы побитно равны между запусками (зафиксировать golden-векторы) *(golden G1/G2/T захвачены фактическим прогоном канонической сборки и зашиты в тест)*
 - [x] [B] `.github/workflows/tests.yml` уже существует — убедиться, что триггеры push/PR на main/master/develop, добить матрицу позже *(проверено: триггеры push/PR на [main, develop] присутствуют; матрица — после GitHub-remote)*
 - [x] [M] Бенчмарк-заготовка: `tests/benchmark/math_benchmark.cpp` (google/benchmark): BM_FixedMul, BM_Vec3Normalize, BM_Mat4Multiply (`benchmark::DoNotOptimize`); включается пресетом `pc-bench` *(подключение — гард: собирается только при вендоренном google/benchmark; submodule-add с pin — отдельная задача §3.6)*
-- [x] [H] Критерии спринта: все тесты зелёные на PC (Windows/Linux/macOS в CI позже; сейчас локально + ubuntu) *(GCC 15.2 с -Wall -Wextra -Wpedantic -Werror; PS1-тулчейн GCC 12.3 freestanding — ps1-release постройка зелёная; GitHub/Actions — blocked (нет remote))*
+- [x] [H] Критерии спринта: все тесты зелёные на PC (Windows/Linux/macOS в CI позже; сейчас локально + ubuntu) *(GCC 15.2 с -Wall -Wextra -Wpedantic -Werror; PS1-тулчейн GCC 12.3 freestanding — ps1-release постройка зелёная; GitHub/Actions — закрыты 2026-11-01: build-pc success на 3 ОС)*
 
 ## Критерии приёмки спринта 1–2
 
 - [x] Все unit-тесты проходят (100% pass rate) *(49/49 pc-debug; 49/49 pc-release)*
-- [ ] CI запускает тесты автоматически на push *(блокировано: нет GitHub-remote; workflow и триггеры готовы)*
+- [x] CI запускает тесты автоматически на push *(2026-11-01: `tests` = success на каждом push в `main`/`develop`, run 41302314603; история стабилизации — аннотации/ЯМЛ-фиксы CI-коммитов)*
 - [x] Точность по операциям подтверждена детерминированными векторами (не «запустил дважды на одной машине») *(golden raw-матрицы/векторы + mt19937(42)-стресс с double-эталоном)*
 - [x] Doxygen на всех публичных функциях; код отформатирован *(clang-format в среде отсутствует — правила соблюдены по STYLE_GUIDE вручную; прогон форматтера перенесён в CI-трек)*
 

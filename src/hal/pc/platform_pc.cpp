@@ -7,6 +7,7 @@
 // ДО создания окна → окно 1280×960 → CreateContext → MakeCurrent →
 // gladLoadGL ДО любых GL-вызовов; Shutdown: DestroyContext → DestroyWindow
 // → SDL_Quit. Любое частичное событие отказа в Init — полный откат.
+#include "core/log/log.h"
 #include "hal/pc/hal_pc_internal.h"
 
 #include <SDL3/SDL.h>
@@ -35,6 +36,11 @@ static void hal_platform_teardown(void)
 
 bool Platform_Init(void)
 {
+    // Журнал движка (core/log): каждая Platform_Init переоткрывает файл
+    // (truncate — Sprint 7–8: «file sink retro_engine.log truncate-on-Init»).
+    // Отказ открытия НЕ сбой (сообщения просто не пишутся — контракт log.h).
+    (void)Log_Init();
+
     // SDL_INIT_TIMER не включаем: подсистема удалена в SDL3 (sprint_05_06).
     if (!SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD)) {
         return false;
@@ -86,6 +92,8 @@ void Platform_Shutdown(void)
         SDL_DestroyWindow(s_window);
         s_window = nullptr;
     }
+    // Журнал закрывается ПОСЛЕ teardown-сообщений слоя, SDL_Quit в конце.
+    Log_Shutdown();
     SDL_Quit();
 }
 

@@ -48,8 +48,10 @@ static uint32_t s_wave_phase;
 // Известное ложное срабатывание GCC (vectorized unroll-хвост однобайтовых
 // записей трактуется как 16-байтовый store за пределами доказуемого bound):
 // подавляем -Wstringop-overflow точечно и локально, с объяснением.
-// MSVC-путь не затрагивается (прагма под __GNUC__).
-#if defined(__GNUC__)
+// Clang исключён: у него нет группы -Wstringop-overflow (AppleClang под
+// -Werror выдаёт -Wunknown-warning-option в CI build-pc/macos); ложных
+// положительных этой группы Clang не имеет. MSVC — под __GNUC__ не попадает.
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic push
 #pragma GCC diagnostic ignored "-Wstringop-overflow"
 #endif
@@ -107,7 +109,11 @@ static void SDLCALL hal_audio_callback(void* userdata, SDL_AudioStream* stream,
 }
 
 #if defined(__GNUC__)
+// (см. выше: push под GCC-only — pop симметрично исключается из Clang,
+// иначе «pop could not pop, no matching push» под -Werror).
+#if defined(__GNUC__) && !defined(__clang__)
 #pragma GCC diagnostic pop
+#endif
 #endif
 
 bool Audio_Init(void)

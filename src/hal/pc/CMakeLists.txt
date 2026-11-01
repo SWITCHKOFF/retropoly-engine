@@ -38,8 +38,14 @@ retro_engine_apply_flags(retro_engine_hal)
 
 # Заголовки движка включаются от корня src/ ("hal/platform.h" и т.п.;
 # PUBLIC-путь к ядру выдаётся от retro_engine в src/CMakeLists.txt).
-target_include_directories(retro_engine_hal PRIVATE "${CMAKE_SOURCE_DIR}/src")
+# Сгенерированный каталог (shaders_embedded.h) — приватная деталь GL-бэкенда;
+# cmake/EmbedShaders.cmake пишет в ${CMAKE_BINARY_DIR}/generated/render/.
+target_include_directories(retro_engine_hal PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${CMAKE_BINARY_DIR}/generated")
 
 # Публичные зависимости propagate: examples/tests ссылаются только на
 # retro_engine (docs/DEVELOPMENT_PLAN.md §2.1), SDL3/GL/glad не разбрасываются.
+# core/log — приватная зависимость HAL (диагностика render_opengl.cpp).
 target_link_libraries(retro_engine_hal PUBLIC SDL3::SDL3 OpenGL::GL glad)
+target_link_libraries(retro_engine_hal PRIVATE retro_engine_log)
