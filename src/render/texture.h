@@ -44,11 +44,10 @@
  * @param stp Флаг STP (semi-transparency bit; MVP-прозрачность выключена).
  * @return 16-битное слово палитры PS1-формата.
  */
-static inline uint16_t pack_rgb555_stp(uint8_t r5, uint8_t g5, uint8_t b5,
-                                       bool stp)
+static inline uint16_t pack_rgb555_stp(uint8_t r5, uint8_t g5, uint8_t b5, bool stp)
 {
-    return (uint16_t)((r5 & 0x1Fu) | ((g5 & 0x1Fu) << 5) | ((b5 & 0x1Fu) << 10)
-                      | (stp ? 0x8000u : 0u));
+    return (uint16_t)((r5 & 0x1Fu) | ((g5 & 0x1Fu) << 5) | ((b5 & 0x1Fu) << 10) |
+                      (stp ? 0x8000u : 0u));
 }
 
 /**
@@ -73,8 +72,7 @@ static inline uint8_t unpack_channel5_to_8(uint8_t c5)
  * @param g8 Выход: зелёный канал 0..255.
  * @param b8 Выход: синий канал 0..255.
  */
-static inline void unpack_rgb555_stp(uint16_t packed, uint8_t* r8, uint8_t* g8,
-                                     uint8_t* b8)
+static inline void unpack_rgb555_stp(uint16_t packed, uint8_t* r8, uint8_t* g8, uint8_t* b8)
 {
     *r8 = unpack_channel5_to_8((uint8_t)(packed & 0x1Fu));
     *g8 = unpack_channel5_to_8((uint8_t)((packed >> 5) & 0x1Fu));
@@ -102,8 +100,7 @@ void render_texture_pool_reset(void);
  * @return Хэндл (index+1) или RENDER_TEXTURE_INVALID при отказе
  *         (пул полон / арена исчерпана / невалидные параметры).
  */
-TextureHandle render_texture_acquire(uint32_t w, uint32_t h,
-                                     const uint8_t* pixels,
+TextureHandle render_texture_acquire(uint32_t w, uint32_t h, const uint8_t* pixels,
                                      const uint16_t* palette);
 
 /** Освобождение слота по хэндлу (пиксели возвращаются в арену). */

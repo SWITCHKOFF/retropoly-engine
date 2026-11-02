@@ -10,13 +10,15 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace
-{
+namespace {
 
 alignas(64) uint8_t g_storage[512];
 alignas(64) uint8_t g_other_storage[128];
 
-uintptr_t address_of(const void* pointer) { return reinterpret_cast<uintptr_t>(pointer); }
+uintptr_t address_of(const void* pointer)
+{
+    return reinterpret_cast<uintptr_t>(pointer);
+}
 
 } // namespace
 

@@ -49,8 +49,7 @@ typedef struct RenderTriCmd
  * Фиксированный command buffer кадра. Команды — тривиально конвертируемые
  * POD; буфер линейный, записи плотные (без выравнивания-паддингов).
  */
-class CommandBuffer
-{
+class CommandBuffer {
 public:
     CommandBuffer() { reset(); }
 

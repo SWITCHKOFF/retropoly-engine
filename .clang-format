@@ -14,6 +14,18 @@ IndentCaseLabels: true
 AllowShortFunctionsOnASingleLine: InlineOnly
 AllowShortIfStatementsOnASingleLine: WithoutElse
 AllowShortLoopsOnASingleLine: false
-SortIncludes: CaseSensitive
-SpaceAfterCStyleCast: true
+SortIncludes: Never # порядок include-блоков — курируемый (проектные группы).
+SpaceAfterCStyleCast: false # касты без пробела: (uint8_t)(c5 & ...) — стиль кода.
 FixNamespaceComments: true
+# Хвостовые комментарии: «Leave» — рукописные выравнивания доку-блоков
+# (struct-поля; /**< */) и однопробельные // — не переносятся автоматом.
+AlignTrailingComments:
+  Kind: Leave
+# Отличие кода от Google-свода: определения (typedef/struct/enum/function)
+# — скобка на НОВОЙ строке; стейтменты (if/for/while) — на той же.
+BreakBeforeBraces: Custom
+BraceWrapping:
+  AfterFunction: true
+  AfterStruct: true
+  AfterEnum: true
+  AfterControlStatement: Never

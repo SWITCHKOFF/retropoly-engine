@@ -46,10 +46,8 @@ typedef int32_t fixed_t;
  */
 static inline int64_t fixed_sat_add_i64(int64_t a, int64_t b)
 {
-    if (b > 0 && a > INT64_MAX - b)
-        return INT64_MAX;
-    if (b < 0 && a < INT64_MIN - b)
-        return INT64_MIN;
+    if (b > 0 && a > INT64_MAX - b) return INT64_MAX;
+    if (b < 0 && a < INT64_MIN - b) return INT64_MIN;
     return a + b;
 }
 
@@ -65,10 +63,8 @@ static inline int64_t fixed_sat_add_i64(int64_t a, int64_t b)
  */
 static inline fixed_t fixed_clamp_i64(int64_t v)
 {
-    if (v > INT32_MAX)
-        return INT32_MAX;
-    if (v < INT32_MIN)
-        return INT32_MIN;
+    if (v > INT32_MAX) return INT32_MAX;
+    if (v < INT32_MIN) return INT32_MIN;
     return (fixed_t)v;
 }
 
@@ -93,7 +89,10 @@ static inline fixed_t fixed_from_int(int32_t v)
  * @param v Значение float.
  * @return 1 — конечное значение (не NaN, не ±Inf); 0 — иначе.
  */
-static inline int fixed_float_isfinite(float v) { return (v == v) && (v - v == 0.0f); }
+static inline int fixed_float_isfinite(float v)
+{
+    return (v == v) && (v - v == 0.0f);
+}
 
 /**
  * Формирование fixed_t из числа с плавающей точкой (host-конверсия).
@@ -107,13 +106,10 @@ static inline int fixed_float_isfinite(float v) { return (v == v) && (v - v == 0
  */
 static inline fixed_t fixed_from_float(float v)
 {
-    if (!fixed_float_isfinite(v))
-        return 0;
+    if (!fixed_float_isfinite(v)) return 0;
     const double scaled = (double)v * (double)FIXED_ONE;
-    if (scaled >= (double)INT32_MAX)
-        return INT32_MAX;
-    if (scaled <= (double)INT32_MIN)
-        return INT32_MIN;
+    if (scaled >= (double)INT32_MAX) return INT32_MAX;
+    if (scaled <= (double)INT32_MIN) return INT32_MIN;
     return (fixed_t)scaled;
 }
 
@@ -123,7 +119,10 @@ static inline fixed_t fixed_from_float(float v)
  * @param v Значение в представлении 16.16.
  * @return Целая часть v (truncation toward zero).
  */
-static inline int32_t fixed_to_int(fixed_t v) { return v / FIXED_ONE; }
+static inline int32_t fixed_to_int(fixed_t v)
+{
+    return v / FIXED_ONE;
+}
 
 /**
  * Конверсия fixed_t в float (host-конверсия; для тестов и отладки).
@@ -131,7 +130,10 @@ static inline int32_t fixed_to_int(fixed_t v) { return v / FIXED_ONE; }
  * @param v Значение в представлении 16.16.
  * @return Аппроксимация v во float (погрешность ≤ 1/2 LSB).
  */
-static inline float fixed_to_float(fixed_t v) { return (float)v / (float)FIXED_ONE; }
+static inline float fixed_to_float(fixed_t v)
+{
+    return (float)v / (float)FIXED_ONE;
+}
 
 /**
  * Насыщающее сложение. Промежуточное значение — int64_t.
@@ -182,8 +184,7 @@ static inline fixed_t fixed_mul(fixed_t a, fixed_t b)
  */
 static inline fixed_t fixed_div(fixed_t a, fixed_t b)
 {
-    if (b == 0)
-    {
+    if (b == 0) {
         assert(!"fixed_div: division by zero");
         return a >= 0 ? INT32_MAX : INT32_MIN;
     }

@@ -38,10 +38,8 @@ TEST(TextureRgb555, PackStpBitTogglesBit15Only)
 TEST(TextureRgb555, PackMasksOverrangeInputs)
 {
     // Компоненты маскируются к 5 битам (безопасный контракт).
-    EXPECT_EQ(pack_rgb555_stp(32, 33, 34, false),
-              pack_rgb555_stp(0, 1, 2, false));
-    EXPECT_EQ(pack_rgb555_stp(255, 255, 255, false),
-              pack_rgb555_stp(31, 31, 31, false));
+    EXPECT_EQ(pack_rgb555_stp(32, 33, 34, false), pack_rgb555_stp(0, 1, 2, false));
+    EXPECT_EQ(pack_rgb555_stp(255, 255, 255, false), pack_rgb555_stp(31, 31, 31, false));
 }
 
 TEST(TextureRgb555, UnpackChannel5To8Ps1Expansion)
@@ -95,15 +93,14 @@ void fill_fixture(TestFixtureData* fixture)
         fixture->pixels[i] = (uint8_t)(i & 0xFFu);
     }
     for (uint32_t i = 0u; i < 256u; ++i) {
-        fixture->palette[i] = pack_rgb555_stp((uint8_t)i, (uint8_t)(i >> 1),
-                                              (uint8_t)(255u - i), true);
+        fixture->palette[i] =
+            pack_rgb555_stp((uint8_t)i, (uint8_t)(i >> 1), (uint8_t)(255u - i), true);
     }
 }
 
 } // namespace
 
-class TexturePoolTest : public ::testing::Test
-{
+class TexturePoolTest : public ::testing::Test {
 protected:
     void SetUp() override
     {
@@ -116,8 +113,7 @@ protected:
 
 TEST_F(TexturePoolTest, AcquireStoresDimensionsAndCopiesData)
 {
-    const TextureHandle h =
-        render_texture_acquire(64, 64, fixture_.pixels, fixture_.palette);
+    const TextureHandle h = render_texture_acquire(64, 64, fixture_.pixels, fixture_.palette);
     ASSERT_NE(h, RENDER_TEXTURE_INVALID);
     EXPECT_EQ(render_texture_width(h), 64u);
     EXPECT_EQ(render_texture_height(h), 64u);
@@ -134,25 +130,20 @@ TEST_F(TexturePoolTest, AcquireStoresDimensionsAndCopiesData)
 TEST_F(TexturePoolTest, AcquireRejectsMalformedInput)
 {
     // NULL-входы (Failure policy: malformed reject before dereference).
-    EXPECT_EQ(render_texture_acquire(64, 64, NULL, fixture_.palette),
-              RENDER_TEXTURE_INVALID);
-    EXPECT_EQ(render_texture_acquire(64, 64, fixture_.pixels, NULL),
-              RENDER_TEXTURE_INVALID);
+    EXPECT_EQ(render_texture_acquire(64, 64, NULL, fixture_.palette), RENDER_TEXTURE_INVALID);
+    EXPECT_EQ(render_texture_acquire(64, 64, fixture_.pixels, NULL), RENDER_TEXTURE_INVALID);
     // Границы размера: 0 и > RENDER_TEXTURE_MAX_DIM.
     EXPECT_EQ(render_texture_acquire(0, 64, fixture_.pixels, fixture_.palette),
               RENDER_TEXTURE_INVALID);
     EXPECT_EQ(render_texture_acquire(64, 0, fixture_.pixels, fixture_.palette),
               RENDER_TEXTURE_INVALID);
-    EXPECT_EQ(
-        render_texture_acquire(257, 64, fixture_.pixels, fixture_.palette),
-        RENDER_TEXTURE_INVALID);
-    EXPECT_EQ(
-        render_texture_acquire(64, 257, fixture_.pixels, fixture_.palette),
-        RENDER_TEXTURE_INVALID);
+    EXPECT_EQ(render_texture_acquire(257, 64, fixture_.pixels, fixture_.palette),
+              RENDER_TEXTURE_INVALID);
+    EXPECT_EQ(render_texture_acquire(64, 257, fixture_.pixels, fixture_.palette),
+              RENDER_TEXTURE_INVALID);
     // 256×256 — на границе, ДОПУСТИМО (без содержимого в арена влезет
     // ровно одна: 65536 байт из 131072).
-    EXPECT_EQ(render_texture_acquire(256, 256, fixture_.pixels,
-                                     fixture_.palette),
+    EXPECT_EQ(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
               1u); // Первый хэндл = slot 0 + 1.
 }
 
@@ -173,8 +164,7 @@ TEST_F(TexturePoolTest, SlotsExhaustToLimitAndRefuse)
 {
     TextureHandle handles[RENDER_TEXTURE_MAX];
     for (uint32_t i = 0u; i < RENDER_TEXTURE_MAX; ++i) {
-        handles[i] = render_texture_acquire(8, 8, fixture_.pixels,
-                                            fixture_.palette);
+        handles[i] = render_texture_acquire(8, 8, fixture_.pixels, fixture_.palette);
         ASSERT_NE(handles[i], RENDER_TEXTURE_INVALID);
         EXPECT_EQ(handles[i], i + 1u); // Хэндл = index + 1 (контракт).
     }
@@ -186,15 +176,12 @@ TEST_F(TexturePoolTest, SlotsExhaustToLimitAndRefuse)
 TEST_F(TexturePoolTest, ArenaExhaustRefuses)
 {
     // Арена 128 KiB: одна 256×256 (64 KiB) + вторая — ровно 128 KiB.
-    EXPECT_NE(render_texture_acquire(256, 256, fixture_.pixels,
-                                     fixture_.palette),
+    EXPECT_NE(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
               RENDER_TEXTURE_INVALID);
-    EXPECT_NE(render_texture_acquire(256, 256, fixture_.pixels,
-                                     fixture_.palette),
+    EXPECT_NE(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
               RENDER_TEXTURE_INVALID);
     // Третья — явный отказ: арена исчерпана, никакого silent drop.
-    EXPECT_EQ(render_texture_acquire(256, 256, fixture_.pixels,
-                                     fixture_.palette),
+    EXPECT_EQ(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
               RENDER_TEXTURE_INVALID);
     // Частичное место (1 байт) не создаёт текстуру 2×256 (512 байт).
     EXPECT_EQ(render_texture_acquire(2, 256, fixture_.pixels, fixture_.palette),
@@ -203,8 +190,7 @@ TEST_F(TexturePoolTest, ArenaExhaustRefuses)
 
 TEST_F(TexturePoolTest, ReleaseFreesSlotForReuse)
 {
-    const TextureHandle first =
-        render_texture_acquire(16, 16, fixture_.pixels, fixture_.palette);
+    const TextureHandle first = render_texture_acquire(16, 16, fixture_.pixels, fixture_.palette);
     ASSERT_NE(first, RENDER_TEXTURE_INVALID);
 
     render_texture_release(first);
@@ -213,16 +199,14 @@ TEST_F(TexturePoolTest, ReleaseFreesSlotForReuse)
     EXPECT_EQ(render_texture_width(first), 0u);
 
     // Слот переиспользуется (same handle value — first-fit).
-    const TextureHandle second =
-        render_texture_acquire(16, 16, fixture_.pixels, fixture_.palette);
+    const TextureHandle second = render_texture_acquire(16, 16, fixture_.pixels, fixture_.palette);
     ASSERT_NE(second, RENDER_TEXTURE_INVALID);
     EXPECT_EQ(second, first);
 }
 
 TEST_F(TexturePoolTest, DoubleReleaseIsSafeNoOp)
 {
-    const TextureHandle h =
-        render_texture_acquire(16, 16, fixture_.pixels, fixture_.palette);
+    const TextureHandle h = render_texture_acquire(16, 16, fixture_.pixels, fixture_.palette);
     ASSERT_NE(h, RENDER_TEXTURE_INVALID);
     render_texture_release(h);
     render_texture_release(h); // Повторное освобождение — no-op.

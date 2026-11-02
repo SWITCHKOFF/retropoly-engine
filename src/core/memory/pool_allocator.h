@@ -31,9 +31,8 @@
  * @tparam T Тип хранимого объекта (POD, trivially destructible).
  * @tparam N Ёмкость пула: 1..65535 (индекс free-list — uint16_t).
  */
-template<typename T, size_t N>
-class Pool
-{
+template <typename T, size_t N>
+class Pool {
 public:
     static_assert(N > 0, "Pool capacity must be non-zero");
     static_assert(N <= 65535, "Pool capacity must fit uint16_t free-list index");
@@ -59,8 +58,7 @@ public:
      */
     T* allocate()
     {
-        if (m_free_head == 0xFFFFu)
-            return nullptr;
+        if (m_free_head == 0xFFFFu) return nullptr;
 
         const uint16_t index = m_free_head;
         m_free_head = m_indices[index];
@@ -80,22 +78,18 @@ public:
      */
     bool deallocate(T* ptr)
     {
-        if (ptr == nullptr)
-            return false;
+        if (ptr == nullptr) return false;
 
         const uintptr_t pointer = reinterpret_cast<uintptr_t>(ptr);
         const uintptr_t begin = reinterpret_cast<uintptr_t>(&m_objects[0]);
         const uintptr_t end = begin + sizeof(m_objects);
-        if (pointer < begin || pointer >= end)
-            return false;
+        if (pointer < begin || pointer >= end) return false;
 
         const uintptr_t byte_offset = pointer - begin;
-        if (byte_offset % sizeof(T) != 0)
-            return false;
+        if (byte_offset % sizeof(T) != 0) return false;
 
         const size_t index = static_cast<size_t>(byte_offset / sizeof(T));
-        if (index >= N || !m_allocated[index])
-            return false;
+        if (index >= N || !m_allocated[index]) return false;
 
         m_allocated[index] = false;
         m_indices[index] = m_free_head;
@@ -109,13 +103,11 @@ public:
      *
      * @param func Функтор, принимающий T& (может изменять объект).
      */
-    template<typename Func>
+    template <typename Func>
     void for_each(Func&& func)
     {
-        for (size_t i = 0; i < N; ++i)
-        {
-            if (m_allocated[i])
-                func(m_objects[i]);
+        for (size_t i = 0; i < N; ++i) {
+            if (m_allocated[i]) func(m_objects[i]);
         }
     }
 
@@ -124,13 +116,11 @@ public:
      *
      * @param func Функтор, принимающий const T&.
      */
-    template<typename Func>
+    template <typename Func>
     void for_each(Func&& func) const
     {
-        for (size_t i = 0; i < N; ++i)
-        {
-            if (m_allocated[i])
-                func(m_objects[i]);
+        for (size_t i = 0; i < N; ++i) {
+            if (m_allocated[i]) func(m_objects[i]);
         }
     }
 

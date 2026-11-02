@@ -14,8 +14,7 @@
 #include <stdio.h>
 #include <string.h>
 
-namespace
-{
+namespace {
 
 /// Чтение журнала целиком (валидные размеры — файл ограничен тестом).
 bool read_log_file(char* out, unsigned long out_size)

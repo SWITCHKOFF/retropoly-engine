@@ -25,8 +25,7 @@
  * Не владеет буфером. Поддерживает вложенные кадры через mark()/pop():
  * pop освобождает всё, что было выделено после соответствующего marker.
  */
-class StackAllocator
-{
+class StackAllocator {
 public:
     /** Снимок состояния аллокатора для отката. */
     struct Marker
@@ -60,8 +59,7 @@ public:
     {
         if (m_buffer == nullptr || alignment == 0 || (alignment & (alignment - 1)) != 0)
             return nullptr;
-        if (m_offset > m_capacity)
-            return nullptr;
+        if (m_offset > m_capacity) return nullptr;
 
         const uintptr_t base = reinterpret_cast<uintptr_t>(m_buffer);
         const uintptr_t current = base + static_cast<uintptr_t>(m_offset);
@@ -70,10 +68,8 @@ public:
         const size_t padding = (alignment - misalignment) & (alignment - 1);
 
         const size_t remaining = m_capacity - m_offset;
-        if (padding > remaining)
-            return nullptr;
-        if (size > remaining - padding)
-            return nullptr;
+        if (padding > remaining) return nullptr;
+        if (size > remaining - padding) return nullptr;
 
         void* result = m_buffer + m_offset + padding;
         m_offset += padding + size;
@@ -96,10 +92,8 @@ public:
      */
     bool pop(Marker marker)
     {
-        if (marker.owner != this)
-            return false;
-        if (marker.offset > m_offset || marker.offset > m_capacity)
-            return false;
+        if (marker.owner != this) return false;
+        if (marker.offset > m_offset || marker.offset > m_capacity) return false;
         m_offset = marker.offset;
         return true;
     }

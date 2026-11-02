@@ -52,8 +52,7 @@ bool Platform_Init(void)
     SDL_GL_SetAttribute(SDL_GL_CONTEXT_PROFILE_MASK, SDL_GL_CONTEXT_PROFILE_CORE);
     SDL_GL_SetAttribute(SDL_GL_DOUBLEBUFFER, 1);
 
-    s_window = SDL_CreateWindow("RetroEngine", 1280, 960,
-                                SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
+    s_window = SDL_CreateWindow("RetroEngine", 1280, 960, SDL_WINDOW_OPENGL | SDL_WINDOW_RESIZABLE);
     if (s_window == nullptr) {
         hal_platform_teardown();
         return false;

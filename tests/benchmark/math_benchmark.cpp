@@ -17,8 +17,7 @@ static void BM_FixedMul(benchmark::State& state)
     // выход подавляется DoNotOptimize (детерминированная измеримая замкнутость).
     const fixed_t a = fixed_from_int(123);
     const fixed_t b = fixed_from_int(456);
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         const fixed_t c = fixed_mul(a, b);
         benchmark::DoNotOptimize(c);
     }
@@ -28,8 +27,7 @@ BENCHMARK(BM_FixedMul);
 static void BM_Vec3Normalize(benchmark::State& state)
 {
     const Vec3 v = vec3_make(fixed_from_int(3), fixed_from_int(4), fixed_from_int(5));
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         const Vec3 n = vec3_normalize(v);
         benchmark::DoNotOptimize(n);
     }
@@ -43,8 +41,7 @@ static void BM_Mat4Multiply(benchmark::State& state)
     Mat4 out;
     mat4_rotate_z(&rotate, FIXED_HALF_PI / 3);
     mat4_translate(&translate, fixed_from_int(1), fixed_from_int(2), fixed_from_int(3));
-    for (auto _ : state)
-    {
+    for (auto _ : state) {
         mat4_multiply(&out, &translate, &rotate);
         benchmark::DoNotOptimize(out);
     }

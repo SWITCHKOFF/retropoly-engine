@@ -54,13 +54,13 @@ void Log_Shutdown(void)
 static const char* log_level_tag(LogLevel level)
 {
     switch (level) {
-    case LOG_LEVEL_INFO:
-        return "INFO";
-    case LOG_LEVEL_WARNING:
-        return "WARNING";
-    case LOG_LEVEL_ERROR:
-    default:
-        return "ERROR";
+        case LOG_LEVEL_INFO:
+            return "INFO";
+        case LOG_LEVEL_WARNING:
+            return "WARNING";
+        case LOG_LEVEL_ERROR:
+        default:
+            return "ERROR";
     }
 }
 #endif // PLATFORM_PC

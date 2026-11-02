@@ -42,21 +42,19 @@ void render_texture_pool_reset(void)
     s_texture_arena_used = 0u;
 }
 
-TextureHandle render_texture_acquire(uint32_t w, uint32_t h,
-                                     const uint8_t* pixels,
+TextureHandle render_texture_acquire(uint32_t w, uint32_t h, const uint8_t* pixels,
                                      const uint16_t* palette)
 {
     // Валидация параметров ДО любой записи (Failure policy: malformed
     // input reject before dereference); переполнение арифметики — в uint64.
-    if (w == 0u || h == 0u || w > RENDER_TEXTURE_MAX_DIM
-        || h > RENDER_TEXTURE_MAX_DIM || pixels == NULL || palette == NULL) {
+    if (w == 0u || h == 0u || w > RENDER_TEXTURE_MAX_DIM || h > RENDER_TEXTURE_MAX_DIM ||
+        pixels == NULL || palette == NULL) {
         return RENDER_TEXTURE_INVALID;
     }
 
     const uint64_t bytes_u64 = (uint64_t)w * (uint64_t)h;
-    if (bytes_u64 > 0xFFFFFFFFull
-        || (uint64_t)s_texture_arena_used + bytes_u64
-               > RENDER_TEXTURE_POOL_BYTES) {
+    if (bytes_u64 > 0xFFFFFFFFull ||
+        (uint64_t)s_texture_arena_used + bytes_u64 > RENDER_TEXTURE_POOL_BYTES) {
         return RENDER_TEXTURE_INVALID; // Арена исчерпана — явный отказ.
     }
 
@@ -96,8 +94,7 @@ void render_texture_release(TextureHandle handle)
 uint32_t render_texture_width(TextureHandle handle)
 {
     const uint32_t index = (uint32_t)handle;
-    if (index == 0u || index > RENDER_TEXTURE_MAX
-        || !s_textures[index - 1u].occupied) {
+    if (index == 0u || index > RENDER_TEXTURE_MAX || !s_textures[index - 1u].occupied) {
         return 0u;
     }
     return s_textures[index - 1u].width;
@@ -106,8 +103,7 @@ uint32_t render_texture_width(TextureHandle handle)
 uint32_t render_texture_height(TextureHandle handle)
 {
     const uint32_t index = (uint32_t)handle;
-    if (index == 0u || index > RENDER_TEXTURE_MAX
-        || !s_textures[index - 1u].occupied) {
+    if (index == 0u || index > RENDER_TEXTURE_MAX || !s_textures[index - 1u].occupied) {
         return 0u;
     }
     return s_textures[index - 1u].height;
@@ -116,8 +112,7 @@ uint32_t render_texture_height(TextureHandle handle)
 const uint8_t* render_texture_pixels(TextureHandle handle)
 {
     const uint32_t index = (uint32_t)handle;
-    if (index == 0u || index > RENDER_TEXTURE_MAX
-        || !s_textures[index - 1u].occupied) {
+    if (index == 0u || index > RENDER_TEXTURE_MAX || !s_textures[index - 1u].occupied) {
         return NULL;
     }
     return s_texture_arena + s_textures[index - 1u].arena_offset;
@@ -126,8 +121,7 @@ const uint8_t* render_texture_pixels(TextureHandle handle)
 const uint16_t* render_texture_palette(TextureHandle handle)
 {
     const uint32_t index = (uint32_t)handle;
-    if (index == 0u || index > RENDER_TEXTURE_MAX
-        || !s_textures[index - 1u].occupied) {
+    if (index == 0u || index > RENDER_TEXTURE_MAX || !s_textures[index - 1u].occupied) {
         return NULL;
     }
     return s_texture_palettes[index - 1u];

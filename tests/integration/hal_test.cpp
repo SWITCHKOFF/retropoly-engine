@@ -35,8 +35,7 @@ extern "C" const char* __lsan_default_suppressions(void)
            "leak:libGL\n";
 }
 
-namespace
-{
+namespace {
 
 /// Headless-обнаружение только для Linux канонизируется репозиторием (CI).
 bool display_available()
@@ -44,8 +43,7 @@ bool display_available()
 #if defined(__linux__)
     const char* x11 = getenv("DISPLAY");
     const char* wayland = getenv("WAYLAND_DISPLAY");
-    return (x11 != nullptr && x11[0] != '\0') ||
-           (wayland != nullptr && wayland[0] != '\0');
+    return (x11 != nullptr && x11[0] != '\0') || (wayland != nullptr && wayland[0] != '\0');
 #else
     return true;
 #endif
@@ -136,7 +134,7 @@ TEST(Hal, AudioStubLifecycleAndBeep)
 
 TEST(HalFileSystem, LoadsValidFileRoundtrip)
 {
-    static const uint8_t payload[] = { 0x01u, 0x02u, 0x7Fu, 0xFFu };
+    static const uint8_t payload[] = {0x01u, 0x02u, 0x7Fu, 0xFFu};
 
     FILE* file = fopen(TEST_FILE_NAME, "wb");
     ASSERT_NE(file, nullptr);

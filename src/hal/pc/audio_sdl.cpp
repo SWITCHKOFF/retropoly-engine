@@ -63,9 +63,8 @@ static void hal_audio_fill(uint8_t* buffer, int count)
     }
     const int frequency = SDL_GetAtomicInt(&s_beep_frequency);
     int samples_left = SDL_GetAtomicInt(&s_beep_samples_left);
-    const bool tone_active = (frequency >= 1 &&
-                              (uint32_t)frequency <= AUDIO_BEEP_MAX_FREQUENCY &&
-                              samples_left > 0);
+    const bool tone_active =
+        (frequency >= 1 && (uint32_t)frequency <= AUDIO_BEEP_MAX_FREQUENCY && samples_left > 0);
 
     for (int i = 0; i < count; ++i) {
         if (!tone_active || samples_left <= 0) {
@@ -73,9 +72,8 @@ static void hal_audio_fill(uint8_t* buffer, int count)
             continue;
         }
         const uint32_t period = (uint32_t)(AUDIO_SAMPLE_RATE / frequency);
-        buffer[i] = (s_wave_phase < period / 2u)
-                        ? (uint8_t)(128u + AUDIO_BEEP_AMPLITUDE)
-                        : (uint8_t)(128u - AUDIO_BEEP_AMPLITUDE);
+        buffer[i] = (s_wave_phase < period / 2u) ? (uint8_t)(128u + AUDIO_BEEP_AMPLITUDE)
+                                                 : (uint8_t)(128u - AUDIO_BEEP_AMPLITUDE);
         ++s_wave_phase;
         if (s_wave_phase >= period) {
             s_wave_phase = 0u;
@@ -97,9 +95,8 @@ static void SDLCALL hal_audio_callback(void* userdata, SDL_AudioStream* stream,
 
     uint8_t buffer[AUDIO_CHUNK_BYTES];
     while (additional_amount > 0) {
-        const int chunk = (additional_amount < AUDIO_CHUNK_BYTES)
-                              ? additional_amount
-                              : AUDIO_CHUNK_BYTES;
+        const int chunk =
+            (additional_amount < AUDIO_CHUNK_BYTES) ? additional_amount : AUDIO_CHUNK_BYTES;
         hal_audio_fill(buffer, chunk);
         if (!SDL_PutAudioStreamData(stream, buffer, chunk)) {
             return; // прерывает request-цикл (без блокировок)
@@ -127,8 +124,8 @@ bool Audio_Init(void)
     spec.channels = 1;
 
     const SDL_AudioStreamCallback callback = hal_audio_callback;
-    s_stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK,
-                                         &spec, callback, nullptr);
+    s_stream =
+        SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec, callback, nullptr);
     if (s_stream == nullptr) {
         return false; // аудио-девайс недоступен — сервис молчит (не crash)
     }
@@ -157,13 +154,12 @@ void Audio_Shutdown(void)
 
 void Audio_PlayBeep(uint32_t frequency, uint32_t duration_ms)
 {
-    if (s_stream == nullptr || frequency == 0u ||
-        frequency > AUDIO_BEEP_MAX_FREQUENCY || duration_ms == 0u) {
+    if (s_stream == nullptr || frequency == 0u || frequency > AUDIO_BEEP_MAX_FREQUENCY ||
+        duration_ms == 0u) {
         return;
     }
 
-    const uint64_t samples =
-        (uint64_t)duration_ms * (uint64_t)AUDIO_SAMPLE_RATE / 1000u;
+    const uint64_t samples = (uint64_t)duration_ms * (uint64_t)AUDIO_SAMPLE_RATE / 1000u;
     if (samples > (uint64_t)2147483647) {
         return; // переполнение int-атомики — отказ (чистая тишина)
     }

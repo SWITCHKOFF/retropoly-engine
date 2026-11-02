@@ -9,8 +9,7 @@
 
 #include <stdint.h>
 
-namespace
-{
+namespace {
 
 struct PoolItem
 {
@@ -49,8 +48,7 @@ TEST(PoolAllocator, OutOfMemory)
     Pool<PoolItem, 4> pool;
     PoolItem* slots[4] = {};
 
-    for (size_t i = 0; i < 4; ++i)
-    {
+    for (size_t i = 0; i < 4; ++i) {
         slots[i] = pool.allocate();
         ASSERT_NE(slots[i], nullptr);
         slots[i]->id = static_cast<uint32_t>(i);
@@ -68,8 +66,7 @@ TEST(PoolAllocator, IteratesOnlyLiveObjects)
 {
     Pool<PoolItem, 8> pool;
     PoolItem* slots[4] = {};
-    for (uint32_t i = 0; i < 4; ++i)
-    {
+    for (uint32_t i = 0; i < 4; ++i) {
         slots[i] = pool.allocate();
         ASSERT_NE(slots[i], nullptr);
         slots[i]->id = i + 1;
@@ -116,8 +113,7 @@ TEST(PoolAllocator, StressAllocFreeCycles)
     Pool<PoolItem, 256> pool;
     PoolItem* slots[256] = {};
 
-    for (size_t i = 0; i < 256; ++i)
-    {
+    for (size_t i = 0; i < 256; ++i) {
         slots[i] = pool.allocate();
         ASSERT_NE(slots[i], nullptr);
         slots[i]->id = static_cast<uint32_t>(i);
@@ -129,17 +125,14 @@ TEST(PoolAllocator, StressAllocFreeCycles)
         EXPECT_TRUE(pool.deallocate(slots[i]));
 
     size_t free_count = 0;
-    for (size_t i = 0; i < 256; ++i)
-    {
-        if (i % 3 == 0)
-        {
+    for (size_t i = 0; i < 256; ++i) {
+        if (i % 3 == 0) {
             ++free_count;
         }
     }
 
     PoolItem* refilled[256] = {};
-    for (size_t i = 0; i < free_count; ++i)
-    {
+    for (size_t i = 0; i < free_count; ++i) {
         refilled[i] = pool.allocate();
         ASSERT_NE(refilled[i], nullptr);
     }
@@ -148,18 +141,15 @@ TEST(PoolAllocator, StressAllocFreeCycles)
     for (size_t i = 0; i < free_count; ++i)
         EXPECT_TRUE(pool.deallocate(refilled[i]));
 
-    for (size_t i = 0; i < 256; ++i)
-    {
-        if (i % 3 != 0)
-        {
+    for (size_t i = 0; i < 256; ++i) {
+        if (i % 3 != 0) {
             EXPECT_TRUE(pool.deallocate(slots[i]));
         }
     }
 
     EXPECT_EQ(pool.used(), 0u);
 
-    for (uint32_t cycle = 0; cycle < 10000; ++cycle)
-    {
+    for (uint32_t cycle = 0; cycle < 10000; ++cycle) {
         PoolItem* item = pool.allocate();
         ASSERT_NE(item, nullptr);
         item->id = cycle;

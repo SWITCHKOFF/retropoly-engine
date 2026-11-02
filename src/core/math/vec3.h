@@ -32,7 +32,10 @@ typedef struct
  * @param z Компонента Z (16.16).
  * @return Сформированный вектор.
  */
-static inline Vec3 vec3_make(fixed_t x, fixed_t y, fixed_t z) { return Vec3{x, y, z}; }
+static inline Vec3 vec3_make(fixed_t x, fixed_t y, fixed_t z)
+{
+    return Vec3{x, y, z};
+}
 
 /**
  * Компонентное сложение (насыщающее, через fixed_add).
@@ -83,12 +86,12 @@ static inline Vec3 vec3_scale(Vec3 v, fixed_t s)
  * @return (a0·b0 + a1·b1 + a2·b2) / 2^16 с однократным насыщением.
  */
 static inline fixed_t fixed_reduce3_products(fixed_t a0, fixed_t a1, fixed_t a2, fixed_t b0,
-    fixed_t b1, fixed_t b2)
+                                             fixed_t b1, fixed_t b2)
 {
     // Полные Q16.16-произведения держим до окончания всей редукции.
-    const int64_t acc = fixed_sat_add_i64(
-        fixed_sat_add_i64((int64_t)a0 * (int64_t)b0, (int64_t)a1 * (int64_t)b1),
-        (int64_t)a2 * (int64_t)b2);
+    const int64_t acc =
+        fixed_sat_add_i64(fixed_sat_add_i64((int64_t)a0 * (int64_t)b0, (int64_t)a1 * (int64_t)b1),
+                          (int64_t)a2 * (int64_t)b2);
     return fixed_clamp_i64(acc / FIXED_ONE);
 }
 
@@ -130,7 +133,10 @@ static inline Vec3 vec3_cross(Vec3 a, Vec3 b)
  * @param v Вектор.
  * @return |v|² в 16.16.
  */
-static inline fixed_t vec3_length_sq(Vec3 v) { return vec3_dot(v, v); }
+static inline fixed_t vec3_length_sq(Vec3 v)
+{
+    return vec3_dot(v, v);
+}
 
 /**
  * Длина вектора (детерминированный integer sqrt; fixed_sqrt).

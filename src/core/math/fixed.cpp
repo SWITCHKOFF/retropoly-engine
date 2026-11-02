@@ -12,13 +12,11 @@
 
 fixed_t fixed_sqrt(fixed_t v)
 {
-    if (v < 0)
-    {
+    if (v < 0) {
         assert(!"fixed_sqrt: negative input");
         return 0;
     }
-    if (v == 0)
-        return 0;
+    if (v == 0) return 0;
 
     // √(V/2^16) = √(V·2^16)/2^16: подкоренное есть V, сдвинутое на число
     // дробных бит представления 16.16. V ≤ 2^31−1 → V·2^16 < 2^47.
@@ -30,15 +28,11 @@ fixed_t fixed_sqrt(fixed_t v)
 
     // Классический побитовый алгоритм: ровно 24 шага при любом входе
     // (bounded iteration) — no division, no float, no data-dependent loops.
-    while (bit != 0)
-    {
-        if (num >= result + bit)
-        {
+    while (bit != 0) {
+        if (num >= result + bit) {
             num -= result + bit;
             result = (result >> 1) + bit;
-        }
-        else
-        {
+        } else {
             result >>= 1;
         }
         bit >>= 2;
