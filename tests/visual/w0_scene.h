@@ -76,6 +76,19 @@ const uint8_t* w0_make_checker_pixels(uint32_t* out_w, uint32_t* out_h);
 const uint16_t* w0_make_checker_palette(void);
 
 /**
+ * CI8-текстура вертикального палитрового шва (64×64, недели 15–16):
+ * texel x < 32 → индекс 0, x ≥ 32 → индекс 1 (точная реплика
+ * model_forecast в render_golden_test.cpp). Спец-текстура числового
+ * affine-конформанса: palитровый шов на наклонной плоскости высверливает
+ * расхождение affine/perspective UV точной координатой seam-стрейка.
+ *
+ * @param out_w Выход: ширина (64).
+ * @param out_h Выход: высота (64).
+ * @return Указатель на статический пиксель-массив CI8.
+ */
+const uint8_t* w0_make_seam_pixels(uint32_t* out_w, uint32_t* out_h);
+
+/**
  * Проспект-матрицы W0-камеры (фиксированные): view — gluLookAt
  * (позиция (0,0,5), цель (0,0,0), up (0,1,0) — камера смотрит вдоль −Z);
  * projection — gluPerspective (fov 60°, aspect 4:3, near 1, far 100).

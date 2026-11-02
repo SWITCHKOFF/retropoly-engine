@@ -69,9 +69,8 @@ void hal_render_backend_begin_frame(uint8_t r, uint8_t g, uint8_t b);
  * @param palette Указатель на 256×u16 RGB555+STP (не NULL).
  * @return true при успехе; false — отказ GL.
  */
-bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w,
-                                       uint32_t h, const uint8_t* pixels_ci8,
-                                       const uint16_t* palette);
+bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_t h,
+                                       const uint8_t* pixels_ci8, const uint16_t* palette);
 
 /** Удаление GPU-текстуры по хэндлу (идемпотентно; невалидные — no-op). */
 void hal_render_backend_destroy_texture(TextureHandle handle);
@@ -98,8 +97,8 @@ void hal_render_backend_clear(uint8_t r, uint8_t g, uint8_t b);
  * @param texture Хэндл ядровой CI8-текстуры или RENDER_TEXTURE_INVALID.
  * @return true при успехе; false при GL-отказе/невалидной текстуре.
  */
-bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3],
-                                      const float* mvp_gl, TextureHandle texture);
+bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], const float* mvp_gl,
+                                      TextureHandle texture);
 
 /**
  * Завершение кадра: выкладка reference-FBO на окно (fullscreen quad,
@@ -116,3 +115,18 @@ void hal_render_backend_end_frame(void);
  * @return true при успехе; false — отказ GL или невалидный буфер.
  */
 bool hal_render_backend_read_pixels(uint8_t* dst_rgba8, uint32_t dst_size);
+
+/**
+ * Инвентарь draw-команд текущего кадра (weeks 15–16, substitute RenderDoc):
+ * каждый поданный треугольник = 1 draw-команда (glDrawArrays на 3
+ * вершины), выкладка reference-FBO на окно = 1 draw-команда (fullscreen
+ * quad). Счётчик сбрасывается в BeginFrame; кадр без-submit (после
+ * reject) = ровно 1 (только present).
+ *
+ * Замена ручной RenderDoc-верификации («draw calls корректны», критерий
+ * приёмки sprint_07_08): точное число подача читается программно, до
+ * единицы draw — детерминированно и повторяемо.
+ *
+ * @return Число draw-команд glDraw* с последнего begin_frame.
+ */
+uint32_t hal_render_backend_draw_call_count(void);
