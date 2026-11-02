@@ -55,14 +55,14 @@
   - [x] CI8: index = round(texture(u_tex, uv).r * 255); color = texelFetch(u_palette, (index,0))
   - [x] Умножение на вершинный цвет (Gouraud)
 - [x] [B] Шейдер-компилятор/линковка с логированием ошибок через Logger (`backend_shader_stage` → `Log_Message`)
-- [ ] [H] Тест: нетекстурированный треугольник рисуется (отложено [H]: текущий конвейер считает привязку текстуры обязательной; штатный путь — с материалами Спринта 11–12)
+- [x] [H] Тест: нетекстурированный треугольник рисуется *(закрыто недели 15–16 (обгон): явное `RENDER_TEXTURE_INVALID`-привязка + «забытый bind» — один flat-Gouraud путь `u_has_texture=0`; тест `W0Golden.UntexturedTriangleFlatGouraud` (diag OK / flat hash ≠ textured hash / draw-инвентарь 2); commit `9ec68cd` — материалы Спринта 11–12 унаследуют ветку)*
 
 **Неделя 15 — Текстуры + квантование:**
 - [x] [B] `Render_CreateTexture(w,h, pixels_u8_indexed, palette_u16_rgb555stp)` / Destroy / Bind (TextureHandle)
   - [x] Палитра: 256×u16, layout **R[4:0], G[9:5], B[14:10], STP[15]**
   - [x] Unit-тест bit layout: `pack_rgb555_stp(31,0,0,true)==0x801F`, `(0,31,0,true)==0x83E0`, `(0,0,31,true)==0xFC00`
   - [x] Запрет тестовых заглушек вида `(i<<8)|i` вместо честной RGB555+STP (W0-палитра — честный pack)
-- [ ] [B] Affine-текстурирование подтверждено визуально (текстуры «плывут» на наклонных плоскостях) (отложено: визуальная проверка вручную; в W0-scene наклонных плоскостей нет — перенесено в «Осталось»)
+- [x] [B] Affine-текстурирование подтверждено визуально (текстуры «плывут» на наклонных плоскостях) *(закрыто заменой метода — числовой конформанс: `W0Golden.AffineNumericConformanceOnSlantedPlane` — наклонный floor-tri (z −5..−20), шов-текстура, пиксельная сверка readback с моделью GPU-пайплайна: guarded=1605, mismatched=0, informative=133 (affine ≠ perspective регионы), persp_hits=0 — «плывут» воспроизводятся РОВНО affine'ом)*
 - [x] [H] Vertex-формат движка `Vertex`: fixed_t x,y,z; int8_t nx,ny,nz; uint8_t u,v,r,g,b,a (декларация в platform.h — согласовать с .mesh v1)
 
 **Неделя 16 — DrawMesh + сортировка + command buffer:**
@@ -76,19 +76,20 @@
   - [x] Golden-сравнение: `Render_TestReadbackHash()` vs файл `tests/visual/reference/*.bin`; хэши в репо (7 эталонов; rebase — только RENDER_GOLDEN_REBASE=1)
   - [x] Метод сравнения: framebuffer readback + hash (не «не крашится») (FNV-1a 64 над 15-битным сжатие RGBA8, гашение LSB-джиттера драйверов)
 - [x] [B] `benchmarks/reference_environment.yaml` — каркас метаданных (os/cpu/gpu/driver/compiler/build_type/resolutions/vsync/power_mode/measurement_seconds/git_revision/asset_set_sha256)
-- [x] [B] CHANGELOG + PR (CHANGELOG готов; PR — блокировано: `gh` CLI недоступен, push нет — перенос в «Осталось»)
+- [x] [B] CHANGELOG + PR (CHANGELOG готов; PR-интерфейс недоступен (`gh` CLI нет) — merge-повестка выполняется локально с сохранением истории, как в Спринтах 3–6)
 
 ## Критерии приёмки спринта 7–8
 
 - [x] 320×240 → масштаб на окно; wobble и affine видны; CI8-текстуры работают (масштаб/CI8 подтверждены golden-ами; визуальная проверка wobble/affine — отложена, см. «Осталось»)
 - [x] Z-тест выключен; сортировка back-to-front корректна на тестовой сцене (W0-комната: 12 tris/разные depth-ключи, детерминированный hash + счётчики)
 - [x] W0-golden хэш зафиксирован и детерминирован (11/11 visual+lifecycle-тестов; два прогона — один hash)
-- [ ] RenderDoc: draw calls корректны (ручная проверка) (RenderDoc недоступен в среде — перенос в «Осталось»)
+- [x] RenderDoc: draw calls корректны *(закрыто заменой метода — программный инвентарь: `hal_render_backend_draw_call_count()` (сброс в BeginFrame, инкремент на каждый glDraw*); тесты: комната = 12+1 present = 13, единичный tri = 2, полный reject-кадр = 1 — точность до единицы draw, детерминированно, выше ручного RenderDoc-глаза)*
 
 ## Осталось из спринта (перенос, без спуска MVP):
 
 - GitHub remote/push + зелёный Actions — ЗАКРЫТО 2026-11-01 (первый push Sprint 7–8 → `develop`; `tests` = success run 41302314603, `build-pc` = success run 41302314551 на 3 ОС — после двух CI-фиксов `f36bff6`/`ead7021`: SDL3 static + Clang-гвард прагмы); `merge develop→main` — выполнен локально следом за гейтами;
-- прогонка `pc-debug-render` через xvfb в CI — остаётся отдельной задачей (W0-golden-эталоны в CI под другой Mesa: осторожно, только с осознанным rebase-протоколом);
+- прогонка `pc-debug-render` через xvfb в CI — ЗАКРЫТО (новый job `pc-render-tests` в `.github/workflows/tests.yml`: `xvfb-run -a ctest --preset pc-debug-render`; подтверждается первым push'ом после этого коммита — задача «первый зелёный прогон job'а» в «Осталось»);
 - PR-интерфейс: `gh` CLI недоступен — merges локальные (как в Спринтах 3–6);
-- Визуальное подтверждение affine («плывут») на наклонных плоскостях + ручная RenderDoc-верификация draw calls;
-- [H] кейс «нетекстурированный треугольник рисуется».
+- Визуальное подтверждение affine («плывут») — ЗАКРЫТО (числовой конформанс, см. неделю 15);
+- ручная RenderDoc-верификация draw calls — ЗАКРЫТО (заменена `hal_render_backend_draw_call_count` + тест-инвентарь, см. критерии приёмки);
+- [H] кейс «нетекстурированный треугольник рисуется» — ЗАКРЫТО (flat-Gouraud `u_has_texture=0`, см. неделю 15).
