@@ -60,6 +60,9 @@ static GLuint s_draw_vao = 0;        ///< Vertex-array подачи.
 static GLuint s_present_vbo = 0;     ///< Статический quad выкладки.
 static GLuint s_present_vao = 0;     ///< Vertex-array выкладки.
 
+/// Инвентарь draw-команд текущего кадра (weeks 15–16; reset в begin_frame).
+static uint32_t s_gl_draw_calls = 0u;
+
 /// GPU-клоны ядровых текстур (index slot = handle − 1).
 static GpuTexture s_gpu_textures[RENDER_TEXTURE_MAX];
 
@@ -67,6 +70,7 @@ static GpuTexture s_gpu_textures[RENDER_TEXTURE_MAX];
 static GLint s_emu_u_mvp = -1;
 static GLint s_emu_u_texture_index = -1;
 static GLint s_emu_u_palette = -1;
+static GLint s_emu_u_has_texture = -1;
 static GLint s_present_u_framebuffer = -1;
 
 /** Число float на вершину подачи: pos(3) + uv(2) + rgba(4). */
@@ -96,8 +100,7 @@ static bool backend_gl_check(const char* stage)
 {
     const GLenum error = glGetError();
     if (error != GL_NO_ERROR) {
-        Log_Message(LOG_LEVEL_ERROR, "render",
-                    "GL error 0x%x on %s", (unsigned)error, stage);
+        Log_Message(LOG_LEVEL_ERROR, "render", "GL error 0x%x on %s", (unsigned)error, stage);
         return false;
     }
     return true;
@@ -114,17 +117,15 @@ static bool backend_gl_check(const char* stage)
  * @param attach Двухэлементный массив шейдеров (линковка).
  * @return GL-объект (shader или program) или 0 (отказ с журналом).
  */
-static GLuint backend_shader_stage(const char* stage, const char* name,
-                                   GLenum type, const char* source,
-                                   const GLuint attach[2])
+static GLuint backend_shader_stage(const char* stage, const char* name, GLenum type,
+                                   const char* source, const GLuint attach[2])
 {
     const bool is_compile = (source != NULL);
     GLuint object = 0;
     if (is_compile) {
         object = glCreateShader(type);
         if (object == 0) {
-            Log_Message(LOG_LEVEL_ERROR, "render",
-                        "glCreateShader failed (%s %s)", stage, name);
+            Log_Message(LOG_LEVEL_ERROR, "render", "glCreateShader failed (%s %s)", stage, name);
             return 0;
         }
         glShaderSource(object, 1, &source, NULL);
@@ -135,8 +136,7 @@ static GLuint backend_shader_stage(const char* stage, const char* name,
             char log[512];
             GLsizei log_len = 0;
             glGetShaderInfoLog(object, (GLsizei)sizeof(log), &log_len, log);
-            Log_Message(LOG_LEVEL_ERROR, "render",
-                        "shader %s compile failed: %.*s", name,
+            Log_Message(LOG_LEVEL_ERROR, "render", "shader %s compile failed: %.*s", name,
                         (int)log_len, log);
             glDeleteShader(object);
             return 0;
@@ -144,8 +144,7 @@ static GLuint backend_shader_stage(const char* stage, const char* name,
     } else {
         object = glCreateProgram();
         if (object == 0) {
-            Log_Message(LOG_LEVEL_ERROR, "render",
-                        "glCreateProgram failed (%s)", name);
+            Log_Message(LOG_LEVEL_ERROR, "render", "glCreateProgram failed (%s)", name);
             return 0;
         }
         glAttachShader(object, attach[0]);
@@ -157,8 +156,7 @@ static GLuint backend_shader_stage(const char* stage, const char* name,
             char log[512];
             GLsizei log_len = 0;
             glGetProgramInfoLog(object, (GLsizei)sizeof(log), &log_len, log);
-            Log_Message(LOG_LEVEL_ERROR, "render",
-                        "program %s link failed: %.*s", name,
+            Log_Message(LOG_LEVEL_ERROR, "render", "program %s link failed: %.*s", name,
                         (int)log_len, log);
             glDeleteProgram(object);
             return 0;
@@ -176,14 +174,11 @@ static GLuint backend_shader_stage(const char* stage, const char* name,
  * @param frag_src Источник пиксельного шейдера.
  * @return GL-программа или 0 (отказ компиляции/линковки).
  */
-static GLuint backend_build_program(const char* name, const char* vert_src,
-                                    const char* frag_src)
+static GLuint backend_build_program(const char* name, const char* vert_src, const char* frag_src)
 {
     backend_gl_sweep();
-    const GLuint vert = backend_shader_stage(
-        "compile", name, GL_VERTEX_SHADER, vert_src, NULL);
-    const GLuint frag = backend_shader_stage(
-        "compile", name, GL_FRAGMENT_SHADER, frag_src, NULL);
+    const GLuint vert = backend_shader_stage("compile", name, GL_VERTEX_SHADER, vert_src, NULL);
+    const GLuint frag = backend_shader_stage("compile", name, GL_FRAGMENT_SHADER, frag_src, NULL);
     if (vert == 0 || frag == 0) {
         if (vert != 0) {
             glDeleteShader(vert);
@@ -194,8 +189,7 @@ static GLuint backend_build_program(const char* name, const char* vert_src,
         return 0;
     }
     const GLuint attach[2] = {vert, frag};
-    const GLuint program =
-        backend_shader_stage("link", name, 0, NULL, attach);
+    const GLuint program = backend_shader_stage("link", name, 0, NULL, attach);
     glDeleteShader(vert);
     glDeleteShader(frag);
     if (program == 0) {
@@ -218,15 +212,14 @@ static GLuint backend_build_program(const char* name, const char* vert_src,
  * @param data Данные (w×h×компоненты); NULL — без данных (FBO).
  * @return GL-текстура или 0 (отказ).
  */
-static GLuint backend_upload_texture(uint32_t w, uint32_t h,
-                                     GLint internal_format, GLenum format,
+static GLuint backend_upload_texture(uint32_t w, uint32_t h, GLint internal_format, GLenum format,
                                      const void* data)
 {
     GLuint texture = 0;
     glGenTextures(1, &texture);
     glBindTexture(GL_TEXTURE_2D, texture);
-    glTexImage2D(GL_TEXTURE_2D, 0, internal_format, (GLsizei)w, (GLsizei)h, 0,
-                 format, GL_UNSIGNED_BYTE, data);
+    glTexImage2D(GL_TEXTURE_2D, 0, internal_format, (GLsizei)w, (GLsizei)h, 0, format,
+                 GL_UNSIGNED_BYTE, data);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
     glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -251,8 +244,7 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     SDL_Window* window = hal_pc_window();
     if (window == NULL) {
         // Окно/GL-контекст отсутствуют (Platform_Init обязан их создать).
-        Log_Message(LOG_LEVEL_ERROR, "render",
-                    "backend_init: окно/GL-контекст отсутствуют");
+        Log_Message(LOG_LEVEL_ERROR, "render", "backend_init: окно/GL-контекст отсутствуют");
         return false;
     }
 
@@ -266,14 +258,12 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     glDisable(GL_CULL_FACE);  // Backface-cull — зона ядра (PS1-семантика).
 
     // --- Шейдерные программы (компиляция/линковка через Logger) ----------
-    s_emu_program = backend_build_program("ps1_emu", RPE_PS1_EMU_VERT_SRC,
-                                          RPE_PS1_EMU_FRAG_SRC);
+    s_emu_program = backend_build_program("ps1_emu", RPE_PS1_EMU_VERT_SRC, RPE_PS1_EMU_FRAG_SRC);
     if (s_emu_program == 0) {
         return false;
     }
     s_present_program =
-        backend_build_program("ps1_present", RPE_PS1_PRESENT_VERT_SRC,
-                              RPE_PS1_PRESENT_FRAG_SRC);
+        backend_build_program("ps1_present", RPE_PS1_PRESENT_VERT_SRC, RPE_PS1_PRESENT_FRAG_SRC);
     if (s_present_program == 0) {
         glDeleteProgram(s_emu_program);
         s_emu_program = 0;
@@ -283,30 +273,27 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     // Числовые unit-привязки фиксированы (GL usage).
     glUseProgram(s_emu_program);
     s_emu_u_mvp = glGetUniformLocation(s_emu_program, "u_mvp");
-    s_emu_u_texture_index =
-        glGetUniformLocation(s_emu_program, "u_texture_index");
+    s_emu_u_texture_index = glGetUniformLocation(s_emu_program, "u_texture_index");
     s_emu_u_palette = glGetUniformLocation(s_emu_program, "u_palette");
+    s_emu_u_has_texture = glGetUniformLocation(s_emu_program, "u_has_texture");
     glUniform1i(s_emu_u_texture_index, 0); // unit 0 = CI8-индексы.
     glUniform1i(s_emu_u_palette, 1);       // unit 1 = палитра 256×1.
+    glUniform1i(s_emu_u_has_texture, 0);   // Старт: нетекстурированный Gouraud.
 
     glUseProgram(s_present_program);
-    s_present_u_framebuffer =
-        glGetUniformLocation(s_present_program, "u_framebuffer");
+    s_present_u_framebuffer = glGetUniformLocation(s_present_program, "u_framebuffer");
     glUniform1i(s_present_u_framebuffer, 0); // unit 0 = FBO-текстура.
 
     // --- Reference FBO 320×240 (RGBA8, БЕЗ depth) ------------------------
-    s_fbo_texture = backend_upload_texture(width, height, GL_RGBA8, GL_RGBA,
-                                          NULL);
+    s_fbo_texture = backend_upload_texture(width, height, GL_RGBA8, GL_RGBA, NULL);
     if (s_fbo_texture == 0) {
         return false;
     }
     glGenFramebuffers(1, &s_fbo);
     glBindFramebuffer(GL_FRAMEBUFFER, s_fbo);
-    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0,
-                           GL_TEXTURE_2D, s_fbo_texture, 0);
+    glFramebufferTexture2D(GL_FRAMEBUFFER, GL_COLOR_ATTACHMENT0, GL_TEXTURE_2D, s_fbo_texture, 0);
     if (glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-        Log_Message(LOG_LEVEL_ERROR, "render",
-                    "reference FBO incomplete (0x%x)",
+        Log_Message(LOG_LEVEL_ERROR, "render", "reference FBO incomplete (0x%x)",
                     (unsigned)glCheckFramebufferStatus(GL_FRAMEBUFFER));
         return false;
     }
@@ -316,29 +303,22 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     glBindVertexArray(s_draw_vao);
     glGenBuffers(1, &s_draw_vbo);
     glBindBuffer(GL_ARRAY_BUFFER, s_draw_vbo);
-    glBufferData(GL_ARRAY_BUFFER,
-                 (GLsizeiptr)(3u * BACKEND_VERTEX_FLOATS * sizeof(float)),
-                 NULL, GL_DYNAMIC_DRAW);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)(3u * BACKEND_VERTEX_FLOATS * sizeof(float)), NULL,
+                 GL_DYNAMIC_DRAW);
 
     const GLsizei stride = (GLsizei)(BACKEND_VERTEX_FLOATS * sizeof(float));
     glEnableVertexAttribArray(0); // a_position vec3
     glVertexAttribPointer(0, 3, GL_FLOAT, GL_FALSE, stride, (void*)0);
     glEnableVertexAttribArray(1); // a_texcoord vec2
-    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride,
-                          (void*)(uintptr_t)(3u * sizeof(float)));
+    glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, stride, (void*)(uintptr_t)(3u * sizeof(float)));
     glEnableVertexAttribArray(2); // a_color vec4
-    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride,
-                          (void*)(uintptr_t)(5u * sizeof(float)));
+    glVertexAttribPointer(2, 4, GL_FLOAT, GL_FALSE, stride, (void*)(uintptr_t)(5u * sizeof(float)));
 
     // --- VAO+VBO выкладки (fullscreen quad, 6 вершин, pos+uv) ------------
     static const float quad[36] = {
         // x, y (NDC) | u, v (FBO UV)
-        -1.0f, -1.0f, 0.0f, 0.0f,
-        +1.0f, -1.0f, 1.0f, 0.0f,
-        +1.0f, +1.0f, 1.0f, 1.0f,
-        -1.0f, -1.0f, 0.0f, 0.0f,
-        +1.0f, +1.0f, 1.0f, 1.0f,
-        -1.0f, +1.0f, 0.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, +1.0f, -1.0f, 1.0f, 0.0f, +1.0f, +1.0f, 1.0f, 1.0f,
+        -1.0f, -1.0f, 0.0f, 0.0f, +1.0f, +1.0f, 1.0f, 1.0f, -1.0f, +1.0f, 0.0f, 1.0f,
     };
     glGenVertexArrays(1, &s_present_vao);
     glBindVertexArray(s_present_vao);
@@ -346,8 +326,7 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     glBindBuffer(GL_ARRAY_BUFFER, s_present_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(quad), quad, GL_STATIC_DRAW);
     glEnableVertexAttribArray(0); // a_position vec2
-    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
-                          (void*)0);
+    glVertexAttribPointer(0, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float), (void*)0);
     glEnableVertexAttribArray(1); // a_texcoord vec2
     glVertexAttribPointer(1, 2, GL_FLOAT, GL_FALSE, 4 * sizeof(float),
                           (void*)(uintptr_t)(2u * sizeof(float)));
@@ -365,8 +344,7 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     }
 
     s_backend_inited = true;
-    Log_Message(LOG_LEVEL_INFO, "render",
-                "backend PC GL init: FBO %ux%u, depth off, nearest",
+    Log_Message(LOG_LEVEL_INFO, "render", "backend PC GL init: FBO %ux%u, depth off, nearest",
                 (unsigned)width, (unsigned)height);
     return true;
 }
@@ -444,10 +422,10 @@ void hal_render_backend_begin_frame(uint8_t r, uint8_t g, uint8_t b)
     if (!s_backend_inited) {
         return;
     }
+    s_gl_draw_calls = 0u; // Инвентарь draw-команд — по кадру.
     glBindFramebuffer(GL_FRAMEBUFFER, s_fbo);
     glViewport(0, 0, (GLsizei)s_fb_w, (GLsizei)s_fb_h);
-    glClearColor((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f,
-                 1.0f);
+    glClearColor((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     (void)backend_gl_check("begin_frame");
 }
@@ -460,55 +438,46 @@ void hal_render_backend_clear(uint8_t r, uint8_t g, uint8_t b)
     // Немедленная очистка ТЕКУЩЕГО назначения (FBO во время кадра; без
     // активного кадра — окно; назначение выбирается state'ом рендера;
     // Render_Clear между кадрами двигает clear state, кадр — переназначает).
-    glClearColor((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f,
-                 1.0f);
+    glClearColor((float)r / 255.0f, (float)g / 255.0f, (float)b / 255.0f, 1.0f);
     glClear(GL_COLOR_BUFFER_BIT);
     (void)backend_gl_check("clear");
 }
 
-bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w,
-                                       uint32_t h, const uint8_t* pixels_ci8,
-                                       const uint16_t* palette)
+bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_t h,
+                                       const uint8_t* pixels_ci8, const uint16_t* palette)
 {
-    if (!s_backend_inited || handle == RENDER_TEXTURE_INVALID
-        || handle > RENDER_TEXTURE_MAX) {
+    if (!s_backend_inited || handle == RENDER_TEXTURE_INVALID || handle > RENDER_TEXTURE_MAX) {
         return false;
     }
     const uint32_t slot = (uint32_t)handle - 1u;
-    if (s_gpu_textures[slot].index_texture != 0
-        || s_gpu_textures[slot].palette_texture != 0) {
+    if (s_gpu_textures[slot].index_texture != 0 || s_gpu_textures[slot].palette_texture != 0) {
         return false; // GPU-клон уже существует (повторное создание — отказ).
     }
     // Валидация данных ядра (malformed input reject before dereference;
     // пиксели CI8 ограничены пулом ядра 256×256 — RENDER_TEXTURE_MAX_DIM).
-    if (pixels_ci8 == NULL || palette == NULL || w == 0u || h == 0u
-        || w > RENDER_TEXTURE_MAX_DIM || h > RENDER_TEXTURE_MAX_DIM) {
+    if (pixels_ci8 == NULL || palette == NULL || w == 0u || h == 0u || w > RENDER_TEXTURE_MAX_DIM ||
+        h > RENDER_TEXTURE_MAX_DIM) {
         return false;
     }
 
     backend_gl_sweep();
     // CI8-индексы: GL_R8 (0..255 — точный; R8 core 3.0+).
-    const GLuint index_texture = backend_upload_texture(
-        w, h, GL_R8, GL_RED, pixels_ci8);
+    const GLuint index_texture = backend_upload_texture(w, h, GL_R8, GL_RED, pixels_ci8);
     if (index_texture == 0) {
-        Log_Message(LOG_LEVEL_ERROR, "render",
-                    "texture upload failed (indexes)");
+        Log_Message(LOG_LEVEL_ERROR, "render", "texture upload failed (indexes)");
         return false;
     }
 
     // Палитра 256×1 RGB8: честный unpack PS1 (5→8 бит, §1.2.5).
     uint8_t palette_rgb[256 * 3];
     for (uint32_t i = 0u; i < 256u; ++i) {
-        unpack_rgb555_stp(palette[i], &palette_rgb[i * 3u + 0u],
-                          &palette_rgb[i * 3u + 1u],
+        unpack_rgb555_stp(palette[i], &palette_rgb[i * 3u + 0u], &palette_rgb[i * 3u + 1u],
                           &palette_rgb[i * 3u + 2u]);
     }
-    const GLuint palette_texture =
-        backend_upload_texture(256u, 1u, GL_RGB8, GL_RGB, palette_rgb);
+    const GLuint palette_texture = backend_upload_texture(256u, 1u, GL_RGB8, GL_RGB, palette_rgb);
     if (palette_texture == 0) {
         glDeleteTextures(1, &index_texture);
-        Log_Message(LOG_LEVEL_ERROR, "render",
-                    "texture upload failed (palette)");
+        Log_Message(LOG_LEVEL_ERROR, "render", "texture upload failed (palette)");
         return false;
     }
 
@@ -520,8 +489,7 @@ bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w,
 
 void hal_render_backend_destroy_texture(TextureHandle handle)
 {
-    if (!s_backend_inited || handle == RENDER_TEXTURE_INVALID
-        || handle > RENDER_TEXTURE_MAX) {
+    if (!s_backend_inited || handle == RENDER_TEXTURE_INVALID || handle > RENDER_TEXTURE_MAX) {
         return; // Безопасно.
     }
     const uint32_t slot = (uint32_t)handle - 1u;
@@ -535,27 +503,35 @@ void hal_render_backend_destroy_texture(TextureHandle handle)
     }
 }
 
-bool hal_render_backend_draw_triangle(
-    const HalRenderBackendVertex vertices[3], const float* mvp_gl,
-    TextureHandle texture)
+bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], const float* mvp_gl,
+                                      TextureHandle texture)
 {
-    if (!s_backend_inited || vertices == NULL || mvp_gl == NULL
-        || texture == RENDER_TEXTURE_INVALID
-        || texture > RENDER_TEXTURE_MAX) {
+    if (!s_backend_inited || vertices == NULL || mvp_gl == NULL || texture > RENDER_TEXTURE_MAX) {
         return false;
     }
-    const uint32_t slot = (uint32_t)texture - 1u;
-    if (s_gpu_textures[slot].index_texture == 0
-        || s_gpu_textures[slot].palette_texture == 0) {
-        return false; // Текстура не создана/gl-клон отсутствует.
+    // texture == RENDER_TEXTURE_INVALID — норма: нетекстурированный
+    // Gouraud (u_has_texture = 0, недели 15–16); семпл не выполняется.
+    const bool textured = (texture != RENDER_TEXTURE_INVALID);
+    uint32_t slot = 0u;
+    if (textured) {
+        slot = (uint32_t)texture - 1u;
+        if (s_gpu_textures[slot].index_texture == 0 || s_gpu_textures[slot].palette_texture == 0) {
+            return false; // Текстура не создана/gl-клон отсутствует.
+        }
     }
 
     backend_gl_sweep();
     glUseProgram(s_emu_program);
-    glActiveTexture(GL_TEXTURE0);
-    glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].index_texture);
-    glActiveTexture(GL_TEXTURE1);
-    glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].palette_texture);
+    if (textured) {
+        glActiveTexture(GL_TEXTURE0);
+        glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].index_texture);
+        glActiveTexture(GL_TEXTURE1);
+        glBindTexture(GL_TEXTURE_2D, s_gpu_textures[slot].palette_texture);
+        glUniform1i(s_emu_u_has_texture, 1);
+    } else {
+        // Flat-путь: юниты не перевязываются (ветка семпла не берётся).
+        glUniform1i(s_emu_u_has_texture, 0);
+    }
     glUniformMatrix4fv(s_emu_u_mvp, 1, GL_FALSE, mvp_gl);
 
     // Конверсия вершины в interleaved float-строку (pos3 uv2 rgba4).
@@ -575,6 +551,7 @@ bool hal_render_backend_draw_triangle(
     glBindBuffer(GL_ARRAY_BUFFER, s_draw_vbo);
     glBufferData(GL_ARRAY_BUFFER, sizeof(packed), packed, GL_DYNAMIC_DRAW);
     glDrawArrays(GL_TRIANGLES, 0, 3);
+    ++s_gl_draw_calls;
 
     if (glGetError() != GL_NO_ERROR) {
         // Явная ошибка per-draw failure (никакой silent drop).
@@ -606,6 +583,7 @@ void hal_render_backend_end_frame(void)
     glBindTexture(GL_TEXTURE_2D, s_fbo_texture);
     glBindVertexArray(s_present_vao);
     glDrawArrays(GL_TRIANGLES, 0, 6);
+    ++s_gl_draw_calls;
 
     // Возврат к нейтральному состоянию (следующий кадр добавляет всё).
     glUseProgram(0);
@@ -625,11 +603,16 @@ bool hal_render_backend_read_pixels(uint8_t* dst_rgba8, uint32_t dst_size)
     }
     backend_gl_sweep();
     glBindFramebuffer(GL_READ_FRAMEBUFFER, s_fbo);
-    glReadPixels(0, 0, (GLsizei)s_fb_w, (GLsizei)s_fb_h, GL_RGBA,
-                 GL_UNSIGNED_BYTE, dst_rgba8);
+    glReadPixels(0, 0, (GLsizei)s_fb_w, (GLsizei)s_fb_h, GL_RGBA, GL_UNSIGNED_BYTE, dst_rgba8);
     const bool ok = backend_gl_check("read_pixels");
     glBindFramebuffer(GL_READ_FRAMEBUFFER, 0);
     return ok;
+}
+
+uint32_t hal_render_backend_draw_call_count(void)
+{
+    // До backend-init — 0 (backend_gl_draw_calls инициализируется statics).
+    return s_gl_draw_calls;
 }
 
 // ---------------------------------------------------------------------------

@@ -10,12 +10,14 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace
-{
+namespace {
 
 alignas(64) uint8_t g_storage[512];
 
-uintptr_t address_of(const void* pointer) { return reinterpret_cast<uintptr_t>(pointer); }
+uintptr_t address_of(const void* pointer)
+{
+    return reinterpret_cast<uintptr_t>(pointer);
+}
 
 } // namespace
 
@@ -41,8 +43,7 @@ TEST(LinearAllocator, AlignmentUsesReturnedAddress)
 {
     LinearAllocator allocator(g_storage, sizeof(g_storage));
 
-    for (size_t alignment = 1; alignment <= 64; alignment <<= 1)
-    {
+    for (size_t alignment = 1; alignment <= 64; alignment <<= 1) {
         void* pointer = allocator.allocate(1, alignment);
         ASSERT_NE(pointer, nullptr) << "alignment = " << alignment;
         EXPECT_EQ(address_of(pointer) % alignment, 0u) << "alignment = " << alignment;

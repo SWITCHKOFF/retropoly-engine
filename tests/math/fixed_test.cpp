@@ -18,8 +18,7 @@
 #include <climits>
 #include <random>
 
-namespace
-{
+namespace {
 
 /** Абсолютная погрешность в представлениях 16.16 (2.0 raw ≈ 3.05e-5). */
 inline double abs_error_raw(fixed_t actual, double expected_raw)
@@ -53,8 +52,7 @@ TEST(Fixed, FromIntSaturates)
 TEST(Fixed, RoundTripToInt)
 {
     const int32_t values[] = {0, 1, -1, 5, -5, 100, -100, 32767, -32768};
-    for (int32_t v : values)
-    {
+    for (int32_t v : values) {
         EXPECT_EQ(fixed_to_int(fixed_from_int(v)), v) << "v = " << v;
     }
 }
@@ -141,7 +139,7 @@ TEST(Fixed, MultiplyUsesQ16_16Scale)
     EXPECT_EQ(fixed_mul(fixed_from_int(-5), fixed_from_int(-7)), fixed_from_int(35));
     // Усечение к нулю в масштабе Q16.16.
     EXPECT_NEAR(fixed_to_float(fixed_mul(fixed_from_float(1.3f), fixed_from_float(2.7f))),
-        1.3 * 2.7, 0.001);
+                1.3 * 2.7, 0.001);
 }
 
 TEST(Fixed, MultiplySaturates)
@@ -196,12 +194,10 @@ TEST(Fixed, AccuracyStressTestMul)
     std::uniform_int_distribution<int32_t> dist(-k_range, k_range);
 
     double max_error = 0.0;
-    for (int i = 0; i < 10000; ++i)
-    {
+    for (int i = 0; i < 10000; ++i) {
         const fixed_t a = dist(rng);
         const fixed_t b = dist(rng);
-        const double expected =
-            (static_cast<double>(a) * static_cast<double>(b)) / 65536.0;
+        const double expected = (static_cast<double>(a) * static_cast<double>(b)) / 65536.0;
         const fixed_t actual = fixed_mul(a, b);
         max_error = std::max(max_error, abs_error_raw(actual, expected));
     }
@@ -215,12 +211,10 @@ TEST(Fixed, AccuracyStressTestDiv)
     std::uniform_int_distribution<int32_t> dist(-k_range, k_range);
 
     double max_error = 0.0;
-    for (int i = 0; i < 10000; ++i)
-    {
+    for (int i = 0; i < 10000; ++i) {
         const fixed_t a = dist(rng);
         const fixed_t b = dist(rng);
-        if (b == 0)
-        {
+        if (b == 0) {
             continue; // детерминированный пропуск нулевого делителя (контракт div)
         }
         const double expected = (static_cast<double>(a) * 65536.0) / static_cast<double>(b);
@@ -239,11 +233,10 @@ TEST(Fixed, DeterminismSameInputSameRawOutput)
     const fixed_t a = fixed_from_float(1.234567f);
     const fixed_t b = fixed_mul(a, INT32_MAX);
     // Один и тот же вход → побитно идентичный raw-выход (независимо от вызова).
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(fixed_mul(a, INT32_MAX), b);
         EXPECT_EQ(fixed_add(fixed_div(a, fixed_from_int(3)), fixed_from_int(7)),
-            fixed_add(fixed_div(a, fixed_from_int(3)), fixed_from_int(7)));
+                  fixed_add(fixed_div(a, fixed_from_int(3)), fixed_from_int(7)));
     }
     // Независимое ожидание (ручная математика, не движок):
     // 123 × 456 = 56088 → 56088 × FIXED_ONE выходит за int32 → насыщение INT32_MAX.

@@ -13,8 +13,7 @@
 #include <cstdint>
 #include <climits>
 
-namespace
-{
+namespace {
 /** Абсолютный float-допуск теста (16.16 точность много меньше). */
 constexpr double k_tol = 0.01;
 
@@ -52,7 +51,7 @@ TEST(Trig, SinCosKnownAngles)
     const fixed_t ref = sin_fixed(FIXED_TWO_PI + FIXED_HALF_PI / 3);
     EXPECT_NEAR(fixed_to_float(ref), fixed_to_float(sin_fixed(FIXED_HALF_PI / 3)), k_tol);
     EXPECT_NEAR(fixed_to_float(sin_fixed(-FIXED_HALF_PI / 3)),
-        -fixed_to_float(sin_fixed(FIXED_HALF_PI / 3)), k_tol);
+                -fixed_to_float(sin_fixed(FIXED_HALF_PI / 3)), k_tol);
 
     // Большие углы: приведение остатком корректно (целочисленный rem — floor-мод).
     const fixed_t big = sin_fixed(7 * FIXED_TWO_PI + FIXED_HALF_PI / 4);
@@ -76,14 +75,12 @@ TEST(Mat4, IdentityNeutral)
     Mat4 san;
     san = translated; // числовая копия аргумента: побитное сравнение out/in
     mat4_multiply(&san, &san, &id);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(san.m[i], translated.m[i]) << "idx " << i;
     }
     san = rot;
     mat4_multiply(&san, &id, &san);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(san.m[i], rot.m[i]) << "idx " << i;
     }
 }
@@ -110,17 +107,17 @@ TEST(Mat4, MultiplyAssociativeOnFixedVectors)
     const Vec4 points[4] = {
         vec4_make(fixed_from_int(1), fixed_from_int(0), fixed_from_int(0), FIXED_ONE),
         vec4_make(fixed_from_int(0), fixed_from_int(3), fixed_from_int(-2), FIXED_ONE),
-        vec4_make(fixed_from_float(0.25f), fixed_from_float(-1.5f), fixed_from_float(2.75f), FIXED_ONE),
+        vec4_make(fixed_from_float(0.25f), fixed_from_float(-1.5f), fixed_from_float(2.75f),
+                  FIXED_ONE),
         vec4_make(fixed_from_int(7), fixed_from_int(11), fixed_from_int(13), FIXED_ONE),
     };
-    for (const Vec4 p : points)
-    {
+    for (const Vec4 p : points) {
         const Vec4 left = mat4_transform(&abc_left, p);
         const Vec4 right = mat4_transform(&abc_right, p);
         // Ассоциативность на фиксированных векторах: переход через расширенную
         // матрицу вводит округление ≤ 1 LSB на элемент → допуск 0.01.
         expect_near_vec4f(left, fixed_to_float(right.x), fixed_to_float(right.y),
-            fixed_to_float(right.z), fixed_to_float(right.w), k_tol);
+                          fixed_to_float(right.z), fixed_to_float(right.w), k_tol);
     }
 }
 
@@ -137,16 +134,14 @@ TEST(Mat4, MultiplyAliasingSafe)
     // out == первый аргумент.
     Mat4 first = a;
     mat4_multiply(&first, &first, &b);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(first.m[i], expected.m[i]) << "idx " << i;
     }
 
     // out == второй аргумент.
     Mat4 second = b;
     mat4_multiply(&second, &a, &second);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(second.m[i], expected.m[i]) << "idx " << i;
     }
 
@@ -156,8 +151,7 @@ TEST(Mat4, MultiplyAliasingSafe)
     mat4_multiply(&same, &same, &same);
     Mat4 id;
     mat4_identity(&id);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(same.m[i], id.m[i]) << "idx " << i;
     }
 }
@@ -208,7 +202,7 @@ TEST(Mat4, PerspectiveNearFarProjectCorrectly)
     const Mat4 proj = [&]() {
         Mat4 p;
         mat4_perspective(&p, fixed_from_float(1.0471976f), fixed_from_float(1.3333333f),
-            fixed_from_float(0.1f), fixed_from_int(100));
+                         fixed_from_float(0.1f), fixed_from_int(100));
         return p;
     }();
 
@@ -251,7 +245,7 @@ TEST(Mat4, LookAtViewsTarget)
 {
     Mat4 view;
     mat4_look_at(&view, vec3_make(0, 0, fixed_from_int(5)), vec3_make(0, 0, 0),
-        vec3_make(0, FIXED_ONE, 0));
+                 vec3_make(0, FIXED_ONE, 0));
 
     // Цель попадает на ось взгляда: view-пространство (0, 0, −5) (камера смотрит в −Z).
     const Vec4 vt = mat4_transform(&view, vec4_make(0, 0, 0, FIXED_ONE));
@@ -262,9 +256,9 @@ TEST(Mat4, LookAtViewsTarget)
     expect_near_vec4f(v1, 0.0, 0.0, -4.0, 1.0, k_tol);
 
     // Ортогональный базис: столбцы 0..2 попарно ортогональны (dot ≈ 0).
-    EXPECT_NEAR(fixed_to_float(vec3_dot(
-                    vec3_make(view.m[0], view.m[1], view.m[2]), vec3_make(view.m[4], view.m[5], view.m[6]))),
-        0.0, k_tol);
+    EXPECT_NEAR(fixed_to_float(vec3_dot(vec3_make(view.m[0], view.m[1], view.m[2]),
+                                        vec3_make(view.m[4], view.m[5], view.m[6]))),
+                0.0, k_tol);
 }
 
 // ----------------------------------------------------------------------------
@@ -285,15 +279,14 @@ TEST(Mat3, IdentityAndRotationSubset)
     mat3_from_mat4(&t3, &t4);
     Mat3 id3;
     mat3_identity(&id3);
-    for (int i = 0; i < 9; ++i)
-    {
+    for (int i = 0; i < 9; ++i) {
         EXPECT_EQ(t3.m[i], id3.m[i]) << "idx " << i;
     }
 
     // mat3_transform поворачивает как верхняя 3×3 Mat4.
     const Vec3 v3 = vec3_make(0, FIXED_ONE, 0);
     const Vec3 via4 = vec3_make(0, mat4_transform(&rot4, vec4_make(v3.x, v3.y, v3.z, FIXED_ONE)).y,
-        mat4_transform(&rot4, vec4_make(v3.x, v3.y, v3.z, FIXED_ONE)).z);
+                                mat4_transform(&rot4, vec4_make(v3.x, v3.y, v3.z, FIXED_ONE)).z);
     const Vec3 via3 = mat3_transform(&r3, v3);
     EXPECT_EQ(via3.x, via4.x);
     EXPECT_EQ(via3.y, via4.y);
@@ -304,48 +297,17 @@ TEST(Mat3, IdentityAndRotationSubset)
 // Детерминизм: побитная фиксация золотых векторов (golden vectors)
 // ----------------------------------------------------------------------------
 
-namespace
-{
+namespace {
 // Golden-векторы захвачены фактическим прогоном канонической сборки
 // (детерминированная Q16.16 арифметика; PC/PS1 требуют побитного равенства).
 // Фиксированная последовательность: T(1,2,3) · Rz(90°) · Perspective(60°,4:3,0.1,100).
 const fixed_t GOLDEN_G1[16] = {
-    -1,
-    65536,
-    0,
-    0,
-    -65536,
-    -1,
-    0,
-    0,
-    0,
-    0,
-    65536,
-    0,
-    65536,
-    131072,
-    196608,
-    65536,
+    -1, 65536, 0, 0, -65536, -1, 0, 0, 0, 0, 65536, 0, 65536, 131072, 196608, 65536,
 };
 const fixed_t GOLDEN_G2[16] = {
-    -1,
-    85134,
-    0,
-    0,
-    -113512,
-    -1,
-    0,
-    0,
-    -65536,
-    -131072,
-    -262275,
-    -65536,
-    0,
-    0,
-    -13119,
-    0,
+    -1, 85134, 0, 0, -113512, -1, 0, 0, -65536, -131072, -262275, -65536, 0, 0, -13119, 0,
 };
-const fixed_t GOLDEN_T[4] = { -17560, -219576, -537669, -131072 };
+const fixed_t GOLDEN_T[4] = {-17560, -219576, -537669, -131072};
 } // namespace
 
 TEST(Mat4, GoldenDeterminismRaw)
@@ -357,7 +319,7 @@ TEST(Mat4, GoldenDeterminismRaw)
     mat4_translate(&a, fixed_from_int(1), fixed_from_int(2), fixed_from_int(3));
     mat4_rotate_z(&b, FIXED_HALF_PI);
     mat4_perspective(&c, fixed_from_float(1.0471976f), fixed_from_float(1.3333333f),
-        fixed_from_float(0.1f), fixed_from_int(100));
+                     fixed_from_float(0.1f), fixed_from_int(100));
 
     Mat4 g1;
     Mat4 g2;
@@ -369,8 +331,7 @@ TEST(Mat4, GoldenDeterminismRaw)
     Mat4 again2;
     mat4_multiply(&again1, &a, &b);
     mat4_multiply(&again2, &again1, &c);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         EXPECT_EQ(again1.m[i], g1.m[i]) << "idx " << i;
         EXPECT_EQ(again2.m[i], g2.m[i]) << "idx " << i;
         EXPECT_EQ(g1.m[i], GOLDEN_G1[i]) << "idx " << i;
@@ -379,7 +340,7 @@ TEST(Mat4, GoldenDeterminismRaw)
 
     // Golden-вектор преобразования точки (0.5, −1.0, 2.0, 1) матрицей g2.
     const Vec4 v = vec4_make(fixed_from_float(0.5f), fixed_from_float(-1.0f),
-        fixed_from_float(2.0f), FIXED_ONE);
+                             fixed_from_float(2.0f), FIXED_ONE);
     const Vec4 t = mat4_transform(&g2, v);
     EXPECT_EQ(t.x, GOLDEN_T[0]);
     EXPECT_EQ(t.y, GOLDEN_T[1]);

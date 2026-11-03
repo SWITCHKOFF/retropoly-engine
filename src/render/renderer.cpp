@@ -83,16 +83,21 @@ static SortRef s_sort_refs[RENDER_SORT_MAX];
 static RenderDiagnostics s_diag;
 
 /** Фиксация кода последней диагностики. */
-static void render_diag(RenderDiag code) { s_diag.last_code = (uint32_t)code; }
+static void render_diag(RenderDiag code)
+{
+    s_diag.last_code = (uint32_t)code;
+}
 
-RenderDiagnostics render_diagnostics(void) { return s_diag; }
+RenderDiagnostics render_diagnostics(void)
+{
+    return s_diag;
+}
 
 // ---------------------------------------------------------------------------
 // Depth-контракт (§1.2.6 — normative, формат 1:1)
 // ---------------------------------------------------------------------------
 
-uint32_t depth_key_from_camera_z(int32_t camera_z, uint32_t depth_min,
-                                 uint32_t depth_max)
+uint32_t depth_key_from_camera_z(int32_t camera_z, uint32_t depth_min, uint32_t depth_max)
 {
     if (camera_z < 0) {
         return DEPTH_REJECT; // Без modulo; normative-вектор (−1 → REJECT).
@@ -153,8 +158,7 @@ static bool derive_near_far_from_projection(void)
     if (near_z <= 0 || far_z <= near_z) {
         return false;
     }
-    if (near_z == INT32_MAX || near_z == INT32_MIN || far_z == INT32_MAX
-        || far_z == INT32_MIN) {
+    if (near_z == INT32_MAX || near_z == INT32_MIN || far_z == INT32_MAX || far_z == INT32_MIN) {
         return false;
     }
 
@@ -164,8 +168,7 @@ static bool derive_near_far_from_projection(void)
     const int32_t near_units = fixed_to_int(s_near);
     const int32_t far_units = fixed_to_int(s_far);
     s_depth_min_units = (near_units > 0) ? (uint32_t)near_units : 0u;
-    s_depth_max_units = (far_units > near_units) ? (uint32_t)far_units
-                                                 : (uint32_t)near_units + 1u;
+    s_depth_max_units = (far_units > near_units) ? (uint32_t)far_units : (uint32_t)near_units + 1u;
     return true;
 }
 
@@ -389,10 +392,8 @@ static ScreenXY project_view_to_screen_sydown(Vec4 view_p)
     ScreenXY result;
     // sx = (ndc_x + 1)/2·320 = ndc_x·160 + 160;
     // sy = (1 − (ndc_y + 1)/2)·240 = 120 − ndc_y·120  (y ВНИЗ).
-    result.sx = fixed_add(fixed_mul(ndc_x, fixed_from_int(160)),
-                          fixed_from_int(160));
-    result.sy = fixed_sub(fixed_from_int(120),
-                          fixed_mul(ndc_y, fixed_from_int(120)));
+    result.sx = fixed_add(fixed_mul(ndc_x, fixed_from_int(160)), fixed_from_int(160));
+    result.sy = fixed_sub(fixed_from_int(120), fixed_mul(ndc_y, fixed_from_int(120)));
     return result;
 }
 
@@ -403,8 +404,7 @@ static ScreenXY project_view_to_screen_sydown(Vec4 view_p)
  * @param s0..s2 Экранные координаты (SY-DOWN).
  * @return Знаковая площадь (fixed; насыщение при экстремумах).
  */
-static fixed_t screen_triangle_signed_area(ScreenXY s0, ScreenXY s1,
-                                           ScreenXY s2)
+static fixed_t screen_triangle_signed_area(ScreenXY s0, ScreenXY s1, ScreenXY s2)
 {
     const fixed_t dx1 = fixed_sub(s1.sx, s0.sx);
     const fixed_t dy1 = fixed_sub(s1.sy, s0.sy);
@@ -417,17 +417,16 @@ static fixed_t screen_triangle_signed_area(ScreenXY s0, ScreenXY s1,
 // DrawMesh (TRANSFORM → CLIP → CULL → SORT-ключ → PACK)
 // ---------------------------------------------------------------------------
 
-void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
-                     const Triangle* indices, uint32_t index_count,
-                     const Mat4* model)
+void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count, const Triangle* indices,
+                     uint32_t index_count, const Mat4* model)
 {
     if (s_state != RENDER_STATE_IN_FRAME) {
         // Draw вне кадра / до Init — диагностический no-op (release).
         render_diag(RENDER_DIAG_DRAW_OUTSIDE_FRAME);
         return;
     }
-    if (vertices == NULL || indices == NULL || model == NULL
-        || vertex_count == 0u || index_count == 0u) {
+    if (vertices == NULL || indices == NULL || model == NULL || vertex_count == 0u ||
+        index_count == 0u) {
         render_diag(RENDER_DIAG_NULL_ARGUMENT);
         return;
     }
@@ -440,8 +439,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
     // Индексы валидируются ДО dereference (malformed reject §1.2.7).
     for (uint32_t t = 0u; t < index_count; ++t) {
         const Triangle* tri = &indices[t];
-        if (tri->v0 >= vertex_count || tri->v1 >= vertex_count
-            || tri->v2 >= vertex_count) {
+        if (tri->v0 >= vertex_count || tri->v1 >= vertex_count || tri->v2 >= vertex_count) {
             render_diag(RENDER_DIAG_INVALID_VERTEX_INDEX);
             return; // Целый вызов отклоняется — частичной вставки нет.
         }
@@ -449,8 +447,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
 
     // Capacity-предпроверка (worst-case: все треугольники пройдут гейты) —
     // overflow = ЯВНАЯ ошибка, никакого частичного silent-сброса.
-    const uint32_t free_items =
-        RENDER_SORT_MAX - s_command_buffer.command_count();
+    const uint32_t free_items = RENDER_SORT_MAX - s_command_buffer.command_count();
     if (free_items < index_count) {
         render_diag(RENDER_DIAG_COMMAND_OVERFLOW);
         return;
@@ -464,14 +461,12 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
     bool any_reject = false; // last_code сохраняет reject-код вызова.
     for (uint32_t t = 0u; t < index_count; ++t) {
         const Triangle* tri = &indices[t];
-        const Vertex* pv[3] = {&vertices[tri->v0], &vertices[tri->v1],
-                               &vertices[tri->v2]};
+        const Vertex* pv[3] = {&vertices[tri->v0], &vertices[tri->v1], &vertices[tri->v2]};
 
         // ---- TRANSFORM (view-space, fixed 16.16) -------------------------
         Vec4 view_p[3];
         for (uint32_t v = 0u; v < 3u; ++v) {
-            view_p[v] = mat4_transform(&mv, Vec4{pv[v]->x, pv[v]->y, pv[v]->z,
-                                                 FIXED_ONE});
+            view_p[v] = mat4_transform(&mv, Vec4{pv[v]->x, pv[v]->y, pv[v]->z, FIXED_ONE});
         }
 
         // ---- CLIP (near/far-гейт; whole-triangle reject) -----------------
@@ -503,13 +498,13 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
         }
 
         // ---- SORT-ключ: средняя camera-space depth в units ---------------
-        const int64_t depth_sum_i64 = fixed_sat_add_i64(
-            fixed_sat_add_i64((int64_t)fixed_sub(0, view_p[0].z),
-                              (int64_t)fixed_sub(0, view_p[1].z)),
-            (int64_t)fixed_sub(0, view_p[2].z));
+        const int64_t depth_sum_i64 =
+            fixed_sat_add_i64(fixed_sat_add_i64((int64_t)fixed_sub(0, view_p[0].z),
+                                                (int64_t)fixed_sub(0, view_p[1].z)),
+                              (int64_t)fixed_sub(0, view_p[2].z));
         const fixed_t depth_avg = fixed_clamp_i64(depth_sum_i64 / 3);
-        const uint32_t depth_key = depth_key_from_camera_z(
-            fixed_to_int(depth_avg), s_depth_min_units, s_depth_max_units);
+        const uint32_t depth_key =
+            depth_key_from_camera_z(fixed_to_int(depth_avg), s_depth_min_units, s_depth_max_units);
         if (depth_key == DEPTH_REJECT) {
             // «invalid depth rejection» — normative конформанс-случай.
             ++s_diag.depth_rejects;
@@ -521,6 +516,8 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
         // ---- PACK (per-tri команда; порядок вставки сохраняется) ---------
         RenderTriCmd cmd;
         cmd.mvp = mvp;
+        // s_bound_texture == INVALID — валидный нетекстурированный путь:
+        // бэкенд рисует flat-Gouraud (u_has_texture = 0).
         cmd.texture = s_bound_texture;
         cmd.depth_key = depth_key;
         cmd.submission_index = s_submission_counter;
@@ -553,8 +550,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
 // Текстуры (CreateTexture/Destroy/Bind — пул ядра + GPU-слой бэкенда)
 // ---------------------------------------------------------------------------
 
-TextureHandle Render_CreateTexture(uint32_t w, uint32_t h,
-                                   const uint8_t* pixels,
+TextureHandle Render_CreateTexture(uint32_t w, uint32_t h, const uint8_t* pixels,
                                    const uint16_t* palette)
 {
     if (s_state != RENDER_STATE_READY && s_state != RENDER_STATE_IN_FRAME) {
@@ -574,9 +570,8 @@ TextureHandle Render_CreateTexture(uint32_t w, uint32_t h,
     const uint32_t pool_h = render_texture_height(handle);
     const uint8_t* pool_pixels = render_texture_pixels(handle);
     const uint16_t* pool_palette = render_texture_palette(handle);
-    if (pool_pixels == NULL || pool_palette == NULL
-        || !hal_render_backend_create_texture(handle, pool_w, pool_h,
-                                              pool_pixels, pool_palette)) {
+    if (pool_pixels == NULL || pool_palette == NULL ||
+        !hal_render_backend_create_texture(handle, pool_w, pool_h, pool_pixels, pool_palette)) {
         render_texture_release(handle);
         render_diag(RENDER_DIAG_BACKEND_FAIL);
         return RENDER_TEXTURE_INVALID;
@@ -607,6 +602,15 @@ void Render_BindTexture(TextureHandle handle)
         render_diag(RENDER_DIAG_NOT_INITIALIZED);
         return;
     }
+    // ЯВНЫЙ unbind (RENDER_TEXTURE_INVALID): перевод в нетекстурированный
+    // режим — DrawMesh рисует Gouraud по вершинам без семплирования
+    // (норматив недели 15: «polygon без texture рисуется flat»). Это
+    // валидный путь (diag OK), а не отказ.
+    if (handle == RENDER_TEXTURE_INVALID) {
+        s_bound_texture = RENDER_TEXTURE_INVALID;
+        render_diag(RENDER_DIAG_OK);
+        return;
+    }
     // Привязка = state ядра, проверяемая на PACK (данные должны существовать).
     if (render_texture_pixels(handle) == NULL) {
         render_diag(RENDER_DIAG_TEXTURE_FAIL);
@@ -632,8 +636,8 @@ static uint8_t s_readback[RENDER_READBACK_BYTES];
 
 bool Render_TestReadbackPixels(uint8_t* dst_rgba8, uint32_t dst_size)
 {
-    if (s_state == RENDER_STATE_UNINITIALIZED || dst_rgba8 == NULL
-        || dst_size < RENDER_READBACK_BYTES) {
+    if (s_state == RENDER_STATE_UNINITIALIZED || dst_rgba8 == NULL ||
+        dst_size < RENDER_READBACK_BYTES) {
         render_diag(RENDER_DIAG_READBACK_FAIL);
         return false;
     }
@@ -646,8 +650,8 @@ bool Render_TestReadbackPixels(uint8_t* dst_rgba8, uint32_t dst_size)
 
 uint64_t Render_TestReadbackHash(void)
 {
-    if (s_state == RENDER_STATE_UNINITIALIZED
-        || !Render_TestReadbackPixels(s_readback, RENDER_READBACK_BYTES)) {
+    if (s_state == RENDER_STATE_UNINITIALIZED ||
+        !Render_TestReadbackPixels(s_readback, RENDER_READBACK_BYTES)) {
         return 0u;
     }
 
@@ -660,9 +664,8 @@ uint64_t Render_TestReadbackHash(void)
     for (uint32_t i = 0u; i < pixel_count; ++i) {
         const uint8_t* px = &s_readback[i * 4u];
         const uint16_t packed =
-            (uint16_t)(((uint16_t)(px[0] >> 3))
-                       | ((uint16_t)(px[1] >> 3) << 5)
-                       | ((uint16_t)(px[2] >> 3) << 10));
+            (uint16_t)(((uint16_t)(px[0] >> 3)) | ((uint16_t)(px[1] >> 3) << 5) |
+                       ((uint16_t)(px[2] >> 3) << 10));
         hash ^= packed;
         hash *= fnv_prime;
     }

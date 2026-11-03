@@ -26,8 +26,7 @@
  * буфера должно покрывать время жизни аллокатора. Освобождение — только
  * целиком через rollback(marker) или reset().
  */
-class LinearAllocator
-{
+class LinearAllocator {
 public:
     /** Снимок состояния аллокатора для отката. */
     struct Marker
@@ -65,8 +64,7 @@ public:
     {
         if (m_buffer == nullptr || alignment == 0 || (alignment & (alignment - 1)) != 0)
             return nullptr;
-        if (m_offset > m_capacity)
-            return nullptr;
+        if (m_offset > m_capacity) return nullptr;
 
         const uintptr_t base = reinterpret_cast<uintptr_t>(m_buffer);
         const uintptr_t current = base + static_cast<uintptr_t>(m_offset);
@@ -75,10 +73,8 @@ public:
         const size_t padding = (alignment - misalignment) & (alignment - 1);
 
         const size_t remaining = m_capacity - m_offset;
-        if (padding > remaining)
-            return nullptr;
-        if (size > remaining - padding)
-            return nullptr;
+        if (padding > remaining) return nullptr;
+        if (size > remaining - padding) return nullptr;
 
         void* result = m_buffer + m_offset + padding;
         m_offset += padding + size;
@@ -101,10 +97,8 @@ public:
      */
     bool rollback(Marker marker)
     {
-        if (marker.owner != this)
-            return false;
-        if (marker.offset > m_offset || marker.offset > m_capacity)
-            return false;
+        if (marker.owner != this) return false;
+        if (marker.offset > m_offset || marker.offset > m_capacity) return false;
         m_offset = marker.offset;
         return true;
     }

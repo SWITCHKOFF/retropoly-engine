@@ -145,14 +145,14 @@ typedef struct Triangle
  *
  * @return хэндл или RENDER_TEXTURE_INVALID при сбое.
  */
-TextureHandle Render_CreateTexture(uint32_t w, uint32_t h,
-                                   const uint8_t* pixels,
+TextureHandle Render_CreateTexture(uint32_t w, uint32_t h, const uint8_t* pixels,
                                    const uint16_t* palette);
 
 /** Освобождение текстуры по хэндлу (Спринт 7–8). */
 void Render_DestroyTexture(TextureHandle handle);
 
-/** Привязка текстуры к текущему draw (Спринт 7–8). */
+/** Привязка текстуры к текущему draw; RENDER_TEXTURE_INVALID — явный
+ *  unbind: нетекстурированный режим (flat-Gouraud без семпла). */
 void Render_BindTexture(TextureHandle handle);
 
 /**
@@ -167,9 +167,8 @@ void Render_SetCamera(const Mat4* view, const Mat4* proj);
  * матрицей @p model, painter's-сортировка по camera-space depth
  * (depth_key_from_camera_z; вне диапазона — DEPTH_REJECT без alias).
  */
-void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count,
-                     const Triangle* indices, uint32_t index_count,
-                     const Mat4* model);
+void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count, const Triangle* indices,
+                     uint32_t index_count, const Mat4* model);
 
 // ---------------------------------------------------------------------------
 // Input: клавиатура + геймпады (недели 9–11)

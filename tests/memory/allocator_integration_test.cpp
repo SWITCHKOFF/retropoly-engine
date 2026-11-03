@@ -18,8 +18,7 @@
 #include <stddef.h>
 #include <stdint.h>
 
-namespace
-{
+namespace {
 
 /** Уровневая арена: 448 KiB по бюджету §5.6 (static storage). */
 alignas(64) uint8_t g_level_storage[448 * 1024];
@@ -46,7 +45,10 @@ struct Enemy
     fixed_t health;
 };
 
-uintptr_t address_of(const void* pointer) { return reinterpret_cast<uintptr_t>(pointer); }
+uintptr_t address_of(const void* pointer)
+{
+    return reinterpret_cast<uintptr_t>(pointer);
+}
 
 } // namespace
 
@@ -62,8 +64,7 @@ TEST(AllocatorsIntegration, LevelLoadScenario)
     header->version = 3;
     header->mesh_count = 3;
 
-    MeshVertex* vertices =
-        static_cast<MeshVertex*>(level.allocate(3 * sizeof(MeshVertex), 16));
+    MeshVertex* vertices = static_cast<MeshVertex*>(level.allocate(3 * sizeof(MeshVertex), 16));
     ASSERT_NE(vertices, nullptr);
     vertices[0] = MeshVertex{fixed_from_int(0), fixed_from_int(0), fixed_from_int(0)};
     vertices[1] = MeshVertex{fixed_from_int(1), fixed_from_int(0), fixed_from_int(0)};

@@ -89,47 +89,47 @@ struct Collider
  * Неизвестный тип не имеет специализации — это осознанная compile-time
  * ошибка, а не скрытый heap-пул.
  */
-template<typename T>
+template <typename T>
 struct ComponentCapacity;
 
 /** @cond INTERNAL */
-template<>
+template <>
 struct ComponentCapacity<Position>
 {
     static constexpr size_t VALUE = 1024;
 };
 
-template<>
+template <>
 struct ComponentCapacity<Rotation>
 {
     static constexpr size_t VALUE = 1024;
 };
 
-template<>
+template <>
 struct ComponentCapacity<Velocity>
 {
     static constexpr size_t VALUE = 1024;
 };
 
-template<>
+template <>
 struct ComponentCapacity<MeshRenderer>
 {
     static constexpr size_t VALUE = 256;
 };
 
-template<>
+template <>
 struct ComponentCapacity<Camera>
 {
     static constexpr size_t VALUE = 8;
 };
 
-template<>
+template <>
 struct ComponentCapacity<PlayerControl>
 {
     static constexpr size_t VALUE = 8;
 };
 
-template<>
+template <>
 struct ComponentCapacity<Collider>
 {
     static constexpr size_t VALUE = 256;
@@ -150,9 +150,8 @@ struct ComponentCapacity<Collider>
  * @tparam T Тип компонента.
  * @tparam Capacity Максимальное число компонентов (1..65535).
  */
-template<typename T, size_t Capacity>
-class ComponentPool
-{
+template <typename T, size_t Capacity>
+class ComponentPool {
 public:
     static_assert(Capacity > 0, "Component capacity must be non-zero");
     static_assert(Capacity <= 65535, "Component capacity must fit uint16_t dense index");
@@ -176,20 +175,16 @@ public:
      */
     bool add(Entity entity, const T& value)
     {
-        if (entity == INVALID_ENTITY)
-            return false;
+        if (entity == INVALID_ENTITY) return false;
         const uint32_t entity_slot = entity_index(entity);
-        if (entity_slot >= MAX_ENTITIES)
-            return false;
+        if (entity_slot >= MAX_ENTITIES) return false;
 
         uint16_t& sparse = m_entity_to_index[entity_slot];
-        if (sparse != COMPONENT_INDEX_NONE)
-        {
+        if (sparse != COMPONENT_INDEX_NONE) {
             m_data[sparse] = value;
             return true;
         }
-        if (m_size >= Capacity)
-            return false;
+        if (m_size >= Capacity) return false;
 
         m_data[m_size] = value;
         m_index_to_entity[m_size] = entity;
@@ -206,19 +201,15 @@ public:
      */
     bool remove(Entity entity)
     {
-        if (entity == INVALID_ENTITY)
-            return false;
+        if (entity == INVALID_ENTITY) return false;
         const uint32_t entity_slot = entity_index(entity);
-        if (entity_slot >= MAX_ENTITIES)
-            return false;
+        if (entity_slot >= MAX_ENTITIES) return false;
 
         const uint16_t dense = m_entity_to_index[entity_slot];
-        if (dense == COMPONENT_INDEX_NONE || dense >= m_size)
-            return false;
+        if (dense == COMPONENT_INDEX_NONE || dense >= m_size) return false;
 
         const uint16_t last = static_cast<uint16_t>(m_size - 1);
-        if (dense != last)
-        {
+        if (dense != last) {
             m_data[dense] = m_data[last];
             const Entity moved = m_index_to_entity[last];
             m_index_to_entity[dense] = moved;
@@ -238,14 +229,11 @@ public:
      */
     T* get(Entity entity)
     {
-        if (entity == INVALID_ENTITY)
-            return nullptr;
+        if (entity == INVALID_ENTITY) return nullptr;
         const uint32_t entity_slot = entity_index(entity);
-        if (entity_slot >= MAX_ENTITIES)
-            return nullptr;
+        if (entity_slot >= MAX_ENTITIES) return nullptr;
         const uint16_t dense = m_entity_to_index[entity_slot];
-        if (dense == COMPONENT_INDEX_NONE || dense >= m_size)
-            return nullptr;
+        if (dense == COMPONENT_INDEX_NONE || dense >= m_size) return nullptr;
         return &m_data[dense];
     }
 
@@ -257,14 +245,11 @@ public:
      */
     const T* get(Entity entity) const
     {
-        if (entity == INVALID_ENTITY)
-            return nullptr;
+        if (entity == INVALID_ENTITY) return nullptr;
         const uint32_t entity_slot = entity_index(entity);
-        if (entity_slot >= MAX_ENTITIES)
-            return nullptr;
+        if (entity_slot >= MAX_ENTITIES) return nullptr;
         const uint16_t dense = m_entity_to_index[entity_slot];
-        if (dense == COMPONENT_INDEX_NONE || dense >= m_size)
-            return nullptr;
+        if (dense == COMPONENT_INDEX_NONE || dense >= m_size) return nullptr;
         return &m_data[dense];
     }
 
@@ -276,11 +261,9 @@ public:
      */
     bool has(Entity entity) const
     {
-        if (entity == INVALID_ENTITY)
-            return false;
+        if (entity == INVALID_ENTITY) return false;
         const uint32_t entity_slot = entity_index(entity);
-        if (entity_slot >= MAX_ENTITIES)
-            return false;
+        if (entity_slot >= MAX_ENTITIES) return false;
         const uint16_t dense = m_entity_to_index[entity_slot];
         return dense != COMPONENT_INDEX_NONE && dense < m_size;
     }
@@ -322,50 +305,49 @@ private:
 // View
 // ----------------------------------------------------------------------------
 
-template<typename... Components>
+template <typename... Components>
 class View;
 
 class Registry;
 
-namespace ecs_detail
-{
+namespace ecs_detail {
 
 /** Позиция T в списке типов Components... (compile-time). */
-template<typename T, typename... Types>
+template <typename T, typename... Types>
 struct TypeIndex;
 
-template<typename T, typename... Rest>
+template <typename T, typename... Rest>
 struct TypeIndex<T, T, Rest...>
 {
     static constexpr size_t VALUE = 0;
 };
 
-template<typename T, typename U, typename... Rest>
+template <typename T, typename U, typename... Rest>
 struct TypeIndex<T, U, Rest...>
 {
     static constexpr size_t VALUE = 1 + TypeIndex<T, Rest...>::VALUE;
 };
 
-template<typename T>
+template <typename T>
 size_t view_size(const void* pool)
 {
     return static_cast<const ComponentPool<T, ComponentCapacity<T>::VALUE>*>(pool)->size();
 }
 
-template<typename T>
+template <typename T>
 Entity view_entity_at(const void* pool, size_t dense_index)
 {
     return static_cast<const ComponentPool<T, ComponentCapacity<T>::VALUE>*>(pool)->entity_at(
         dense_index);
 }
 
-template<typename T>
+template <typename T>
 bool view_has_entity(const void* pool, Entity entity)
 {
     return static_cast<const ComponentPool<T, ComponentCapacity<T>::VALUE>*>(pool)->has(entity);
 }
 
-template<typename T>
+template <typename T>
 void* view_data_for_entity(void* pool, Entity entity)
 {
     return static_cast<ComponentPool<T, ComponentCapacity<T>::VALUE>*>(pool)->get(entity);
@@ -385,8 +367,7 @@ void* view_data_for_entity(void* pool, Entity entity)
  * сущности. Экземпляр с бюджетом ~234 KiB размещается в static/global storage,
  * не на CPU-стеке. Размер принудительно ограничен 256 KiB (см. registry.cpp).
  */
-class Registry
-{
+class Registry {
 public:
     /** Инициализация слотов и пулов. */
     Registry();
@@ -435,11 +416,10 @@ public:
      * @param component Значение компонента.
      * @return false для stale хэндла или переполнения пула.
      */
-    template<typename T>
+    template <typename T>
     bool add_component(Entity entity, const T& component)
     {
-        if (!is_alive(entity))
-            return false;
+        if (!is_alive(entity)) return false;
         return pool_for<T>().add(entity, component);
     }
 
@@ -450,11 +430,10 @@ public:
      * @param entity Живой хэндл сущности.
      * @return false для stale хэндла или отсутствующего компонента.
      */
-    template<typename T>
+    template <typename T>
     bool remove_component(Entity entity)
     {
-        if (!is_alive(entity))
-            return false;
+        if (!is_alive(entity)) return false;
         return pool_for<T>().remove(entity);
     }
 
@@ -465,11 +444,10 @@ public:
      * @param entity Живой хэндл сущности.
      * @return Указатель на компонент либо nullptr.
      */
-    template<typename T>
+    template <typename T>
     T* get_component(Entity entity)
     {
-        if (!is_alive(entity))
-            return nullptr;
+        if (!is_alive(entity)) return nullptr;
         return pool_for<T>().get(entity);
     }
 
@@ -480,11 +458,10 @@ public:
      * @param entity Живой хэндл сущности.
      * @return Указатель на компонент либо nullptr.
      */
-    template<typename T>
+    template <typename T>
     const T* get_component(Entity entity) const
     {
-        if (!is_alive(entity))
-            return nullptr;
+        if (!is_alive(entity)) return nullptr;
         return pool_for<T>().get(entity);
     }
 
@@ -495,11 +472,10 @@ public:
      * @param entity Живой хэндл сущности.
      * @return true, если компонент присутствует.
      */
-    template<typename T>
+    template <typename T>
     bool has_component(Entity entity) const
     {
-        if (!is_alive(entity))
-            return false;
+        if (!is_alive(entity)) return false;
         return pool_for<T>().has(entity);
     }
 
@@ -513,7 +489,7 @@ public:
      * @tparam Components Компоненты пересечения (минимум один).
      * @return View<Components...>.
      */
-    template<typename... Components>
+    template <typename... Components>
     View<Components...> view();
 
 private:
@@ -533,10 +509,10 @@ private:
 
     void remove_all_components(Entity entity);
 
-    template<typename T>
+    template <typename T>
     ComponentPool<T, ComponentCapacity<T>::VALUE>& pool_for();
 
-    template<typename T>
+    template <typename T>
     const ComponentPool<T, ComponentCapacity<T>::VALUE>& pool_for() const;
 
     PositionPool m_positions;
@@ -558,93 +534,93 @@ private:
 // ----------------------------------------------------------------------------
 
 /** @cond INTERNAL */
-template<>
+template <>
 inline ComponentPool<Position, ComponentCapacity<Position>::VALUE>& Registry::pool_for<Position>()
 {
     return m_positions;
 }
 
-template<>
+template <>
 inline const ComponentPool<Position, ComponentCapacity<Position>::VALUE>&
 Registry::pool_for<Position>() const
 {
     return m_positions;
 }
 
-template<>
+template <>
 inline ComponentPool<Rotation, ComponentCapacity<Rotation>::VALUE>& Registry::pool_for<Rotation>()
 {
     return m_rotations;
 }
 
-template<>
+template <>
 inline const ComponentPool<Rotation, ComponentCapacity<Rotation>::VALUE>&
 Registry::pool_for<Rotation>() const
 {
     return m_rotations;
 }
 
-template<>
+template <>
 inline ComponentPool<Velocity, ComponentCapacity<Velocity>::VALUE>& Registry::pool_for<Velocity>()
 {
     return m_velocities;
 }
 
-template<>
+template <>
 inline const ComponentPool<Velocity, ComponentCapacity<Velocity>::VALUE>&
 Registry::pool_for<Velocity>() const
 {
     return m_velocities;
 }
 
-template<>
+template <>
 inline ComponentPool<MeshRenderer, ComponentCapacity<MeshRenderer>::VALUE>&
 Registry::pool_for<MeshRenderer>()
 {
     return m_mesh_renderers;
 }
 
-template<>
+template <>
 inline const ComponentPool<MeshRenderer, ComponentCapacity<MeshRenderer>::VALUE>&
 Registry::pool_for<MeshRenderer>() const
 {
     return m_mesh_renderers;
 }
 
-template<>
+template <>
 inline ComponentPool<Camera, ComponentCapacity<Camera>::VALUE>& Registry::pool_for<Camera>()
 {
     return m_cameras;
 }
 
-template<>
-inline const ComponentPool<Camera, ComponentCapacity<Camera>::VALUE>&
-Registry::pool_for<Camera>() const
+template <>
+inline const ComponentPool<Camera, ComponentCapacity<Camera>::VALUE>& Registry::pool_for<Camera>()
+    const
 {
     return m_cameras;
 }
 
-template<>
+template <>
 inline ComponentPool<PlayerControl, ComponentCapacity<PlayerControl>::VALUE>&
 Registry::pool_for<PlayerControl>()
 {
     return m_player_controls;
 }
 
-template<>
+template <>
 inline const ComponentPool<PlayerControl, ComponentCapacity<PlayerControl>::VALUE>&
 Registry::pool_for<PlayerControl>() const
 {
     return m_player_controls;
 }
 
-template<>
+template <>
 inline ComponentPool<Collider, ComponentCapacity<Collider>::VALUE>& Registry::pool_for<Collider>()
 {
     return m_colliders;
 }
 
-template<>
+template <>
 inline const ComponentPool<Collider, ComponentCapacity<Collider>::VALUE>&
 Registry::pool_for<Collider>() const
 {
@@ -667,15 +643,13 @@ Registry::pool_for<Collider>() const
  *       Registry (create/destroy/add/remove) инвалидирует существующий View;
  *       создавайте View заново после изменения состава компонентов.
  */
-template<typename... Components>
-class View
-{
+template <typename... Components>
+class View {
 public:
     static_assert(sizeof...(Components) > 0, "View requires at least one component");
     static constexpr size_t COMPONENT_COUNT = sizeof...(Components);
 
-    class Iterator
-    {
+    class Iterator {
     public:
         /**
          * Итератор на dense-строку primary-пула.
@@ -729,7 +703,7 @@ public:
          * @tparam T Один из компонентов View.
          * @return Ссылка на компонент.
          */
-        template<typename T>
+        template <typename T>
         T& get() const
         {
             void* component = m_components[ecs_detail::TypeIndex<T, Components...>::VALUE];
@@ -754,10 +728,10 @@ public:
     explicit View(ComponentPool<Components, ComponentCapacity<Components>::VALUE>*... pools)
         : m_primary_size(0)
     {
-        const PoolAccess access[COMPONENT_COUNT] = {
-            PoolAccess{static_cast<void*>(pools), &ecs_detail::view_size<Components>,
-                &ecs_detail::view_entity_at<Components>, &ecs_detail::view_has_entity<Components>,
-                &ecs_detail::view_data_for_entity<Components>}...};
+        const PoolAccess access[COMPONENT_COUNT] = {PoolAccess{
+            static_cast<void*>(pools), &ecs_detail::view_size<Components>,
+            &ecs_detail::view_entity_at<Components>, &ecs_detail::view_has_entity<Components>,
+            &ecs_detail::view_data_for_entity<Components>}...};
 
         for (size_t i = 0; i < COMPONENT_COUNT; ++i)
             m_access[i] = access[i];
@@ -798,37 +772,30 @@ private:
     size_t m_primary_size;
 };
 
-template<typename... Components>
+template <typename... Components>
 void View<Components...>::Iterator::find_next()
 {
-    if (m_view == nullptr)
-    {
+    if (m_view == nullptr) {
         m_entity = INVALID_ENTITY;
         for (size_t i = 0; i < COMPONENT_COUNT; ++i)
             m_components[i] = nullptr;
         return;
     }
 
-    while (m_row < m_view->m_primary_size)
-    {
-        const Entity entity =
-            m_view->m_access[0].entity_at(m_view->m_access[0].pool, m_row);
+    while (m_row < m_view->m_primary_size) {
+        const Entity entity = m_view->m_access[0].entity_at(m_view->m_access[0].pool, m_row);
 
         bool present = true;
-        for (size_t i = 1; i < COMPONENT_COUNT; ++i)
-        {
-            if (!m_view->m_access[i].has_entity(m_view->m_access[i].pool, entity))
-            {
+        for (size_t i = 1; i < COMPONENT_COUNT; ++i) {
+            if (!m_view->m_access[i].has_entity(m_view->m_access[i].pool, entity)) {
                 present = false;
                 break;
             }
         }
 
-        if (present)
-        {
+        if (present) {
             m_entity = entity;
-            for (size_t i = 0; i < COMPONENT_COUNT; ++i)
-            {
+            for (size_t i = 0; i < COMPONENT_COUNT; ++i) {
                 m_components[i] =
                     m_view->m_access[i].data_for_entity(m_view->m_access[i].pool, entity);
             }
@@ -847,7 +814,7 @@ void View<Components...>::Iterator::find_next()
 // Registry::view<Components...>() — определение после полного объявления View.
 // ----------------------------------------------------------------------------
 
-template<typename... Components>
+template <typename... Components>
 View<Components...> Registry::view()
 {
     return View<Components...>(&pool_for<Components>()...);

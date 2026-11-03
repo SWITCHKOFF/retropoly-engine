@@ -82,9 +82,10 @@ static inline fixed_t vec4_dot(Vec4 a, Vec4 b)
     // Полные Q16.16-произведения держим до конца редукции; накопление —
     // насыщающее к диапазону int64_t (fixed_sat_add_i64, без UB), затем
     // единственный Q16.16-clamp.
-    const int64_t acc = fixed_sat_add_i64(fixed_sat_add_i64(fixed_sat_add_i64((int64_t)a.x * (int64_t)b.x,
-                                                                    (int64_t)a.y * (int64_t)b.y),
-                                              (int64_t)a.z * (int64_t)b.z),
+    const int64_t acc = fixed_sat_add_i64(
+        fixed_sat_add_i64(
+            fixed_sat_add_i64((int64_t)a.x * (int64_t)b.x, (int64_t)a.y * (int64_t)b.y),
+            (int64_t)a.z * (int64_t)b.z),
         (int64_t)a.w * (int64_t)b.w);
     return fixed_clamp_i64(acc / FIXED_ONE);
 }

@@ -23,7 +23,10 @@ typedef struct
  * @param y Компонента Y (16.16).
  * @return Сформированный вектор.
  */
-static inline Vec2 vec2_make(fixed_t x, fixed_t y) { return Vec2{x, y}; }
+static inline Vec2 vec2_make(fixed_t x, fixed_t y)
+{
+    return Vec2{x, y};
+}
 
 /**
  * Компонентное сложение (насыщающее, через fixed_add).
@@ -32,7 +35,10 @@ static inline Vec2 vec2_make(fixed_t x, fixed_t y) { return Vec2{x, y}; }
  * @param b Слагаемое.
  * @return a + b.
  */
-static inline Vec2 vec2_add(Vec2 a, Vec2 b) { return Vec2{fixed_add(a.x, b.x), fixed_add(a.y, b.y)}; }
+static inline Vec2 vec2_add(Vec2 a, Vec2 b)
+{
+    return Vec2{fixed_add(a.x, b.x), fixed_add(a.y, b.y)};
+}
 
 /**
  * Компонентное вычитание (насыщающее, через fixed_sub).
@@ -41,7 +47,10 @@ static inline Vec2 vec2_add(Vec2 a, Vec2 b) { return Vec2{fixed_add(a.x, b.x), f
  * @param b Вычитаемое.
  * @return a − b.
  */
-static inline Vec2 vec2_sub(Vec2 a, Vec2 b) { return Vec2{fixed_sub(a.x, b.x), fixed_sub(a.y, b.y)}; }
+static inline Vec2 vec2_sub(Vec2 a, Vec2 b)
+{
+    return Vec2{fixed_sub(a.x, b.x), fixed_sub(a.y, b.y)};
+}
 
 /**
  * Компонентное умножение на скаляр (насыщающий fixed_mul, масштаб Q16.16).
@@ -50,7 +59,10 @@ static inline Vec2 vec2_sub(Vec2 a, Vec2 b) { return Vec2{fixed_sub(a.x, b.x), f
  * @param s Скаляр (16.16).
  * @return v·s.
  */
-static inline Vec2 vec2_scale(Vec2 v, fixed_t s) { return Vec2{fixed_mul(v.x, s), fixed_mul(v.y, s)}; }
+static inline Vec2 vec2_scale(Vec2 v, fixed_t s)
+{
+    return Vec2{fixed_mul(v.x, s), fixed_mul(v.y, s)};
+}
 
 /**
  * Скалярное произведение: полный int64-аккумулятор, clamp ровно один раз.

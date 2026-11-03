@@ -16,8 +16,7 @@
 #include <set>
 #include <vector>
 
-namespace
-{
+namespace {
 
 Registry g_registry;
 
@@ -33,8 +32,7 @@ Velocity velocity_at(int x, int y, int z)
 
 } // namespace
 
-class RegistryTest : public ::testing::Test
-{
+class RegistryTest : public ::testing::Test {
 protected:
     void SetUp() override { g_registry.reset(); }
 };
@@ -43,8 +41,7 @@ TEST_F(RegistryTest, CreateEntityIsUniqueAndNonZero)
 {
     std::set<Entity> handles;
 
-    for (uint32_t i = 0; i < 1000; ++i)
-    {
+    for (uint32_t i = 0; i < 1000; ++i) {
         const Entity entity = g_registry.create_entity();
         ASSERT_NE(entity, INVALID_ENTITY);
         EXPECT_TRUE(handles.insert(entity).second);
@@ -106,13 +103,11 @@ TEST_F(RegistryTest, AddRemoveGetRoundTrip)
 TEST_F(RegistryTest, ViewSingleComponent)
 {
     std::vector<Entity> entities;
-    for (int i = 0; i < 10; ++i)
-    {
+    for (int i = 0; i < 10; ++i) {
         const Entity entity = g_registry.create_entity();
         ASSERT_NE(entity, INVALID_ENTITY);
         entities.push_back(entity);
-        if (i < 6)
-        {
+        if (i < 6) {
             ASSERT_TRUE(g_registry.add_component(entity, position_at(i, 0, 0)));
         }
     }
@@ -122,8 +117,7 @@ TEST_F(RegistryTest, ViewSingleComponent)
 
     size_t visited = 0;
     fixed_t sum = 0;
-    for (View<Position>::Iterator it = view.begin(); it != view.end(); ++it)
-    {
+    for (View<Position>::Iterator it = view.begin(); it != view.end(); ++it) {
         ++visited;
         sum = fixed_add(sum, it.get<Position>().value.x);
         EXPECT_TRUE(g_registry.has_component<Position>(it.entity()));
@@ -132,8 +126,7 @@ TEST_F(RegistryTest, ViewSingleComponent)
     EXPECT_EQ(sum, fixed_from_int(0 + 1 + 2 + 3 + 4 + 5));
 
     size_t range_count = 0;
-    for (auto row : view)
-    {
+    for (auto row : view) {
         ++range_count;
         EXPECT_TRUE(g_registry.has_component<Position>(row.entity()));
     }
@@ -143,15 +136,13 @@ TEST_F(RegistryTest, ViewSingleComponent)
 TEST_F(RegistryTest, ViewTwoComponentsUsesIntersection)
 {
     std::vector<Entity> entities;
-    for (int i = 0; i < 10; ++i)
-    {
+    for (int i = 0; i < 10; ++i) {
         const Entity entity = g_registry.create_entity();
         ASSERT_NE(entity, INVALID_ENTITY);
         entities.push_back(entity);
 
         ASSERT_TRUE(g_registry.add_component(entity, position_at(i, i, i)));
-        if (i % 3 == 0)
-        {
+        if (i % 3 == 0) {
             ASSERT_TRUE(g_registry.add_component(entity, velocity_at(1, 2, 3)));
         }
     }
@@ -160,8 +151,7 @@ TEST_F(RegistryTest, ViewTwoComponentsUsesIntersection)
     EXPECT_EQ(view.count(), 4u); // 0, 3, 6, 9
 
     size_t visited = 0;
-    for (View<Position, Velocity>::Iterator it = view.begin(); it != view.end(); ++it)
-    {
+    for (View<Position, Velocity>::Iterator it = view.begin(); it != view.end(); ++it) {
         ++visited;
         EXPECT_TRUE(g_registry.has_component<Position>(it.entity()));
         EXPECT_TRUE(g_registry.has_component<Velocity>(it.entity()));
@@ -172,16 +162,12 @@ TEST_F(RegistryTest, ViewTwoComponentsUsesIntersection)
     }
     EXPECT_EQ(visited, 4u);
 
-    for (size_t i = 0; i < entities.size(); ++i)
-    {
+    for (size_t i = 0; i < entities.size(); ++i) {
         const Velocity* velocity = g_registry.get_component<Velocity>(entities[i]);
-        if (i % 3 == 0)
-        {
+        if (i % 3 == 0) {
             ASSERT_NE(velocity, nullptr);
             EXPECT_EQ(velocity->value.x, fixed_from_int(2));
-        }
-        else
-        {
+        } else {
             EXPECT_EQ(velocity, nullptr);
         }
     }
@@ -202,8 +188,7 @@ TEST_F(RegistryTest, ViewWithModificationMovementSystem)
         {g_registry.create_entity(), 30, 5},
     };
 
-    for (const MovementFixture& fixture : fixtures)
-    {
+    for (const MovementFixture& fixture : fixtures) {
         ASSERT_NE(fixture.entity, INVALID_ENTITY);
         ASSERT_TRUE(g_registry.add_component(fixture.entity, position_at(fixture.start_x, 0, 0)));
         ASSERT_TRUE(
@@ -212,8 +197,7 @@ TEST_F(RegistryTest, ViewWithModificationMovementSystem)
 
     const fixed_t delta_time = FIXED_ONE;
     View<Position, Velocity> view = g_registry.view<Position, Velocity>();
-    for (View<Position, Velocity>::Iterator it = view.begin(); it != view.end(); ++it)
-    {
+    for (View<Position, Velocity>::Iterator it = view.begin(); it != view.end(); ++it) {
         Position& position = it.get<Position>();
         const Velocity& velocity = it.get<Velocity>();
         position.value.x = fixed_add(position.value.x, fixed_mul(velocity.value.x, delta_time));
@@ -221,8 +205,7 @@ TEST_F(RegistryTest, ViewWithModificationMovementSystem)
         position.value.z = fixed_add(position.value.z, fixed_mul(velocity.value.z, delta_time));
     }
 
-    for (const MovementFixture& fixture : fixtures)
-    {
+    for (const MovementFixture& fixture : fixtures) {
         const Position* position = g_registry.get_component<Position>(fixture.entity);
         ASSERT_NE(position, nullptr);
         EXPECT_EQ(position->value.x, fixed_from_int(fixture.start_x + fixture.velocity_x));
@@ -302,8 +285,7 @@ TEST_F(RegistryTest, GenerationWrapRetirement)
 
     // 255 циклов: generation растёт 1,2,...,255; на destroy при 255 слот
     // выводится из оборота, и следующий create обязан взять другой слот.
-    for (uint32_t cycle = 0; cycle < 255; ++cycle)
-    {
+    for (uint32_t cycle = 0; cycle < 255; ++cycle) {
         EXPECT_EQ(entity_index(current), retired_slot);
         EXPECT_EQ(entity_generation(current), cycle + 1u);
         ASSERT_TRUE(g_registry.destroy_entity(current));
@@ -350,8 +332,7 @@ TEST_F(RegistryTest, DestroyRemovesAllComponentTypes)
 TEST_F(RegistryTest, ComponentPoolCapacityIsEnforced)
 {
     std::vector<Entity> entities;
-    for (uint32_t i = 0; i < ComponentCapacity<Position>::VALUE + 1u; ++i)
-    {
+    for (uint32_t i = 0; i < ComponentCapacity<Position>::VALUE + 1u; ++i) {
         const Entity entity = g_registry.create_entity();
         ASSERT_NE(entity, INVALID_ENTITY);
         entities.push_back(entity);
@@ -369,8 +350,7 @@ TEST_F(RegistryTest, ComponentPoolCapacityIsEnforced)
 
 TEST_F(RegistryTest, CapacityIsMaxEntities)
 {
-    for (uint32_t i = 0; i < MAX_ENTITIES; ++i)
-    {
+    for (uint32_t i = 0; i < MAX_ENTITIES; ++i) {
         const Entity entity = g_registry.create_entity();
         ASSERT_NE(entity, INVALID_ENTITY) << "i = " << i;
     }
@@ -384,16 +364,14 @@ TEST_F(RegistryTest, TenThousandEntitiesDenseIteration)
     std::vector<Entity> entities;
     entities.reserve(MAX_ENTITIES);
 
-    for (uint32_t i = 0; i < MAX_ENTITIES; ++i)
-    {
+    for (uint32_t i = 0; i < MAX_ENTITIES; ++i) {
         const Entity entity = g_registry.create_entity();
         ASSERT_NE(entity, INVALID_ENTITY);
         entities.push_back(entity);
     }
 
     const size_t component_count = ComponentCapacity<Position>::VALUE;
-    for (size_t i = 0; i < component_count; ++i)
-    {
+    for (size_t i = 0; i < component_count; ++i) {
         ASSERT_TRUE(g_registry.add_component(entities[i], position_at(static_cast<int>(i), 0, 0)));
         ASSERT_TRUE(g_registry.add_component(entities[i], velocity_at(1, 0, 0)));
     }
@@ -402,8 +380,7 @@ TEST_F(RegistryTest, TenThousandEntitiesDenseIteration)
     EXPECT_EQ(view.count(), component_count);
 
     size_t visited = 0;
-    for (View<Position, Velocity>::Iterator it = view.begin(); it != view.end(); ++it)
-    {
+    for (View<Position, Velocity>::Iterator it = view.begin(); it != view.end(); ++it) {
         ++visited;
         it.get<Position>().value.y =
             fixed_add(it.get<Position>().value.y, it.get<Velocity>().value.x);

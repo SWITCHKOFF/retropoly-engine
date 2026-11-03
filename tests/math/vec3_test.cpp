@@ -58,7 +58,8 @@ TEST(Vec3, DotPreciseValues)
 
     // Независимое float-ожидание (ручная редукция).
     const Vec3 c = vec3_make(fixed_from_float(1.5f), fixed_from_float(-2.0f), fixed_from_int(4));
-    const Vec3 d = vec3_make(fixed_from_float(2.0f), fixed_from_float(3.0f), fixed_from_float(0.25f));
+    const Vec3 d =
+        vec3_make(fixed_from_float(2.0f), fixed_from_float(3.0f), fixed_from_float(0.25f));
     // 1.5·2 + (−2)·3 + 4·0.25 = 3 − 6 + 1 = −2.
     EXPECT_NEAR(fixed_to_float(vec3_dot(c, d)), -2.0, 0.001);
 }
@@ -135,7 +136,7 @@ TEST(Vec3, LengthPreciseValues)
 
     EXPECT_EQ(vec3_length(vec3_make(0, 0, 0)), 0);
     EXPECT_EQ(vec3_length(vec3_make(fixed_from_int(0), fixed_from_int(5), fixed_from_int(0))),
-        fixed_from_int(5));
+              fixed_from_int(5));
 }
 
 TEST(Vec3, NormalizeUnitLength)
@@ -184,11 +185,11 @@ TEST(Vec3, NormalizeZeroDebugAsserts)
 
 TEST(Vec3, DeterminismSameInputSameRawOutput)
 {
-    const Vec3 a = vec3_make(fixed_from_float(1.234f), fixed_from_float(-5.678f), fixed_from_int(9));
+    const Vec3 a =
+        vec3_make(fixed_from_float(1.234f), fixed_from_float(-5.678f), fixed_from_int(9));
     const Vec3 b = vec3_make(fixed_from_float(2.111f), fixed_from_float(0.876f), fixed_from_int(3));
     const Vec3 once = vec3_cross(vec3_scale(a, fixed_from_float(0.25f)), b);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         const Vec3 again = vec3_cross(vec3_scale(a, fixed_from_float(0.25f)), b);
         EXPECT_EQ(once.x, again.x);
         EXPECT_EQ(once.y, again.y);

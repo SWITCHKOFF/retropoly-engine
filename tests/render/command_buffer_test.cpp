@@ -25,8 +25,7 @@ TEST(CommandBufferLayout, FixedSize64KiB)
     EXPECT_EQ(RENDER_COMMAND_BUFFER_BYTES, 64u * 1024u);
     // Поле capacity — выведено из sizeof (компилируемой константы).
     EXPECT_GT(CommandBuffer::capacity(), 0u);
-    EXPECT_EQ(CommandBuffer::capacity(),
-              RENDER_COMMAND_BUFFER_BYTES / sizeof(RenderTriCmd));
+    EXPECT_EQ(CommandBuffer::capacity(), RENDER_COMMAND_BUFFER_BYTES / sizeof(RenderTriCmd));
     // Команда — маленький POD; буфер обязан вмещать «репрезентативный» кадр
     // (W0-сцены ~256 команд достаточно; 256 — минимум политики).
     EXPECT_GE(CommandBuffer::capacity(), 256u);

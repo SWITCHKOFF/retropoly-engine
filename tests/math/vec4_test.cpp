@@ -8,8 +8,10 @@
 
 TEST(Vec4, MakeAddSubValues)
 {
-    const Vec4 a = vec4_make(fixed_from_int(1), fixed_from_int(2), fixed_from_int(3), fixed_from_int(4));
-    const Vec4 b = vec4_make(fixed_from_int(5), fixed_from_int(6), fixed_from_int(7), fixed_from_int(8));
+    const Vec4 a =
+        vec4_make(fixed_from_int(1), fixed_from_int(2), fixed_from_int(3), fixed_from_int(4));
+    const Vec4 b =
+        vec4_make(fixed_from_int(5), fixed_from_int(6), fixed_from_int(7), fixed_from_int(8));
 
     const Vec4 sum = vec4_add(a, b);
     EXPECT_EQ(sum.x, fixed_from_int(6));
@@ -37,8 +39,10 @@ TEST(Vec4, ScalePreciseValues)
 TEST(Vec4, DotSingleFinalClamp)
 {
     // Независимое ожидание: (1,2,3,4)·(5,6,7,8) = 5+12+21+32 = 70.
-    const Vec4 a = vec4_make(fixed_from_int(1), fixed_from_int(2), fixed_from_int(3), fixed_from_int(4));
-    const Vec4 b = vec4_make(fixed_from_int(5), fixed_from_int(6), fixed_from_int(7), fixed_from_int(8));
+    const Vec4 a =
+        vec4_make(fixed_from_int(1), fixed_from_int(2), fixed_from_int(3), fixed_from_int(4));
+    const Vec4 b =
+        vec4_make(fixed_from_int(5), fixed_from_int(6), fixed_from_int(7), fixed_from_int(8));
     EXPECT_EQ(vec4_dot(a, b), fixed_from_int(70));
 
     // Полный int64-аккумулятор (4 компоненты): 4·INT32_MAX·2^16 / 2^16 → INT32_MAX.
@@ -50,11 +54,12 @@ TEST(Vec4, DotSingleFinalClamp)
 
 TEST(Vec4, Determinism)
 {
-    const Vec4 a = vec4_make(fixed_from_float(1.125f), fixed_from_int(-7), 0, fixed_from_float(0.25f));
-    const Vec4 b = vec4_make(fixed_from_int(2), fixed_from_float(0.5f), fixed_from_int(9), FIXED_ONE);
+    const Vec4 a =
+        vec4_make(fixed_from_float(1.125f), fixed_from_int(-7), 0, fixed_from_float(0.25f));
+    const Vec4 b =
+        vec4_make(fixed_from_int(2), fixed_from_float(0.5f), fixed_from_int(9), FIXED_ONE);
     const Vec4 once = vec4_sub(vec4_scale(a, FIXED_ONE / 4), b);
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         const Vec4 again = vec4_sub(vec4_scale(a, FIXED_ONE / 4), b);
         EXPECT_EQ(once.x, again.x);
         EXPECT_EQ(once.y, again.y);

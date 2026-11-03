@@ -49,8 +49,7 @@
  * @param depth_max Верхняя граница диапазона (uint32, ≥ depth_min).
  * @return depth key или DEPTH_REJECT.
  */
-uint32_t depth_key_from_camera_z(int32_t camera_z, uint32_t depth_min,
-                                 uint32_t depth_max);
+uint32_t depth_key_from_camera_z(int32_t camera_z, uint32_t depth_min, uint32_t depth_max);
 
 // ---------------------------------------------------------------------------
 // Диагностика (Renderer safety contract: явные ошибки, без silent drop)

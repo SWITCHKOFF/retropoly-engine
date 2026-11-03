@@ -32,51 +32,43 @@ static constexpr int16_t INPUT_TRIGGER_THRESHOLD = 64;
 
 /// Сканкоды INPUT_KEY_* — порядок зеркалит enum в platform.h (контракт ABI).
 static const SDL_Scancode KEY_SCANCODES[INPUT_KEY_COUNT] = {
-    SDL_SCANCODE_W, SDL_SCANCODE_A, SDL_SCANCODE_S, SDL_SCANCODE_D, // W A S D
-    SDL_SCANCODE_UP, SDL_SCANCODE_DOWN, SDL_SCANCODE_LEFT, SDL_SCANCODE_RIGHT,
-    SDL_SCANCODE_SPACE,
-    SDL_SCANCODE_RETURN,
-    SDL_SCANCODE_ESCAPE,
-    SDL_SCANCODE_TAB,
+    SDL_SCANCODE_W,      SDL_SCANCODE_A,      SDL_SCANCODE_S,      SDL_SCANCODE_D, // W A S D
+    SDL_SCANCODE_UP,     SDL_SCANCODE_DOWN,   SDL_SCANCODE_LEFT,   SDL_SCANCODE_RIGHT,
+    SDL_SCANCODE_SPACE,  SDL_SCANCODE_RETURN, SDL_SCANCODE_ESCAPE, SDL_SCANCODE_TAB,
     SDL_SCANCODE_LSHIFT, SDL_SCANCODE_RSHIFT, // шифты PC именно они
-    SDL_SCANCODE_LCTRL, SDL_SCANCODE_RCTRL,
-    SDL_SCANCODE_J, SDL_SCANCODE_K, SDL_SCANCODE_L, // pad-эмуляция face
-    SDL_SCANCODE_U, SDL_SCANCODE_I,                 // pad-эмуляция шоулдеров
+    SDL_SCANCODE_LCTRL,  SDL_SCANCODE_RCTRL,  SDL_SCANCODE_J,      SDL_SCANCODE_K,
+    SDL_SCANCODE_L, // pad-эмуляция face
+    SDL_SCANCODE_U,      SDL_SCANCODE_I,                 // pad-эмуляция шоулдеров
 };
 
-static_assert((int)(sizeof(KEY_SCANCODES) / sizeof(KEY_SCANCODES[0])) ==
-                  (int)INPUT_KEY_COUNT,
+static_assert((int)(sizeof(KEY_SCANCODES) / sizeof(KEY_SCANCODES[0])) == (int)INPUT_KEY_COUNT,
               "input_sdl.cpp: таблица сканкодов не совпадает с KeyCode");
 
 /// INPUT_PAD_* → SDL_GamepadButton; L2/R2 отдельный путь — через оси.
 static const SDL_GamepadButton PAD_BUTTONS[INPUT_PAD_COUNT] = {
-    SDL_GAMEPAD_BUTTON_DPAD_UP, SDL_GAMEPAD_BUTTON_DPAD_DOWN,
-    SDL_GAMEPAD_BUTTON_DPAD_LEFT, SDL_GAMEPAD_BUTTON_DPAD_RIGHT,
+    SDL_GAMEPAD_BUTTON_DPAD_UP,       SDL_GAMEPAD_BUTTON_DPAD_DOWN,
+    SDL_GAMEPAD_BUTTON_DPAD_LEFT,     SDL_GAMEPAD_BUTTON_DPAD_RIGHT,
     SDL_GAMEPAD_BUTTON_SOUTH,   // PS: Крестик (низ)
     SDL_GAMEPAD_BUTTON_EAST,    // PS: Круг (право)
     SDL_GAMEPAD_BUTTON_WEST,    // PS: Квадрат (лево)
     SDL_GAMEPAD_BUTTON_NORTH,   // PS: Треугольник (верх)
-    SDL_GAMEPAD_BUTTON_LEFT_SHOULDER,
-    SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,
+    SDL_GAMEPAD_BUTTON_LEFT_SHOULDER, SDL_GAMEPAD_BUTTON_RIGHT_SHOULDER,
     SDL_GAMEPAD_BUTTON_INVALID, // L2: аналоговая ось
     SDL_GAMEPAD_BUTTON_INVALID, // R2: аналоговая ось
     SDL_GAMEPAD_BUTTON_START,
     SDL_GAMEPAD_BUTTON_BACK,    // PS: Select/Share
 };
 
-static_assert((int)(sizeof(PAD_BUTTONS) / sizeof(PAD_BUTTONS[0])) ==
-                  (int)INPUT_PAD_COUNT,
+static_assert((int)(sizeof(PAD_BUTTONS) / sizeof(PAD_BUTTONS[0])) == (int)INPUT_PAD_COUNT,
               "input_sdl.cpp: таблица PAD_BUTTONS не совпадает с PadButton");
 
 /// INPUT_AXIS_* → SDL_GamepadAxis; порядок зеркалит SDL (контракт).
 static const SDL_GamepadAxis PAD_AXES[INPUT_AXIS_COUNT] = {
-    SDL_GAMEPAD_AXIS_LEFTX, SDL_GAMEPAD_AXIS_LEFTY,
-    SDL_GAMEPAD_AXIS_RIGHTX, SDL_GAMEPAD_AXIS_RIGHTY,
-    SDL_GAMEPAD_AXIS_LEFT_TRIGGER, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER,
+    SDL_GAMEPAD_AXIS_LEFTX,  SDL_GAMEPAD_AXIS_LEFTY,        SDL_GAMEPAD_AXIS_RIGHTX,
+    SDL_GAMEPAD_AXIS_RIGHTY, SDL_GAMEPAD_AXIS_LEFT_TRIGGER, SDL_GAMEPAD_AXIS_RIGHT_TRIGGER,
 };
 
-static_assert((int)(sizeof(PAD_AXES) / sizeof(PAD_AXES[0])) ==
-                  (int)INPUT_AXIS_COUNT,
+static_assert((int)(sizeof(PAD_AXES) / sizeof(PAD_AXES[0])) == (int)INPUT_AXIS_COUNT,
               "input_sdl.cpp: таблица PAD_AXES не совпадает с InputAxis");
 
 /// Строка клавиатурной эмуляции цифрового pad 0 (см. комментарий в шапке).
@@ -87,22 +79,14 @@ struct KeyboardPadEntry
 };
 
 static const KeyboardPadEntry KEYBOARD_PAD_0[] = {
-    { SDL_SCANCODE_W, INPUT_PAD_UP },
-    { SDL_SCANCODE_S, INPUT_PAD_DOWN },
-    { SDL_SCANCODE_A, INPUT_PAD_LEFT },
-    { SDL_SCANCODE_D, INPUT_PAD_RIGHT },
-    { SDL_SCANCODE_UP, INPUT_PAD_UP },
-    { SDL_SCANCODE_DOWN, INPUT_PAD_DOWN },
-    { SDL_SCANCODE_LEFT, INPUT_PAD_LEFT },
-    { SDL_SCANCODE_RIGHT, INPUT_PAD_RIGHT },
-    { SDL_SCANCODE_SPACE, INPUT_PAD_CROSS },
-    { SDL_SCANCODE_J, INPUT_PAD_CIRCLE },
-    { SDL_SCANCODE_K, INPUT_PAD_SQUARE },
-    { SDL_SCANCODE_L, INPUT_PAD_TRIANGLE },
-    { SDL_SCANCODE_U, INPUT_PAD_L1 },
-    { SDL_SCANCODE_I, INPUT_PAD_R1 },
-    { SDL_SCANCODE_RETURN, INPUT_PAD_START },
-    { SDL_SCANCODE_TAB, INPUT_PAD_SELECT },
+    {SDL_SCANCODE_W, INPUT_PAD_UP},         {SDL_SCANCODE_S, INPUT_PAD_DOWN},
+    {SDL_SCANCODE_A, INPUT_PAD_LEFT},       {SDL_SCANCODE_D, INPUT_PAD_RIGHT},
+    {SDL_SCANCODE_UP, INPUT_PAD_UP},        {SDL_SCANCODE_DOWN, INPUT_PAD_DOWN},
+    {SDL_SCANCODE_LEFT, INPUT_PAD_LEFT},    {SDL_SCANCODE_RIGHT, INPUT_PAD_RIGHT},
+    {SDL_SCANCODE_SPACE, INPUT_PAD_CROSS},  {SDL_SCANCODE_J, INPUT_PAD_CIRCLE},
+    {SDL_SCANCODE_K, INPUT_PAD_SQUARE},     {SDL_SCANCODE_L, INPUT_PAD_TRIANGLE},
+    {SDL_SCANCODE_U, INPUT_PAD_L1},         {SDL_SCANCODE_I, INPUT_PAD_R1},
+    {SDL_SCANCODE_RETURN, INPUT_PAD_START}, {SDL_SCANCODE_TAB, INPUT_PAD_SELECT},
 };
 
 /// Сжатие raw SDL [-32768..32767] в [-128..127]: детерминированное целочисленное
@@ -189,8 +173,7 @@ bool Input_IsPadButtonDown(uint32_t pad_index, PadButton button)
         if (state == nullptr || numkeys <= 0) {
             return false;
         }
-        for (size_t i = 0; i < sizeof(KEYBOARD_PAD_0) / sizeof(KEYBOARD_PAD_0[0]);
-             ++i) {
+        for (size_t i = 0; i < sizeof(KEYBOARD_PAD_0) / sizeof(KEYBOARD_PAD_0[0]); ++i) {
             if (KEYBOARD_PAD_0[i].button != button) {
                 continue;
             }
@@ -207,9 +190,8 @@ bool Input_IsPadButtonDown(uint32_t pad_index, PadButton button)
 
     if (sdl_button == SDL_GAMEPAD_BUTTON_INVALID) {
         // L2/R2: аналоговые оси, цифровая трактовка по порогу.
-        const int16_t axis = (button == INPUT_PAD_L2)
-                                 ? Input_GetPadAxis(pad_index, INPUT_AXIS_L2)
-                                 : Input_GetPadAxis(pad_index, INPUT_AXIS_R2);
+        const int16_t axis = (button == INPUT_PAD_L2) ? Input_GetPadAxis(pad_index, INPUT_AXIS_L2)
+                                                      : Input_GetPadAxis(pad_index, INPUT_AXIS_R2);
         return axis >= INPUT_TRIGGER_THRESHOLD;
     }
     return SDL_GetGamepadButton(gamepad, sdl_button);

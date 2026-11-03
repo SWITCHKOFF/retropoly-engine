@@ -42,9 +42,9 @@ constexpr Entity INVALID_ENTITY = 0;
 constexpr uint32_t MAX_ENTITIES = 10000;
 
 static_assert(ENTITY_INDEX_BITS + ENTITY_GENERATION_BITS == 32,
-    "Entity handle must use exactly 32 bits");
+              "Entity handle must use exactly 32 bits");
 static_assert(MAX_ENTITIES <= (ENTITY_INDEX_MASK + 1u),
-    "MAX_ENTITIES must fit into the 24-bit index domain");
+              "MAX_ENTITIES must fit into the 24-bit index domain");
 
 /**
  * Формирование хэндла из индекса слота и generation.
@@ -69,7 +69,10 @@ static inline Entity entity_make(uint32_t index, uint32_t generation)
  * @param entity Хэндл сущности.
  * @return Нижние 24 бита хэндла (индекс слота).
  */
-static inline uint32_t entity_index(Entity entity) { return entity & ENTITY_INDEX_MASK; }
+static inline uint32_t entity_index(Entity entity)
+{
+    return entity & ENTITY_INDEX_MASK;
+}
 
 /**
  * Извлечение generation из хэндла.

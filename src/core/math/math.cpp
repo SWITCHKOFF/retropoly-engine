@@ -32,8 +32,7 @@ Vec3 vec3_normalize(Vec3 v)
 // Тригонометрия (Спринт 1–2 Неделя 4): sin_fixed / cos_fixed
 // ============================================================================
 
-namespace
-{
+namespace {
 /**
  * Целочисленная редукция угла к [0, π/2] + симметричное свёртывание знака,
  * затем полином Тейлора (4 члена): sin(x) ≈ x − x³/3! + x⁵/5! − x⁷/7! + x⁹/9!.
@@ -45,18 +44,15 @@ fixed_t sin_i64(int64_t a)
 {
     // Периодичность: [0, 2π) (остаток с коррекцией знака — floor-мод).
     a %= FIXED_TWO_PI;
-    if (a < 0)
-        a += FIXED_TWO_PI;
+    if (a < 0) a += FIXED_TWO_PI;
 
     int neg = 0;
-    if (a >= FIXED_PI)
-    {
+    if (a >= FIXED_PI) {
         a -= FIXED_PI;
         neg = 1;
     }
     // Свёртывание к [0, π/2]: sin(π − x) = sin(x); a ≤ FIXED_PI здесь.
-    if (a > FIXED_HALF_PI)
-        a = FIXED_PI - a;
+    if (a > FIXED_HALF_PI) a = FIXED_PI - a;
 
     const fixed_t x = (fixed_t)a;
     const fixed_t x2 = fixed_mul(x, x);
@@ -81,7 +77,10 @@ fixed_t sin_i64(int64_t a)
 }
 } // namespace
 
-fixed_t sin_fixed(fixed_t angle) { return sin_i64((int64_t)angle); }
+fixed_t sin_fixed(fixed_t angle)
+{
+    return sin_i64((int64_t)angle);
+}
 
 fixed_t cos_fixed(fixed_t angle)
 {
@@ -95,10 +94,8 @@ fixed_t cos_fixed(fixed_t angle)
 
 void mat4_identity(Mat4* out)
 {
-    for (int c = 0; c < 4; ++c)
-    {
-        for (int r = 0; r < 4; ++r)
-        {
+    for (int c = 0; c < 4; ++c) {
+        for (int r = 0; r < 4; ++r) {
             out->m[c * 4 + r] = (r == c) ? FIXED_ONE : 0;
         }
     }
@@ -108,10 +105,8 @@ void mat4_multiply(Mat4* out, const Mat4* a, const Mat4* b)
 {
     // Aliasing-safe: все 16 аккумуляторов формируются до операций записи.
     int64_t acc[16];
-    for (int c = 0; c < 4; ++c)
-    {
-        for (int r = 0; r < 4; ++r)
-        {
+    for (int c = 0; c < 4; ++c) {
+        for (int r = 0; r < 4; ++r) {
             // out(r,c) = Σ_k a(r,k)·b(k,c) в column-major: a.m[k*4+r]·b.m[c*4+k].
             int64_t sum = (int64_t)a->m[0 * 4 + r] * (int64_t)b->m[c * 4 + 0];
             sum = fixed_sat_add_i64(sum, (int64_t)a->m[1 * 4 + r] * (int64_t)b->m[c * 4 + 1]);
@@ -120,8 +115,7 @@ void mat4_multiply(Mat4* out, const Mat4* a, const Mat4* b)
             acc[c * 4 + r] = sum;
         }
     }
-    for (int i = 0; i < 16; ++i)
-    {
+    for (int i = 0; i < 16; ++i) {
         out->m[i] = fixed_clamp_i64(acc[i] / FIXED_ONE);
     }
 }
@@ -222,17 +216,17 @@ Vec4 mat4_transform(const Mat4* m, Vec4 v)
 {
     // Покомпонентная редукция: 4 произведения на полный int64-аккумулятор,
     // один fixed-clamp на компоненту (column-major: row r = m[c*4+r] по c).
-    const int64_t x_acc = fixed_sat_add_i64(fixed_sat_add_i64((int64_t)m->m[0] * (int64_t)v.x,
-                                                (int64_t)m->m[4] * (int64_t)v.y),
+    const int64_t x_acc = fixed_sat_add_i64(
+        fixed_sat_add_i64((int64_t)m->m[0] * (int64_t)v.x, (int64_t)m->m[4] * (int64_t)v.y),
         fixed_sat_add_i64((int64_t)m->m[8] * (int64_t)v.z, (int64_t)m->m[12] * (int64_t)v.w));
-    const int64_t y_acc = fixed_sat_add_i64(fixed_sat_add_i64((int64_t)m->m[1] * (int64_t)v.x,
-                                                (int64_t)m->m[5] * (int64_t)v.y),
+    const int64_t y_acc = fixed_sat_add_i64(
+        fixed_sat_add_i64((int64_t)m->m[1] * (int64_t)v.x, (int64_t)m->m[5] * (int64_t)v.y),
         fixed_sat_add_i64((int64_t)m->m[9] * (int64_t)v.z, (int64_t)m->m[13] * (int64_t)v.w));
-    const int64_t z_acc = fixed_sat_add_i64(fixed_sat_add_i64((int64_t)m->m[2] * (int64_t)v.x,
-                                                (int64_t)m->m[6] * (int64_t)v.y),
+    const int64_t z_acc = fixed_sat_add_i64(
+        fixed_sat_add_i64((int64_t)m->m[2] * (int64_t)v.x, (int64_t)m->m[6] * (int64_t)v.y),
         fixed_sat_add_i64((int64_t)m->m[10] * (int64_t)v.z, (int64_t)m->m[14] * (int64_t)v.w));
-    const int64_t w_acc = fixed_sat_add_i64(fixed_sat_add_i64((int64_t)m->m[3] * (int64_t)v.x,
-                                                (int64_t)m->m[7] * (int64_t)v.y),
+    const int64_t w_acc = fixed_sat_add_i64(
+        fixed_sat_add_i64((int64_t)m->m[3] * (int64_t)v.x, (int64_t)m->m[7] * (int64_t)v.y),
         fixed_sat_add_i64((int64_t)m->m[11] * (int64_t)v.z, (int64_t)m->m[15] * (int64_t)v.w));
 
     return Vec4{
@@ -249,10 +243,8 @@ Vec4 mat4_transform(const Mat4* m, Vec4 v)
 
 void mat3_identity(Mat3* out)
 {
-    for (int c = 0; c < 3; ++c)
-    {
-        for (int r = 0; r < 3; ++r)
-        {
+    for (int c = 0; c < 3; ++c) {
+        for (int r = 0; r < 3; ++r) {
             out->m[c * 3 + r] = (r == c) ? FIXED_ONE : 0;
         }
     }
@@ -261,10 +253,8 @@ void mat3_identity(Mat3* out)
 void mat3_from_mat4(Mat3* out, const Mat4* src)
 {
     // Верхние 3×3 (rotation) без 4-й строки/колонки.
-    for (int c = 0; c < 3; ++c)
-    {
-        for (int r = 0; r < 3; ++r)
-        {
+    for (int c = 0; c < 3; ++c) {
+        for (int r = 0; r < 3; ++r) {
             out->m[c * 3 + r] = src->m[c * 4 + r];
         }
     }
@@ -273,29 +263,29 @@ void mat3_from_mat4(Mat3* out, const Mat4* src)
 void mat3_multiply(Mat3* out, const Mat3* a, const Mat3* b)
 {
     int64_t acc[9];
-    for (int c = 0; c < 3; ++c)
-    {
-        for (int r = 0; r < 3; ++r)
-        {
+    for (int c = 0; c < 3; ++c) {
+        for (int r = 0; r < 3; ++r) {
             int64_t sum = (int64_t)a->m[0 * 3 + r] * (int64_t)b->m[c * 3 + 0];
             sum = fixed_sat_add_i64(sum, (int64_t)a->m[1 * 3 + r] * (int64_t)b->m[c * 3 + 1]);
             sum = fixed_sat_add_i64(sum, (int64_t)a->m[2 * 3 + r] * (int64_t)b->m[c * 3 + 2]);
             acc[c * 3 + r] = sum;
         }
     }
-    for (int i = 0; i < 9; ++i)
-    {
+    for (int i = 0; i < 9; ++i) {
         out->m[i] = fixed_clamp_i64(acc[i] / FIXED_ONE);
     }
 }
 
 Vec3 mat3_transform(const Mat3* m, Vec3 v)
 {
-    const int64_t x_acc = fixed_sat_add_i64((int64_t)m->m[0] * (int64_t)v.x,
+    const int64_t x_acc = fixed_sat_add_i64(
+        (int64_t)m->m[0] * (int64_t)v.x,
         fixed_sat_add_i64((int64_t)m->m[3] * (int64_t)v.y, (int64_t)m->m[6] * (int64_t)v.z));
-    const int64_t y_acc = fixed_sat_add_i64((int64_t)m->m[1] * (int64_t)v.x,
+    const int64_t y_acc = fixed_sat_add_i64(
+        (int64_t)m->m[1] * (int64_t)v.x,
         fixed_sat_add_i64((int64_t)m->m[4] * (int64_t)v.y, (int64_t)m->m[7] * (int64_t)v.z));
-    const int64_t z_acc = fixed_sat_add_i64((int64_t)m->m[2] * (int64_t)v.x,
+    const int64_t z_acc = fixed_sat_add_i64(
+        (int64_t)m->m[2] * (int64_t)v.x,
         fixed_sat_add_i64((int64_t)m->m[5] * (int64_t)v.y, (int64_t)m->m[8] * (int64_t)v.z));
 
     return Vec3{

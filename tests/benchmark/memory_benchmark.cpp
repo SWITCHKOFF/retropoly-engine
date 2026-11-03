@@ -14,8 +14,7 @@
 #include <chrono>
 #include <cstdio>
 
-namespace
-{
+namespace {
 
 alignas(64) uint8_t g_linear_storage[1024 * 1024];
 alignas(64) uint8_t g_stack_storage[1024 * 1024];
@@ -37,7 +36,7 @@ inline void consume(const void* pointer)
 #endif
 }
 
-template<typename Func>
+template <typename Func>
 double measure_ns_per_op(uint32_t iterations, Func&& func)
 {
     const std::chrono::steady_clock::time_point start = std::chrono::steady_clock::now();
@@ -60,14 +59,12 @@ int main()
     Pool<BenchObject, 256> pool;
 
     const double linear_ns = measure_ns_per_op(iterations, [&linear]() {
-        if (linear.remaining() < 16)
-            linear.reset();
+        if (linear.remaining() < 16) linear.reset();
         consume(linear.allocate(16, 8));
     });
 
     const double stack_ns = measure_ns_per_op(iterations, [&stack]() {
-        if (stack.remaining() < 16)
-            stack.reset_frame();
+        if (stack.remaining() < 16) stack.reset_frame();
         consume(stack.push(16, 8));
     });
 

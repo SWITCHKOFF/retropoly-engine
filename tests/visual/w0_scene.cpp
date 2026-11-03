@@ -30,8 +30,7 @@ const uint8_t* w0_make_checker_pixels(uint32_t* out_w, uint32_t* out_h)
     static uint8_t pixels[64 * 64];
     for (uint32_t y = 0u; y < 64u; ++y) {
         for (uint32_t x = 0u; x < 64u; ++x) {
-            const uint32_t cell =
-                ((x / W0_CHECKER_CELL) + (y / W0_CHECKER_CELL)) & 1u;
+            const uint32_t cell = ((x / W0_CHECKER_CELL) + (y / W0_CHECKER_CELL)) & 1u;
             pixels[y * 64u + x] = (cell == 0u) ? 0u : 1u;
         }
     }
@@ -61,6 +60,30 @@ const uint16_t* w0_make_checker_palette(void)
     return palette;
 }
 
+const uint8_t* w0_make_seam_pixels(uint32_t* out_w, uint32_t* out_h)
+{
+    // Вертикальный палитровый шов: texel x < 32 → индекс 0 (palette[0]),
+    // x ≥ 32 → индекс 1 (palette[1]). Реплика model_forecast (недели 15–16;
+    // render_golden_test.cpp): seam при u_texcoord = 0.5 → floor(u·64) = 32
+    // → palette[1]; при u < 0.5 → palette[0]. Спец-текстура числового
+    // affine-конформанса: расхождение affine/perspective UV детектируется
+    // точно по палитровому шву (не по чекерам), где дрейф w-веса
+    // максимальный на наклонной плоскости.
+    static uint8_t pixels[64 * 64];
+    for (uint32_t y = 0u; y < 64u; ++y) {
+        for (uint32_t x = 0u; x < 64u; ++x) {
+            pixels[y * 64u + x] = (x < 32u) ? 0u : 1u;
+        }
+    }
+    if (out_w != NULL) {
+        *out_w = 64u;
+    }
+    if (out_h != NULL) {
+        *out_h = 64u;
+    }
+    return pixels;
+}
+
 // ---------------------------------------------------------------------------
 // Комната: 6 плоскостей × 2 треугольника
 // ---------------------------------------------------------------------------
@@ -76,9 +99,8 @@ namespace {
  * против часовой (CCW СМОТРЯ ИЗНУРИ комнаты) → и A<0 при SY-DOWN
  * проекции ядра (front-face конвенция ядра).
  */
-void w0_push_quad(uint32_t* vertex_cursor, uint32_t* tri_cursor,
-                  Vertex* vertices, Triangle* triangles,
-                  const fixed_t p[4][3], const uint8_t uv[4][2],
+void w0_push_quad(uint32_t* vertex_cursor, uint32_t* tri_cursor, Vertex* vertices,
+                  Triangle* triangles, const fixed_t p[4][3], const uint8_t uv[4][2],
                   const uint8_t color[4][3])
 {
     const uint32_t base = *vertex_cursor;
@@ -132,7 +154,10 @@ void w0_build_room(Vertex* vertices, Triangle* triangles)
             {fixed_from_int(-5), fixed_from_int(-5), fixed_from_int(-20)},
         };
         const uint8_t color[4][3] = {
-            {200, 120, 100}, {240, 160, 60}, {120, 200, 60}, {60, 100, 240},
+            {200, 120, 100},
+            {240, 160, 60},
+            {120, 200, 60},
+            {60, 100, 240},
         };
         w0_push_quad(&vc, &tc, vertices, triangles, p, uv_quad, color);
     }
@@ -146,7 +171,10 @@ void w0_build_room(Vertex* vertices, Triangle* triangles)
             {fixed_from_int(5), fixed_from_int(5), fixed_from_int(-5)},
         };
         const uint8_t color[4][3] = {
-            {80, 80, 160}, {160, 80, 80}, {80, 160, 80}, {160, 80, 160},
+            {80, 80, 160},
+            {160, 80, 80},
+            {80, 160, 80},
+            {160, 80, 160},
         };
         w0_push_quad(&vc, &tc, vertices, triangles, p, uv_quad, color);
     }
@@ -160,7 +188,10 @@ void w0_build_room(Vertex* vertices, Triangle* triangles)
             {fixed_from_int(-5), fixed_from_int(5), fixed_from_int(-5)},
         };
         const uint8_t color[4][3] = {
-            {220, 220, 60}, {220, 60, 220}, {60, 220, 220}, {220, 220, 220},
+            {220, 220, 60},
+            {220, 60, 220},
+            {60, 220, 220},
+            {220, 220, 220},
         };
         w0_push_quad(&vc, &tc, vertices, triangles, p, uv_quad, color);
     }
@@ -174,7 +205,10 @@ void w0_build_room(Vertex* vertices, Triangle* triangles)
             {fixed_from_int(5), fixed_from_int(-5), fixed_from_int(-20)},
         };
         const uint8_t color[4][3] = {
-            {60, 220, 120}, {120, 60, 220}, {220, 120, 60}, {220, 220, 60},
+            {60, 220, 120},
+            {120, 60, 220},
+            {220, 120, 60},
+            {220, 220, 60},
         };
         w0_push_quad(&vc, &tc, vertices, triangles, p, uv_quad, color);
     }
@@ -188,7 +222,10 @@ void w0_build_room(Vertex* vertices, Triangle* triangles)
             {fixed_from_int(-5), fixed_from_int(5), fixed_from_int(-5)},
         };
         const uint8_t color[4][3] = {
-            {240, 240, 240}, {180, 180, 240}, {120, 120, 200}, {200, 200, 120},
+            {240, 240, 240},
+            {180, 180, 240},
+            {120, 120, 200},
+            {200, 200, 120},
         };
         w0_push_quad(&vc, &tc, vertices, triangles, p, uv_quad, color);
     }
@@ -202,7 +239,10 @@ void w0_build_room(Vertex* vertices, Triangle* triangles)
             {fixed_from_int(-5), fixed_from_int(5), fixed_from_int(-20)},
         };
         const uint8_t color[4][3] = {
-            {120, 60, 60}, {240, 240, 60}, {60, 240, 240}, {240, 60, 240},
+            {120, 60, 60},
+            {240, 240, 60},
+            {60, 240, 240},
+            {240, 60, 240},
         };
         w0_push_quad(&vc, &tc, vertices, triangles, p, uv_quad, color);
     }
@@ -227,85 +267,85 @@ void w0_build_case(W0CaseId case_id, Vertex* vertices, Triangle* triangle)
     Vertex* v = vertices;
 
     switch (case_id) {
-    case W0_CASE_VISIBLE:
-        // Фронтальный по winding (A < 0) — виден на экране целиком.
-        v[0].x = fixed_from_int(-1);
-        v[1].x = fixed_from_int(1);
-        v[2].x = 0;
-        v[0].y = fixed_from_int(-1);
-        v[1].y = fixed_from_int(-1);
-        v[2].y = fixed_from_int(1);
-        v[0].z = fixed_from_int(-5);
-        v[1].z = fixed_from_int(-5);
-        v[2].z = fixed_from_int(-5);
-        v[0].r = 255;
-        v[0].g = 0;
-        v[0].b = 0;
-        v[1].r = 0;
-        v[1].g = 255;
-        v[1].b = 0;
-        v[2].r = 0;
-        v[2].g = 0;
-        v[2].b = 255;
-        v[0].u = 0;
-        v[0].v = 0;
-        v[1].u = 255;
-        v[1].v = 0;
-        v[2].u = 128;
-        v[2].v = 255;
-        break;
-    case W0_CASE_BACKFACE:
-        // GEометриі та ж, winding обратен (A ≥ 0) — CULL reject.
-        v[0].x = fixed_from_int(1);
-        v[1].x = fixed_from_int(-1);
-        v[2].x = 0;
-        v[0].y = fixed_from_int(-1);
-        v[1].y = fixed_from_int(-1);
-        v[2].y = fixed_from_int(1);
-        v[0].z = fixed_from_int(-5);
-        v[1].z = fixed_from_int(-5);
-        v[2].z = fixed_from_int(-5);
-        break;
-    case W0_CASE_NEAR_CROSS:
-        // Вершина «пересекает» near plane: d = −(z−5) = −1 (< near = 1),
-        // остальные d = 5 (внутри). Whole-triangle clip reject (норматив:
-        // explicit rejection, клипсование без сохранения — не реализовано).
-        v[0].x = fixed_from_int(-1);
-        v[1].x = fixed_from_int(1);
-        v[2].x = 0;
-        v[0].y = fixed_from_int(-1);
-        v[1].y = fixed_from_int(-1);
-        v[2].y = fixed_from_int(1);
-        v[0].z = fixed_from_int(6);    // d = −1: вне [near..far].
-        v[1].z = fixed_from_int(0);    // d = 5.
-        v[2].z = fixed_from_int(0);    // d = 5.
-        break;
-    case W0_CASE_FAR_CROSS:
-        // Вершина дальше far: d = −(−110−5) = 115 (> far = 100).
-        v[0].x = fixed_from_int(-1);
-        v[1].x = fixed_from_int(1);
-        v[2].x = 0;
-        v[0].y = fixed_from_int(-1);
-        v[1].y = fixed_from_int(-1);
-        v[2].y = fixed_from_int(1);
-        v[0].z = fixed_from_int(-110); // d = 115 → clip reject.
-        v[1].z = fixed_from_int(0);
-        v[2].z = fixed_from_int(0);
-        break;
-    case W0_CASE_BEHIND_CAMERA:
-    default:
-        // Все вершины ЗА камерой (world z = 8 > глаз z = 5; d = −(8−5) =
-        // −3 < 0 < near) — invalid depth / clip rejection (кейс 5 нормы).
-        v[0].x = fixed_from_int(-1);
-        v[1].x = fixed_from_int(1);
-        v[2].x = 0;
-        v[0].y = fixed_from_int(-1);
-        v[1].y = fixed_from_int(-1);
-        v[2].y = fixed_from_int(1);
-        v[0].z = fixed_from_int(8);
-        v[1].z = fixed_from_int(8);
-        v[2].z = fixed_from_int(8);
-        break;
+        case W0_CASE_VISIBLE:
+            // Фронтальный по winding (A < 0) — виден на экране целиком.
+            v[0].x = fixed_from_int(-1);
+            v[1].x = fixed_from_int(1);
+            v[2].x = 0;
+            v[0].y = fixed_from_int(-1);
+            v[1].y = fixed_from_int(-1);
+            v[2].y = fixed_from_int(1);
+            v[0].z = fixed_from_int(-5);
+            v[1].z = fixed_from_int(-5);
+            v[2].z = fixed_from_int(-5);
+            v[0].r = 255;
+            v[0].g = 0;
+            v[0].b = 0;
+            v[1].r = 0;
+            v[1].g = 255;
+            v[1].b = 0;
+            v[2].r = 0;
+            v[2].g = 0;
+            v[2].b = 255;
+            v[0].u = 0;
+            v[0].v = 0;
+            v[1].u = 255;
+            v[1].v = 0;
+            v[2].u = 128;
+            v[2].v = 255;
+            break;
+        case W0_CASE_BACKFACE:
+            // GEометриі та ж, winding обратен (A ≥ 0) — CULL reject.
+            v[0].x = fixed_from_int(1);
+            v[1].x = fixed_from_int(-1);
+            v[2].x = 0;
+            v[0].y = fixed_from_int(-1);
+            v[1].y = fixed_from_int(-1);
+            v[2].y = fixed_from_int(1);
+            v[0].z = fixed_from_int(-5);
+            v[1].z = fixed_from_int(-5);
+            v[2].z = fixed_from_int(-5);
+            break;
+        case W0_CASE_NEAR_CROSS:
+            // Вершина «пересекает» near plane: d = −(z−5) = −1 (< near = 1),
+            // остальные d = 5 (внутри). Whole-triangle clip reject (норматив:
+            // explicit rejection, клипсование без сохранения — не реализовано).
+            v[0].x = fixed_from_int(-1);
+            v[1].x = fixed_from_int(1);
+            v[2].x = 0;
+            v[0].y = fixed_from_int(-1);
+            v[1].y = fixed_from_int(-1);
+            v[2].y = fixed_from_int(1);
+            v[0].z = fixed_from_int(6);    // d = −1: вне [near..far].
+            v[1].z = fixed_from_int(0);    // d = 5.
+            v[2].z = fixed_from_int(0);    // d = 5.
+            break;
+        case W0_CASE_FAR_CROSS:
+            // Вершина дальше far: d = −(−110−5) = 115 (> far = 100).
+            v[0].x = fixed_from_int(-1);
+            v[1].x = fixed_from_int(1);
+            v[2].x = 0;
+            v[0].y = fixed_from_int(-1);
+            v[1].y = fixed_from_int(-1);
+            v[2].y = fixed_from_int(1);
+            v[0].z = fixed_from_int(-110); // d = 115 → clip reject.
+            v[1].z = fixed_from_int(0);
+            v[2].z = fixed_from_int(0);
+            break;
+        case W0_CASE_BEHIND_CAMERA:
+        default:
+            // Все вершины ЗА камерой (world z = 8 > глаз z = 5; d = −(8−5) =
+            // −3 < 0 < near) — invalid depth / clip rejection (кейс 5 нормы).
+            v[0].x = fixed_from_int(-1);
+            v[1].x = fixed_from_int(1);
+            v[2].x = 0;
+            v[0].y = fixed_from_int(-1);
+            v[1].y = fixed_from_int(-1);
+            v[2].y = fixed_from_int(1);
+            v[0].z = fixed_from_int(8);
+            v[1].z = fixed_from_int(8);
+            v[2].z = fixed_from_int(8);
+            break;
     }
     // Gouraud/UV оставлены 0 для reject-кейсов — не рисуются, инфлюэнса
     // хэша нет; видимый кейс имеет полную раскраску (см. visible).
@@ -318,8 +358,7 @@ void w0_build_case(W0CaseId case_id, Vertex* vertices, Triangle* triangle)
 void w0_camera(Mat4* view, Mat4* proj)
 {
     const Vec3 eye = {fixed_from_int(0), fixed_from_int(0), fixed_from_int(5)};
-    const Vec3 target = {fixed_from_int(0), fixed_from_int(0),
-                         fixed_from_int(0)};
+    const Vec3 target = {fixed_from_int(0), fixed_from_int(0), fixed_from_int(0)};
     const Vec3 up = {fixed_from_int(0), fixed_from_int(1), fixed_from_int(0)};
     mat4_look_at(view, eye, target, up);
     // fov 60° в fixed (§4.3: FIXED_PI радиан = 205887; 60° = π/3 = 68629).

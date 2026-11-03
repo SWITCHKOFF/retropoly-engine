@@ -6,6 +6,52 @@
 
 ### Added
 
+- Спринт 7–8, недели 15–16 — закрывающий хвост (M2) — числовой конформанс +
+  инвентарь draw + CI-рендер-гейт: (1) `tests/visual/render_golden_test.cpp` —
+  `W0Golden.AffineNumericConformanceOnSlantedPlane` — программная реплика
+  GPU-пайплайна (`model_clip_from_view` → 1/16-квантование → барицентрика по
+  центрам пикселей → nearest-семпл → Gouraud-модуляция) против фактического
+  readback на НАКЛОННОЙ floor-плоскости (z −5..−20, w 10→25) с двуцветной
+  шов-текстурой (`w0_make_seam_pixels`, affine ≠ perspective различаются
+  палитровым швом): guarded=1605 / mismatched=0 / informative=133 / persp_hits=0
+  — «плывут» подтверждаются ровно affine'ом (замена ручного визуального
+  пункта приёмки); (2) `hal_render_backend_draw_call_count()` — программный
+  инвентарь draw-команд кадра (1 треугольник = 1 draw + 1 present quad; сброс
+  в BeginFrame) — замена ручной RenderDoc-верификации (тест-инвентарь:
+  комната = 13, единичный tri = 2, полный reject = 1); (3) CI: job
+  `pc-render-tests` в `tests.yml` — первый в истории прогон `pc-debug-render`
+  (W0-golden всего дерева 143 тестов) под `xvfb-run -a` на GitHub-runner
+  (закрывает задачу «xvfb-прогонка pc-debug-render в CI», до сих пор не
+  выполнявшуюся — W0-golden ранее вообще не запускался в CI); (4) фикс:
+  эталоны golden-теста резолвились через getenv (иначе — зависимость от CWD
+  запущенного процесса) — теперь compile-time `RPE_TEST_SOURCE_DIR`
+  (CWD-зависимость устранена; CI-runnable из любого каталога); (5)
+  `tools/windows/setup-windows.ps1` — идемпотентная автоматизация §3.1
+  Спринта 0 (Git/CMake/Ninja/VS2022 BuildTools/MSYS2/Cursor+7/эмуляторы) с
+  критериальными проверками [OK]/[FAIL].
+
+### Changed
+
+- Golden-протокол → v2 (после первого CI-прогона `pc-render-tests`):
+  быстрый путь — hash (7 из 8 эталонов bit-стабильны даже на
+  runner-llvmpipe); для `Room12TexturedTriangles` — фолбэк по сырым
+  15 битам против px-партнёра эталона (`w0_room12.bin.px`) с бюджетом
+  128 px и капом ±2 LSB канала — хэш-эталон байт-в-байт не изменён
+  (`a7dce7faeadb1b7f`); причина — rasterizer tie-breaking на силуэтных
+  рёбрах (замер: 26 px из 76 800, все ±1 LSB, локальный драйвер vs
+  llvmpipe; GL не специфицирует принадлежность пикселя на ребре).
+- `.clang-format` согласован с фактическим стилем кода (BraceWrapping
+  определений, `SortIncludes: Never`, `AlignTrailingComments: Leave`,
+  касты без пробела): дерево проекта проверяется формальнее —
+  `clang-format --dry-run --Werror` чистый по `src/ tests/ game/
+  tools/asset_converter`; прогон форматтера (v23) применён к файлам —
+  прямое закрытие «прогон clang-format» из Спринта 1–2.
+- `docs/STYLE_GUIDE.md` §2: определения (typedef/struct/enum/функции) —
+  скобка с переносом, стейтменты — attach; include-порядок — курируемый;
+  хвостовые комментарии — рукописные выравнивания.
+
+### Added
+
 - Спринт 7–8, Недели 13–15 (M2): ядро рендера с эмуляцией PS1 — `src/render/renderer.h/.cpp` (`Render_Init` — ровно один до первого `BeginFrame` (Lifecycle-contract: debug assert / release-diag), `Render_Shutdown/BeginFrame/EndFrame/Clear/BindTexture`, `RENDER_CLEAR_DEFAULT (0,0,32)`), `src/render/command_buffer.h` (фиксированный 64 KiB, overflow = явный отказ, без silent-drop), `src/render/sort_key.h` (SortRef + `sort_ref_before` — far→near с tie-breaker `submission_index`), `src/render/mesh.h` (Vertex/Triangle/MeshReader-заготовка), `src/render/texture.h/.cpp` (`pack_rgb555_stp` R[4:0]/G[9:5]/B[14:10]/STP[15]; пул CI8-текстур на static-арене 128 KiB/16 слотов, `RENDER_TEXTURE_MAX_DIM`=256); GL3.3-бэкенд `src/hal/pc/render_opengl.cpp` (reference FBO 320×240 RGBA8 без depth-attachment, `glDisable(GL_DEPTH_TEST/BLEND/CULL_FACE)` — backface-куллинг зона ядра; компиляция/линковка шейдеров с журналированием через core/log; динамический VBO per-triangle + static quad выкладки nearest). Шейдеры `src/render/shaders/ps1_emu.{vert,frag}` (affine UV `noperspective`, квантование 1/16 px 320×240 — wobble heuristic; CI8 → палитра 256×1 RGB555→RGB8 честный (c<<3)|(c>>2), Gouraud) и `ps1_present.{vert,frag}` (nearest-выкладка на окно); генерация `shaders_embedded.h` — `cmake/EmbedShaders.cmake` (C-escaping, `CMAKE_CONFIGURE_DEPENDS` на *.vert/*.frag); шейдерные qualifier'ы вынесены 1:1 vert↔frag. Пул текстур ядра ↔ GPU-клоны через `hal_render_backend_create_texture(handle,w,h,pixels,palette)` (HAL не ходит в пул ядра; слоёные статические библиотеки `retro_engine_log` → `retro_engine_hal` → `retro_engine`).
 - Спринт 7–8, Неделя 16 (M2): `Render_SetCamera(view,proj)` (вывод near/far из projection валидатором — мусорная матрица отказывается детерминированно), `Render_DrawMesh` (гейты: Transform→Clip(whole-triangle near/far)→Cull(A<0 SY-DOWN)→depth_key→PACK; `model=NULL` — явный NULL_ARGUMENT, «NULL=identity» нет), Painter's algorithm — стабильная вставочная сортировка SortRef (без `<algorithm>` — freestanding PS1), `depth_key_from_camera_z` (-1→REJECT, 4096→REJECT, 1024 ok — §1.2.6 1:1). W0-golden-конформанс `tests/visual/` (пресет `pc-debug-render`, gate `BUILD_RENDER_INTEGRATION_TESTS`): сцена 320×240 — комната из 12 CI8/Gouraud треугольников перед фиксированной камерой (12 подано/0 reject), 5 reject-кейсов (visible/backface/near/far/behind-camera), lifecycle-контракты; метод сравнения — framebuffer readback + FNV-1a 64 над 15-битным сжатием RGBA8 (`Render_TestReadbackHash`), эталоны `tests/visual/reference/*.bin` в репо (8-байтовые big-endian; regen — только `RENDER_GOLDEN_REBASE=1`). Каркас метаданных окружения `docs/benchmarks/reference_environment.yaml` (os/cpu/gpu/driver/compiler/build_type/resolutions/vsync/power_mode/measurement_seconds/git_revision/asset_set_sha256). Итог: 141 тест — 130 юнит (pc-debug/pc-release/pc-asan, 0 findings) + 11 visual/lifecycle (pc-debug-render); `ps1-release` ELF собирается.
 

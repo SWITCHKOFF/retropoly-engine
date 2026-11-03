@@ -9,9 +9,12 @@
 
 static_assert(MAX_ENTITIES <= 65535u, "MAX_ENTITIES must fit uint16_t free-list index");
 static_assert(sizeof(Registry) <= 256u * 1024u,
-    "ECS Registry exceeds the normative 256 KiB ECS/dynamic-pool budget");
+              "ECS Registry exceeds the normative 256 KiB ECS/dynamic-pool budget");
 
-Registry::Registry() : m_free_head(0xFFFFu), m_alive_count(0) { reset(); }
+Registry::Registry() : m_free_head(0xFFFFu), m_alive_count(0)
+{
+    reset();
+}
 
 void Registry::reset()
 {
@@ -23,8 +26,7 @@ void Registry::reset()
     m_player_controls.clear();
     m_colliders.clear();
 
-    for (uint32_t i = 0; i < MAX_ENTITIES; ++i)
-    {
+    for (uint32_t i = 0; i < MAX_ENTITIES; ++i) {
         m_slots[i].generation = 0;
         m_slots[i].alive = false;
         m_free_next[i] = (i + 1 < MAX_ENTITIES) ? static_cast<uint16_t>(i + 1) : 0xFFFFu;
@@ -39,8 +41,7 @@ void Registry::reset()
 
 Entity Registry::create_entity()
 {
-    if (m_free_head == 0xFFFFu || m_free_head >= MAX_ENTITIES)
-        return INVALID_ENTITY;
+    if (m_free_head == 0xFFFFu || m_free_head >= MAX_ENTITIES) return INVALID_ENTITY;
 
     const uint16_t slot = m_free_head;
     m_free_head = m_free_next[slot];
@@ -51,8 +52,7 @@ Entity Registry::create_entity()
 
 bool Registry::destroy_entity(Entity entity)
 {
-    if (!is_alive(entity))
-        return false;
+    if (!is_alive(entity)) return false;
 
     const uint32_t slot = entity_index(entity);
     remove_all_components(entity);
@@ -62,8 +62,7 @@ bool Registry::destroy_entity(Entity entity)
     // Generation 255 — последняя валидная; после destroy слот выводится из
     // оборота навсегда, чтобы 255→0 не дал stale-handle aliasing.
     const bool retire = (m_slots[slot].generation == 255);
-    if (!retire)
-    {
+    if (!retire) {
         ++m_slots[slot].generation;
         m_free_next[slot] = m_free_head;
         m_free_head = static_cast<uint16_t>(slot);
@@ -75,12 +74,10 @@ bool Registry::destroy_entity(Entity entity)
 
 bool Registry::is_alive(Entity entity) const
 {
-    if (entity == INVALID_ENTITY)
-        return false;
+    if (entity == INVALID_ENTITY) return false;
 
     const uint32_t slot = entity_index(entity);
-    if (slot >= MAX_ENTITIES)
-        return false;
+    if (slot >= MAX_ENTITIES) return false;
 
     return m_slots[slot].alive && m_slots[slot].generation == entity_generation(entity);
 }

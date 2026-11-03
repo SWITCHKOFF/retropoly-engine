@@ -29,6 +29,11 @@
 
 ### 3.1. Базовые инструменты Windows 11
 
+> Автоматизация: `tools/windows/setup-windows.ps1` — идемпотентный установка
+> всех пунктов §3.1 (Git/CMake/Ninja/VS Build Tools/MSYS2/Cursor×7/эмуляторы)
+> с критериями-проверками (сводка [OK]/[FAIL] в конце прогона). Чек-боксы
+> закрываются после первого реального прогона скрипта на Windows-хосте.
+
 - [ ] **Git for Windows** (2.40+)
   - [ ] Скачать с git-scm.com/download/win
   - [ ] Опция установки: «Checkout as-is, commit Unix-style line endings» (критично для CMake/CI)
@@ -68,7 +73,7 @@
   - [x] `mipsel-none-elf-gcc --version` выполняется *(12.3.0)*
   - [x] `$PSN00BSDK_LIBS/cmake/sdk.cmake` существует
   - [x] Смок-тест: скомпилировать `test.c` (`int main(){return 42;}`) компилятором из пакета; затем проверить сборку минимального target через `cmake --preset ps1-release` канонического пресета *(ELF 32-bit MIPS; пресет ps1-release сконфигурирован и собран — hello_triangle.elf/rotating_cube.elf)*
-- [ ] **Правило:** обновление SDK = отдельная задача с ADR; локальные pull/update после pin запрещены.
+- [x] **Правило:** обновление SDK = отдельная задача с ADR; локальные pull/update после pin запрещены. *(зафиксировано нормативно: `docs/DEVELOPMENT_PLAN.md` — «Workflow обновления toolchain»: ветка `update/psn00bsdk-vX.Y` → pin+sha → все пресеты+ctest → LEGAL/BUILDING/CHANGELOG/ADR → PR, старый pin сохраняется как rollback; `ci/verify_vendored.sh` держит *sha32 в каждом прогоне CI)*
 
 ### 3.3. OpenGL-загрузчик (glad)
 
@@ -78,7 +83,7 @@
 
 ### 3.4. Репозиторий (первичная структура)
 
-- [ ] Создать репо на GitHub: имя `retro-engine`, лицензия MIT, public *(нужен доступ к GitHub/gh; после создания: `git remote add origin …`, push)*
+- [x] Создать репо на GitHub: имя `retro-engine`, лицензия MIT, public *(создано: `origin` = github.com/SWITCHKOFF/retropoly-engine — публичный репо, LICENSE MIT; `git remote -v` → fetch/push настроены)*
 - [x] `git clone` локально *(вместо clone — локальный `git init` в RetroPolyEngine; identity: user.name `switchkoff`, e-mail noreply — при необходимости сменить)*
 - [x] Создать `.gitignore`: `build/`, `.vs/`, `.cache/`, `*.log`, `duckstation_test.log`, `coverage.info`
 - [x] Создать `.editorconfig` (UTF-8, LF, 4 пробела)
@@ -92,7 +97,7 @@
   - [x] `game/`, `tools/asset_converter/`, `examples/hello_triangle/`, `examples/rotating_cube/`
   - [x] `assets/source/`, `assets/build/`, `tests/`, `docs/`, `toolchain/`, `scripts/`, `ci/`, `benchmarks/`, `cmake/`
   - [x] `.github/workflows/`, `.github/ISSUE_TEMPLATE/`
-- [ ] Первый commit + push в `main` *(commit выполнен: 565d3a0, ветки `main`/`develop` созданы; push — после создания remote)*
+- [x] Первый commit + push в `main` *(выполнено: `origin/main` = `0ef99f5`, `origin/develop` — синхронизировано; первый зелёный Actions-прогон 2026-11-01: `tests` = success run 41302314603, `build-pc` = success run 41302314551)*
 - [x] Создать ветку `develop`, далее работать в `develop`
 
 ### 3.5. Система сборки (каркас)
@@ -139,7 +144,7 @@
 
 ## Критерии приёмки (гейт выхода из M0)
 
-- [ ] Все чек-боксы выше закрыты *(остались только Windows-only пункты §3.1 (инструменты Windows); PS1-тулчейн закрыт на Linux, GitHub remote/push и зелёный Actions закрыты 2026-11-01)*
+- [ ] Все чек-боксы выше закрыты *(остались ТОЛЬКО Windows-only пункты §3.1 — автоматизированы скриптом `tools/windows/setup-windows.ps1`; PS1-тулчейн закрыт на Linux, GitHub/push/Actions и правило-ADR закрыты)*
 - [x] `cmake --preset pc-debug && cmake --build --preset pc-debug` проходит *(Linux: GCC 15.2, CMake 4.4.4, Ninja 1.13.2)*
 - [x] `ctest --preset pc-debug` зелёный; CI (`tests.yml`) зелёный на пустом каркасе *(выполнено: локальный ctest = 130/130; `tests` = success, run 41302314603, 2026-11-01)*
 - [x] `cmake --preset ps1-release` конфигурируется с pinned SDK (смок-тест) *(Linux: PSn00bSDK v0.24 = `06e65bea…`, GCC 12.3.0; configure + build из бандла `PSn00bSDK-0.24-Linux.zip`)*
