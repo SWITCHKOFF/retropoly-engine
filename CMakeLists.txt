@@ -71,6 +71,35 @@ add_subdirectory(src)
 if(PLATFORM_PC)
     # asset_converter — host-only инструмент, никогда не компилируется MIPS-тулчейном.
     add_subdirectory(tools/asset_converter)
+
+    # --- Ассеты примеров: конвертация источников (Спринт 9–10, неделя 20, §4.5)
+    # Выходы — assets/build/ (детерминированные; коммитятся как versioned‑ассеты
+    # для PS1-checkout, Спринт 15–16; PC-сборка перегенерирует при изменении).
+    set(RPE_ASSET_SOURCE "${CMAKE_SOURCE_DIR}/assets/source")
+    set(RPE_ASSET_BUILD "${CMAKE_SOURCE_DIR}/assets/build")
+    if(EXISTS "${RPE_ASSET_SOURCE}/cube.gltf" AND EXISTS "${RPE_ASSET_SOURCE}/texture.png")
+        add_custom_command(
+            OUTPUT
+                "${RPE_ASSET_BUILD}/cube.mesh"
+                "${RPE_ASSET_BUILD}/texture.tex"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${RPE_ASSET_BUILD}"
+            COMMAND asset_converter
+                "${RPE_ASSET_SOURCE}/cube.gltf"
+                "${RPE_ASSET_BUILD}/cube.mesh"
+            COMMAND asset_converter
+                "${RPE_ASSET_SOURCE}/texture.png"
+                "${RPE_ASSET_BUILD}/texture.tex"
+            DEPENDS
+                asset_converter
+                "${RPE_ASSET_SOURCE}/cube.gltf"
+                "${RPE_ASSET_SOURCE}/texture.png"
+            COMMENT "asset_converter: cube.gltf → cube.mesh, texture.png → texture.tex"
+            VERBATIM)
+        add_custom_target(convert_assets ALL
+            DEPENDS
+                "${RPE_ASSET_BUILD}/cube.mesh"
+                "${RPE_ASSET_BUILD}/texture.tex")
+    endif()
 endif()
 
 # --- Примеры: зависят только от retro_engine (ни от SDL3/OpenGL/PSn00bSDK) ----
