@@ -32,6 +32,14 @@
 
 ### Changed
 
+- Golden-протокол → v2 (после первого CI-прогона `pc-render-tests`):
+  быстрый путь — hash (7 из 8 эталонов bit-стабильны даже на
+  runner-llvmpipe); для `Room12TexturedTriangles` — фолбэк по сырым
+  15 битам против px-партнёра эталона (`w0_room12.bin.px`) с бюджетом
+  128 px и капом ±2 LSB канала — хэш-эталон байт-в-байт не изменён
+  (`a7dce7faeadb1b7f`); причина — rasterizer tie-breaking на силуэтных
+  рёбрах (замер: 26 px из 76 800, все ±1 LSB, локальный драйвер vs
+  llvmpipe; GL не специфицирует принадлежность пикселя на ребре).
 - `.clang-format` согласован с фактическим стилем кода (BraceWrapping
   определений, `SortIncludes: Never`, `AlignTrailingComments: Leave`,
   касты без пробела): дерево проекта проверяется формальнее —
