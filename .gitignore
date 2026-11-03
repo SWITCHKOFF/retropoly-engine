@@ -8,3 +8,4 @@ coverage.info
 
 # Локальные артефакты агентов/инструментов (не часть движка)
 testsprite_tests/
+tests/visual/reference/*.dump.px

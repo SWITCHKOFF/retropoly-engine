@@ -91,6 +91,139 @@ struct FrameResult
     uint32_t draw_calls; ///< hal_render_backend_draw_call_count после EndFrame.
 };
 
+/// Readback ТЕКУЩЕГО снятого кадра + валидность (заполняется в
+/// golden_capture_readback, пока GL жив; после render_shutdown()
+/// повторный readback мёртв — факт-буфер переносит кадр в golden_check).
+uint8_t s_capture_pixels[320u * 240u * 4u];
+bool s_capture_pixels_valid = false;
+
+/// Упаковка RGBA-8 в PS1-родные 15 бит — та же компрессия, что и в
+/// FNV-хэше ядра: R>>3 | G>>3<<5 | B>>3<<10.
+uint16_t px_pack15(const uint8_t* px)
+{
+    const uint16_t r5 = px[0] >> 3;
+    const uint16_t g5 = px[1] >> 3;
+    const uint16_t b5 = px[2] >> 3;
+    return (uint16_t)(r5 | (g5 << 5) | (b5 << 10));
+}
+
+/// Канальный порог фолбэка golden v2: дельта любого канала не больше
+/// 2 LSB (норматив 15-битной хэш-компрессии — теперь явный кап).
+const uint32_t GOLDEN_MAX_LSB = 2u;
+
+/// Бюджет фолбэка room12: замер 2026-11-02 (локальный драйвер vs
+/// llvmpipe) = 26 px отличий, все по плюс-минус 1 LSB, точки на рёбрах
+/// треугольников (rasterizer tie-breaking — вне GL-спецификации).
+/// 128 = пятикратный запас против наблюдённого.
+const uint32_t W0_ROOM_GOLDEN_BUDGET = 128u;
+
+/// Путь эталона @p name: <root>/tests/visual/reference/<name>.bin
+///
+/// Корень — compile-time (канонический; CMake: RPE_TEST_SOURCE_DIR =
+/// ${CMAKE_SOURCE_DIR}). getenv-fallback — только для ad-hoc прогонов вне
+/// билд-кабинета (норматив комментария tests/CMakeLists.txt: **ошибка
+/// инверсии** — эталоны не зависят от CWD запустившего процесса).
+#ifndef RPE_TEST_SOURCE_DIR
+#define RPE_TEST_SOURCE_DIR "."
+#endif
+const char* golden_path(const char* name)
+{
+    static char path[640];
+    const char* root = RPE_TEST_SOURCE_DIR;
+    snprintf(path, sizeof(path), "%s/tests/visual/reference/%s", root, name);
+    return path;
+}
+
+/**
+ * Текущее имя теста (для имён dump-файлов): reference/<TestName>.dump.px.
+ */
+const char* golden_test_name(void)
+{
+    const testing::TestInfo* info = testing::UnitTest::GetInstance()->current_test_info();
+    return (info != nullptr) ? info->name() : "unknown-test";
+}
+
+/// BE-запись u32 (согласована с golden_check-контрактом big-endian хэша).
+void rpe_fwrite_u32_be(FILE* f, uint32_t v)
+{
+    for (int shift = 24; shift >= 0; shift -= 8) {
+        const uint8_t byte = (uint8_t)((v >> shift) & 0xFFu);
+        fwrite(&byte, 1, 1, f);
+    }
+}
+
+/// u16 BE-запись (px-партнёр эталона: 15-битные пиксели, тот же BE-контракт).
+void rpe_fwrite_u16_be(FILE* f, uint16_t v)
+{
+    const uint8_t bytes[2] = {(uint8_t)(v >> 8), (uint8_t)(v & 0xFFu)};
+    fwrite(bytes, 1, 2, f);
+}
+
+/// u32 BE-чтение (px-партнёр: заголовок w/h).
+bool rpe_fread_u32_be(FILE* f, uint32_t* v)
+{
+    uint32_t acc = 0u;
+    for (int i = 0; i < 4; ++i) {
+        const int byte = fgetc(f);
+        if (byte == EOF) {
+            return false;
+        }
+        acc = (acc << 8) | (uint32_t)byte;
+    }
+    *v = acc;
+    return true;
+}
+
+/// u16 BE-чтение (px-партнёр: пиксели).
+bool rpe_fread_u16_be(FILE* f, uint16_t* v)
+{
+    uint16_t acc = 0u;
+    for (int i = 0; i < 2; ++i) {
+        const int byte = fgetc(f);
+        if (byte == EOF) {
+            return false;
+        }
+        acc = (uint16_t)((acc << 8) | (uint16_t)byte);
+    }
+    *v = acc;
+    return true;
+}
+
+/**
+ * Снятие readback-кадра: hash + (при env RENDER_GOLDEN_DUMP=1) px-дамп.
+ *
+ * Дамп — инструмент диагноста rebase-протокола (сравнение растеризаторов:
+ * локальный драйвер vs runner-llvmpipe). Место — строго ТОЧКА снятия
+ * кадра (hash-сайт, GL ещё жив): после render_shutdown() readback мёртв,
+ * а golden_check вызывается уже ПОСЛЕ shutdown — оттуда дамп не взять.
+ * px-файлы — throwaway, НЕ коммитятся (px-файлы в reference-каталоге
+ * перечислены в gitignore).
+ */
+uint64_t golden_capture_readback(void)
+{
+    const uint64_t hash = Render_TestReadbackHash();
+    if (hash != 0u) {
+        s_capture_pixels_valid =
+            Render_TestReadbackPixels(s_capture_pixels, sizeof(s_capture_pixels));
+    }
+    const char* dump = getenv("RENDER_GOLDEN_DUMP");
+    if (hash != 0u && dump != NULL && dump[0] == '1') {
+        char path[768];
+        snprintf(path, sizeof(path), "%s.dump.px", golden_path(golden_test_name()));
+        FILE* f = fopen(path, "wb");
+        if (f == NULL) {
+            printf("[golden] dump: файл не открыть: %s\n", path);
+            return hash;
+        }
+        rpe_fwrite_u32_be(f, 320u);
+        rpe_fwrite_u32_be(f, 240u);
+        fwrite(s_capture_pixels, 1, sizeof(s_capture_pixels), f);
+        printf("[golden] dump -> %s\n", path);
+        fclose(f);
+    }
+    return hash;
+}
+
 /**
  * Кадр с одной меш-подачей: BeginFrame → Clear(0,0,32) → Bind →
  * DrawMesh → EndFrame → hash; диагностика снимается до shutdown.
@@ -108,7 +241,7 @@ FrameResult render_frame(const Vertex* vertices, uint32_t vertex_count, const Tr
     Render_BindTexture(texture);
     Render_DrawMesh(vertices, vertex_count, indices, index_count, &identity);
     Render_EndFrame();
-    result.hash = Render_TestReadbackHash();
+    result.hash = golden_capture_readback();
     result.diag = render_diagnostics();
     result.draw_calls = hal_render_backend_draw_call_count();
     render_shutdown();
@@ -129,42 +262,43 @@ FrameResult render_frame_unbound(const Vertex* vertices, uint32_t vertex_count,
     Render_Clear(RENDER_CLEAR_DEFAULT_R, RENDER_CLEAR_DEFAULT_G, RENDER_CLEAR_DEFAULT_B);
     Render_DrawMesh(vertices, vertex_count, indices, index_count, &identity);
     Render_EndFrame();
-    result.hash = Render_TestReadbackHash();
+    result.hash = golden_capture_readback();
     result.diag = render_diagnostics();
     result.draw_calls = hal_render_backend_draw_call_count();
     render_shutdown();
     return result;
 }
 
-/// Путь эталона @p name: <root>/tests/visual/reference/<name>.bin
-///
-/// Корень — compile-time (канонический; CMake: RPE_TEST_SOURCE_DIR =
-/// ${CMAKE_SOURCE_DIR}). getenv-fallback — только для ad-hoc прогонов вне
-/// билд-кабинета (норматив комментария tests/CMakeLists.txt: **ошибка
-/// инверсии** — эталоны не зависят от CWD запустившего процесса).
-#ifndef RPE_TEST_SOURCE_DIR
-#define RPE_TEST_SOURCE_DIR "."
-#endif
-const char* golden_path(const char* name)
-{
-    static char path[640];
-    const char* root = RPE_TEST_SOURCE_DIR;
-    snprintf(path, sizeof(path), "%s/tests/visual/reference/%s", root, name);
-    return path;
-}
-
 /**
  * Сравнение кадра с эталоном (или запись при RENDER_GOLDEN_REBASE=1).
  *
+ * Метод сравнения v2 (после первого CI-прогона pc-render-tests):
+ * 1. Быстрый путь — ХЭШ: равенство эталон-хэша = PASS, сырые пиксели
+ *    не читаются (7 из 8 golden-эталонов bit-стабильны и между
+ *    драйверами, и на runner-llvmpipe — fast-путь остаётся каноном).
+ * 2. Фолбэк при @p budget > 0: hash может НЕ совпасть —
+ *    rasterizer tie-breaking на силуэтных рёбрах треугольников
+ *    инвариантом НЕ является (GL не специфицирует принадлежность
+ *    пикселя на ребре). Замер 2026-11-02: локальный драйвер vs
+ *    llvmpipe = 26 px из 76 800, максимум плюс-минус 1 LSB,
+ *    разреженные точки на рёбрах. Фолбэк сверяет сырые 15 бит
+ *    против px-партнёра эталона (<name>.px: u32-BE w, u32-BE h,
+ *    u16-BE r5g5b5 на 76 800 пикселей): PASS, если отличий не больше
+ *    budget И дельта каждого канала не больше GOLDEN_MAX_LSB.
+ *    Деградация сцены (сдвиг целого региона) уйдёт за оба порога —
+ *    ложный класс «1 px на ребре» убран, регресс не спрятать.
+ *
  * @param name Имя эталона («w0_room12.bin»).
  * @param hash Хэш актуального кадра.
- * @return true при совпадении (или при успешном rebase-записи).
+ * @param budget Допуск фолбэка в px; 0 — строгий hash-режим (дефолт).
+ * @return true при совпадении (или при успешной rebase-записи).
  */
-bool golden_check(const char* name, uint64_t hash)
+bool golden_check(const char* name, uint64_t hash, const uint32_t budget)
 {
     const char* path = golden_path(name);
 
-    // Rebase-режим: осознанная запись эталона.
+    // Rebase-режим: осознанная запись эталона (+ px-партнёр — кадр
+    // обязан быть снят golden_capture_readback, GL ещё жив).
     const char* rebase = getenv("RENDER_GOLDEN_REBASE");
     if (rebase != NULL && rebase[0] == '1') {
         FILE* f = fopen(path, "wb");
@@ -178,7 +312,20 @@ bool golden_check(const char* name, uint64_t hash)
             fwrite(&byte, 1, 1, f);
         }
         fclose(f);
-        printf("[golden] rebase %s <- %016llx\n", path, (unsigned long long)hash);
+        char px_path[704];
+        snprintf(px_path, sizeof(px_path), "%s.px", path);
+        FILE* pf = fopen(px_path, "wb");
+        if (pf == NULL) {
+            printf("[golden] rebase: px-партнёр не открыть %s\n", px_path);
+            return false;
+        }
+        rpe_fwrite_u32_be(pf, 320u);
+        rpe_fwrite_u32_be(pf, 240u);
+        for (uint32_t i = 0u; i < 320u * 240u; ++i) {
+            rpe_fwrite_u16_be(pf, px_pack15(&s_capture_pixels[i * 4u]));
+        }
+        fclose(pf);
+        printf("[golden] rebase %s <- %016llx (+ px-партнёр)\n", path, (unsigned long long)hash);
         return true;
     }
 
@@ -200,11 +347,51 @@ bool golden_check(const char* name, uint64_t hash)
         golden = (golden << 8) | (uint64_t)(byte & 0xFFu);
     }
     fclose(f);
-    if (golden != hash) {
+    if (golden == hash) {
+        return true;
+    }
+    if (budget == 0u || !s_capture_pixels_valid) {
         printf("[golden] MISMATCH %s: эталон %016llx, фактический %016llx\n", path,
                (unsigned long long)golden, (unsigned long long)hash);
+        return false;
     }
-    return golden == hash;
+
+    // Фолбэк v2: счётчик отличных 15-битных px + кап каналов.
+    char px_path[704];
+    snprintf(px_path, sizeof(px_path), "%s.px", path);
+    FILE* pf = fopen(px_path, "rb");
+    if (pf == NULL) {
+        printf("[golden] фолбэк: px-партнёр отсутствует: %s\n", px_path);
+        return false;
+    }
+    uint32_t w = 0u;
+    uint32_t h = 0u;
+    bool px_ok = rpe_fread_u32_be(pf, &w) && rpe_fread_u32_be(pf, &h) && (w == 320u) && (h == 240u);
+    uint32_t differ = 0u;
+    uint32_t max_lsb = 0u;
+    for (uint32_t i = 0u; px_ok && (i < 320u * 240u); ++i) {
+        uint16_t expected = 0u;
+        if (!rpe_fread_u16_be(pf, &expected)) {
+            px_ok = false;
+            break;
+        }
+        const uint16_t actual = px_pack15(&s_capture_pixels[i * 4u]);
+        if (expected != actual) {
+            const int dr = (int)((expected >> 10) & 31u) - (int)((actual >> 10) & 31u);
+            const int dg = (int)((expected >> 5) & 31u) - (int)((actual >> 5) & 31u);
+            const int db = (int)(expected & 31u) - (int)(actual & 31u);
+            const uint32_t dgx = (uint32_t)abs(dr < -dr ? -dr : dr);
+            const uint32_t max_pair = dgx > (uint32_t)abs(dg) ? dgx : (uint32_t)abs(dg);
+            const uint32_t delta = max_pair > (uint32_t)abs(db) ? max_pair : (uint32_t)abs(db);
+            max_lsb = delta > max_lsb ? delta : max_lsb;
+            ++differ;
+        }
+    }
+    fclose(pf);
+    printf("[golden] фолбэк %s: отличий %u (бюджет %u), макс. LSB %u, px-файл %s\n", name,
+           (unsigned int)differ, (unsigned int)budget, (unsigned int)max_lsb,
+           px_ok ? "ok" : "поврежден");
+    return px_ok && (differ <= budget) && (max_lsb <= GOLDEN_MAX_LSB);
 }
 
 // ---------------------------------------------------------------------------
@@ -356,7 +543,7 @@ TEST(W0Golden, ClearDefaultBackground)
         Render_BeginFrame();
         Render_Clear(RENDER_CLEAR_DEFAULT_R, RENDER_CLEAR_DEFAULT_G, RENDER_CLEAR_DEFAULT_B);
         Render_EndFrame();
-        result.hash = Render_TestReadbackHash();
+        result.hash = golden_capture_readback();
         result.diag = render_diagnostics();
         result.draw_calls = hal_render_backend_draw_call_count();
     }
@@ -369,7 +556,7 @@ TEST(W0Golden, ClearDefaultBackground)
     // Draw-call inventory (weeks 15–16): пустой submit-кадр — ровно 1
     // draw-команда (fullscreen present-quad).
     EXPECT_EQ(result.draw_calls, 1u);
-    EXPECT_TRUE(golden_check("w0_clear_default.bin", result.hash));
+    EXPECT_TRUE(golden_check("w0_clear_default.bin", result.hash, 0u));
 }
 
 //! Комната W0: 12 CI8-текстурированных треугольников, Gouraud, fixed камера.
@@ -397,7 +584,9 @@ TEST(W0Golden, Room12TexturedTriangles)
     // Draw-call inventory (weeks 15–16): Painter's-алгоритм = ровно 1
     // GL-подача на треугольник → 12 причесанных + 1 present-quad = 13.
     EXPECT_EQ(result.draw_calls, W0_ROOM_TRIANGLE_COUNT + 1u);
-    EXPECT_TRUE(golden_check("w0_room12.bin", result.hash));
+    // Хэш room12 НЕ bit-стабилен между растеризаторами (см. замер в
+    // docblock golden_check) — фолбэк с бюджетом по px-партнёру.
+    EXPECT_TRUE(golden_check("w0_room12.bin", result.hash, W0_ROOM_GOLDEN_BUDGET));
 }
 
 //! Детерминизм: повторный рендер комнаты → тот же хэш (без золотого).
@@ -449,7 +638,7 @@ TEST(W0Golden, VisibleTriangleHashes)
     EXPECT_EQ(result.diag.depth_rejects, 0u);
     // Draw-call inventory: 1 trouverez + 1 present-quad = 2.
     EXPECT_EQ(result.draw_calls, 2u);
-    EXPECT_TRUE(golden_check("w0_visible.bin", result.hash));
+    EXPECT_TRUE(golden_check("w0_visible.bin", result.hash, 0u));
 }
 
 //! [H] Нетекстурированный треугольник (неделя 15): явный unbind
@@ -491,7 +680,7 @@ TEST(W0Golden, UntexturedTriangleFlatGouraud)
     EXPECT_EQ(textured.diag.submitted, 1u);
     EXPECT_NE(textured.hash, flat.hash);
 
-    EXPECT_TRUE(golden_check("w0_untextured.bin", flat.hash));
+    EXPECT_TRUE(golden_check("w0_untextured.bin", flat.hash, 0u));
 }
 
 //! Backface-кулинг: зеркальный winding → CULL, кадр = чистый фон.
@@ -514,7 +703,7 @@ TEST(W0Golden, BackfaceTriangleCulled)
     EXPECT_EQ(result.diag.clip_rejects, 0u);
     EXPECT_EQ(result.diag.last_code, (uint32_t)RENDER_DIAG_CULL_REJECT);
     EXPECT_EQ(result.draw_calls, 1u); // CULLED → только present-quad.
-    EXPECT_TRUE(golden_check("w0_backface.bin", result.hash));
+    EXPECT_TRUE(golden_check("w0_backface.bin", result.hash, 0u));
 }
 
 //! Пересечение near plane: вершина вне [near..far] → whole-triangle reject.
@@ -537,7 +726,7 @@ TEST(W0Golden, NearPlaneCrossRejectedWholeTriangle)
     EXPECT_EQ(result.diag.backface_rejects, 0u);
     EXPECT_EQ(result.diag.last_code, (uint32_t)RENDER_DIAG_CLIP_REJECT);
     EXPECT_EQ(result.draw_calls, 1u); // Полный reject: только present-quad.
-    EXPECT_TRUE(golden_check("w0_near_cross.bin", result.hash));
+    EXPECT_TRUE(golden_check("w0_near_cross.bin", result.hash, 0u));
 }
 
 //! Пересечение far plane: вершина d > far → whole-triangle reject.
@@ -559,7 +748,7 @@ TEST(W0Golden, FarPlaneCrossRejectedWholeTriangle)
     EXPECT_EQ(result.diag.submitted, 0u);
     EXPECT_EQ(result.diag.last_code, (uint32_t)RENDER_DIAG_CLIP_REJECT);
     EXPECT_EQ(result.draw_calls, 1u); // Полный reject: только present-quad.
-    EXPECT_TRUE(golden_check("w0_far_cross.bin", result.hash));
+    EXPECT_TRUE(golden_check("w0_far_cross.bin", result.hash, 0u));
 }
 
 //! All-verts behind camera: invalid clip/depth rejection (кейс 5 нормы).
@@ -581,7 +770,7 @@ TEST(W0Golden, BehindCameraInvalidClipRejection)
     EXPECT_EQ(result.diag.submitted, 0u);
     EXPECT_EQ(result.diag.last_code, (uint32_t)RENDER_DIAG_CLIP_REJECT);
     EXPECT_EQ(result.draw_calls, 1u); // Полный reject: только present-quad.
-    EXPECT_TRUE(golden_check("w0_behind_camera.bin", result.hash));
+    EXPECT_TRUE(golden_check("w0_behind_camera.bin", result.hash, 0u));
 }
 
 // ---------------------------------------------------------------------------
