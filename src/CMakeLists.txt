@@ -37,12 +37,15 @@ add_library(retro_engine STATIC)
 # Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
 # ECS (Спринт 3–4): Registry; аллокаторы — header-only (core/memory).
 # Рендер-ядро (Спринт 7–8): pipeline + пул текстур; backend — ровно один HAL.
+# Ассеты (Спринт 9–10): безопасные загрузчики .mesh/.tex v1 (core/assets).
 target_sources(retro_engine PRIVATE
     core/math/fixed.cpp
     core/math/math.cpp
     core/ecs/registry.cpp
     render/texture.cpp
     render/renderer.cpp
+    assets/mesh_loader.cpp
+    assets/texture_loader.cpp
 )
 
 # Compile-time специализация платформы (renderer.cpp: readback/hash — PC-only,
