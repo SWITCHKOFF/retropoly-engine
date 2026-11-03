@@ -36,11 +36,16 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         render/command_buffer_test.cpp
         render/contract_test.cpp
         integration/hal_test.cpp
+        integration/mesh_loader_test.cpp
+        integration/texture_loader_test.cpp
     )
     target_compile_features(retro_engine_tests PRIVATE cxx_std_14)
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)
     # Канонические флаги применяются только к коду тестов движка.
     retro_engine_apply_flags(retro_engine_tests)
+    # Путь к пайплайн-артефактам (assets/build/*) — compile-time, CWD-независимо.
+    target_compile_definitions(retro_engine_tests PRIVATE
+        RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
 
     include(GoogleTest)
     gtest_discover_tests(retro_engine_tests DISCOVERY_TIMEOUT 60)
