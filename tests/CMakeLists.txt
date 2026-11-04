@@ -44,8 +44,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     # Канонические флаги применяются только к коду тестов движка.
     retro_engine_apply_flags(retro_engine_tests)
     # Путь к пайплайн-артефактам (assets/build/*) — compile-time, CWD-независимо.
+    # PLATFORM_PC — специализация платформы для тестов HAL (tests/ добавляются
+    # только при PLATFORM_PC; mirrors retro_engine / retro_engine_log).
     target_compile_definitions(retro_engine_tests PRIVATE
-        RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+        RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        PLATFORM_PC=1)
 
     include(GoogleTest)
     gtest_discover_tests(retro_engine_tests DISCOVERY_TIMEOUT 60)

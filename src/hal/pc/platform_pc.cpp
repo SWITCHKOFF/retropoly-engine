@@ -100,6 +100,9 @@ bool Platform_PumpEvents(void)
 {
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
+        // Мышь (Спринт 11–12): накопление motion-дельт в подсистеме ввода
+        // (yield только QUIT — остальные события окно/контекст не меняют).
+        hal_input_pump_event(&event);
         if (event.type == SDL_EVENT_QUIT) {
             return false;
         }

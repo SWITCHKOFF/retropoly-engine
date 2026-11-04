@@ -9,8 +9,14 @@
 // На headless-CI Linux (нет DISPLAY/WAYLAND_DISPLAY) такие кейсы пропускаются
 // через GTEST_SKIP; локальные прогонки и windows/macos CI (build-pc.yml)
 // выполняют их полностью. Тесты Audio/FileSystem от дисплея не зависят.
-// Рендер-Lifecycle (G9) — Спринты 7–8.
+// Рендер-Lifecycle (G9) — Спринты 7–8. Мышь (Sprint 11–12, неделя 23) —
+// HalMouse: относительный режим + consume-дельты, включая вставку
+// синтетических событий SDL через общий PumpEvents-путь.
 #include "hal/platform.h"
+
+#ifdef PLATFORM_PC
+#include <SDL3/SDL.h> // вставка синтетических SDL-событий (тест PC-only)
+#endif
 
 #include <gtest/gtest.h>
 
@@ -113,6 +119,121 @@ TEST(Hal, InputQueriesReturnValuesWithoutCrash)
     EXPECT_EQ(Input_GetPadAxis(0, (uint32_t)INPUT_AXIS_COUNT), 0);
 
     Platform_Shutdown();
+}
+
+namespace {
+
+#ifdef PLATFORM_PC
+/// Вставка синтетического motion-события мыши в SDL-очередь: до движка дельты
+/// доходят ровно по тому же пути, что и реальный ввод (Platform_PumpEvents →
+/// hal_input_pump_event), поэтому тест проверяет и точку накопления.
+/// SDL3: motion.xrel/yrel — float; в тесте — целые значения, так что хук
+/// копит их в int32 без потерь.
+void push_mouse_motion(int32_t xrel, int32_t yrel)
+{
+    SDL_Event motion;
+    SDL_zero(motion); // «неиспользуемые» поля события без мусора
+    motion.type = SDL_EVENT_MOUSE_MOTION;
+    motion.motion.xrel = (float)xrel;
+    motion.motion.yrel = (float)yrel;
+    ASSERT_EQ(SDL_PushEvent(&motion), true);
+}
+#endif
+
+} // namespace
+
+// no-op контракт ДО Init (валиден и headless — окно не требуется).
+TEST(HalMouse, PreInitQueriesAreSafeNoOps)
+{
+    // Предыдущие кейсы завершились честным Platform_Shutdown.
+    int32_t dx = -99;
+    int32_t dy = -99;
+    Input_GetMouseDelta(&dx, &dy);
+    EXPECT_EQ(dx, 0);
+    EXPECT_EQ(dy, 0);
+
+    Input_GetMouseDelta(nullptr, nullptr); // NULL-каналы — без краша
+
+    // Относительный режим требует окна: платформа не инициализирована → false.
+    EXPECT_FALSE(Input_SetMouseRelativeMode(true));
+    EXPECT_FALSE(Input_SetMouseRelativeMode(false));
+}
+
+TEST(HalMouse, RelativeModeLifecycleAndDeltasThroughPumpEvents)
+{
+    if (!platform_ready()) {
+        GTEST_SKIP() << "Дисплей недоступен — HAL Platform-тест пропущен (headless)";
+    }
+
+    int32_t dx = 0;
+    int32_t dy = 0;
+
+#ifdef PLATFORM_PC
+    // Свежая сессия: накопители пусты.
+    Input_GetMouseDelta(&dx, &dy);
+    EXPECT_EQ(dx, 0);
+    EXPECT_EQ(dy, 0);
+
+    // Включение режима требует окна: с окном — true; идемпотентно.
+    EXPECT_TRUE(Input_SetMouseRelativeMode(true));
+    EXPECT_TRUE(Input_SetMouseRelativeMode(true));
+
+    // Первый grab может «подтолкнуть» реальный motion (warp курсора):
+    // осушаем очередь и сбрасываем накопитель — база ровно 0.
+    ASSERT_TRUE(Platform_PumpEvents());
+    Input_GetMouseDelta(nullptr, nullptr);
+
+    // Три известных дельты + шум-событие НЕ-motion: (+5,-3)+(-2,+7)+0 = (+3,+4).
+    push_mouse_motion(5, -3);
+    push_mouse_motion(-2, 7);
+    push_mouse_motion(0, 0);
+    SDL_Event noise;
+    SDL_zero(noise);
+    noise.type = SDL_EVENT_MOUSE_BUTTON_UP; // копилку не трогает
+    ASSERT_EQ(SDL_PushEvent(&noise), true);
+    ASSERT_TRUE(Platform_PumpEvents());
+
+    Input_GetMouseDelta(&dx, &dy);
+    EXPECT_EQ(dx, 3);
+    EXPECT_EQ(dy, 4);
+
+    // Consume-семантика: повторное чтение — нулевое.
+    Input_GetMouseDelta(&dx, &dy);
+    EXPECT_EQ(dx, 0);
+    EXPECT_EQ(dy, 0);
+
+    // Частичное чтение (NULL-канал) тоже опорожняет ОБА накопителя.
+    push_mouse_motion(-4, -9);
+    ASSERT_TRUE(Platform_PumpEvents());
+    Input_GetMouseDelta(nullptr, &dy);
+    EXPECT_EQ(dy, -9);
+    Input_GetMouseDelta(&dx, &dy);
+    EXPECT_EQ(dx, 0);
+    EXPECT_EQ(dy, 0);
+
+    // Выключение режима: дальнейшие motion не копятся даже после pump.
+    EXPECT_TRUE(Input_SetMouseRelativeMode(false));
+    push_mouse_motion(11, 13);
+    ASSERT_TRUE(Platform_PumpEvents());
+    Input_GetMouseDelta(&dx, &dy);
+    EXPECT_EQ(dx, 0);
+    EXPECT_EQ(dy, 0);
+
+    // Идемпотентность выключения.
+    EXPECT_TRUE(Input_SetMouseRelativeMode(false));
+#endif
+
+    Platform_Shutdown();
+
+#ifdef PLATFORM_PC
+    // После Shutdown — тот же no-op контракт, что и до Init.
+    EXPECT_FALSE(Input_SetMouseRelativeMode(true));
+    dx = -1;
+    dy = -1;
+    Input_GetMouseDelta(&dx, &dy);
+    EXPECT_EQ(dx, 0);
+    EXPECT_EQ(dy, 0);
+#endif
 }
 
 TEST(Hal, AudioStubLifecycleAndBeep)

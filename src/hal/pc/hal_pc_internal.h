@@ -5,15 +5,19 @@
 // не включается). Связывает трансляционные единицы HAL:
 //   - platform_pc.cpp    — владение окном/GL-контекстом (SDL);
 //   - render_opengl.cpp  — GL-пакет (swap; расширение Спринтами 7–8);
-//   - input_sdl.cpp      — открытие/закрытие геймпадов, состояние ввода.
+//   - input_sdl.cpp      — открытие/закрытие геймпадов, состояние ввода
+//                          (мышь/накопление дельт — Спринт 11–12).
 //
 // Нормативные источники: docs/plans/sprint_05_06.md (недели 9–12),
-// docs/RetroEngine_Engineering_Documentation_v1.43.md §3.
+// docs/RetroEngine_Engineering_Documentation_v1.43.md §3;
+// мышь — Спринт 11–12 (неделя 23, docs/plans/sprint_11_12.md).
 #pragma once
 
 #include "hal/platform.h"
 
 #include <SDL3/SDL.h>
+
+#include <stdbool.h>
 
 /// Максимум геймпадов HAL (PS1-паритет: PS1 обслуживает 2 контроллера).
 #define HAL_PC_MAX_PADS 2u
@@ -45,3 +49,22 @@ bool hal_input_init(void);
  * Вызывается из Platform_Shutdown до SDL_Quit. Идемпотентна.
  */
 void hal_input_shutdown(void);
+
+/**
+ * Прокачка одного SDL-события через подсистему ввода (накопление
+ * относительных мышиных дельт). Вызывается из Platform_PumpEvents для
+ * каждого события. Отдельно от SDL_EVENT_QUIT (тот отдаёт сам PumpEvents).
+ *
+ * @param event Событие SDL (не NULL).
+ */
+void hal_input_pump_event(const SDL_Event* event);
+
+/**
+ * Включение/выключение относительного режима мыши (SDL3
+ * SDL_SetWindowRelativeMouseMode на окне HAL). Идемпотентна.
+ *
+ * @param window Окно SDL (NULL — no-fail-out false).
+ * @param enable true — включить; false — выключить (и сбросить счётчики).
+ * @return true при успехе.
+ */
+bool hal_input_set_mouse_relative_mode(SDL_Window* window, bool enable);

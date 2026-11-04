@@ -16,7 +16,10 @@
 //     Треугольник, U/I → L1/R1, Enter → Start, Tab → Select; L2/R2 на
 //     клавиатуре не эмулируются);
 //   - все запросы вне диапазона / без устройств — безопасные значения
-//     (0/false) без краша.
+//     (0/false) без краша;
+//   - мышь (Спринт 11–12, неделя 23): относительный режим
+//     SDL_SetWindowRelativeMouseMode + накопление motion-дельт между
+//     вызовами Input_GetMouseDelta (consume-семантика; сброс в Shutdown).
 #include "hal/pc/hal_pc_internal.h"
 
 #include <SDL3/SDL.h>
@@ -26,6 +29,13 @@
 
 /// Открытые геймпады (индекс = pad_index; NULL — слот пуст).
 static SDL_Gamepad* s_gamepads[HAL_PC_MAX_PADS];
+
+/// Относительный режим мыши включён (паблик Input_SetMouseRelativeMode).
+static bool s_mouse_relative_active = false;
+
+/// Накопленные относительные дельты мыши с последнего consume (пиксели).
+static int32_t s_mouse_accum_dx = 0;
+static int32_t s_mouse_accum_dy = 0;
 
 /// Порог аналогового триггера в сжатом масштабе (-128..127): 64 = половина.
 static constexpr int16_t INPUT_TRIGGER_THRESHOLD = 64;
@@ -132,6 +142,41 @@ void hal_input_shutdown(void)
             s_gamepads[i] = nullptr;
         }
     }
+    // Мышь: детерминированное старт-состояние следующей сессии (ной Init).
+    s_mouse_relative_active = false;
+    s_mouse_accum_dx = 0;
+    s_mouse_accum_dy = 0;
+}
+
+void hal_input_pump_event(const SDL_Event* event)
+{
+    if (event == nullptr || !s_mouse_relative_active) {
+        return;
+    }
+    // Накопление только в относительном режиме: дельты motion без привязки
+    // к краям экрана; абс-координаты (x, y) события не используются.
+    if (event->type == SDL_EVENT_MOUSE_MOTION) {
+        s_mouse_accum_dx += (int32_t)event->motion.xrel;
+        s_mouse_accum_dy += (int32_t)event->motion.yrel;
+    }
+}
+
+bool hal_input_set_mouse_relative_mode(SDL_Window* window, bool enable)
+{
+    if (window == nullptr) {
+        return false;
+    }
+    if (!SDL_SetWindowRelativeMouseMode(window, enable ? true : false)) {
+        return false;
+    }
+    s_mouse_relative_active = enable;
+    if (!enable) {
+        // Выключение режима сбрасывает накопитель: «старые» дельты не
+        // подтаекут в следующую сессию (детерминизм старт-состояния).
+        s_mouse_accum_dx = 0;
+        s_mouse_accum_dy = 0;
+    }
+    return true;
 }
 
 bool Input_IsKeyDown(KeyCode key)
@@ -209,4 +254,23 @@ int16_t Input_GetPadAxis(uint32_t pad_index, uint32_t axis)
     }
     const Sint16 raw = SDL_GetGamepadAxis(gamepad, PAD_AXES[axis]);
     return hal_input_scale_axis(raw);
+}
+
+bool Input_SetMouseRelativeMode(bool enable)
+{
+    return hal_input_set_mouse_relative_mode(hal_pc_window(), enable);
+}
+
+void Input_GetMouseDelta(int32_t* out_dx, int32_t* out_dy)
+{
+    if (out_dx != nullptr) {
+        *out_dx = s_mouse_accum_dx;
+    }
+    if (out_dy != nullptr) {
+        *out_dy = s_mouse_accum_dy;
+    }
+    // Consume-семантика: чтение обязано однозначно опорожнить накопитель,
+    // чтобы следующий тик не получил уже обработанные значения.
+    s_mouse_accum_dx = 0;
+    s_mouse_accum_dy = 0;
 }
