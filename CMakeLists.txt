@@ -100,6 +100,25 @@ if(PLATFORM_PC)
                 "${RPE_ASSET_BUILD}/cube.mesh"
                 "${RPE_ASSET_BUILD}/texture.tex")
     endif()
+    # Ассет примера hello_triangle (Спринт 11–12, неделя 21): triangle.gltf →
+    # .mesh v1. Текстура примера — та же texture.tex (256×256 паттерн).
+    if(EXISTS "${RPE_ASSET_SOURCE}/triangle.gltf")
+        add_custom_command(
+            OUTPUT
+                "${RPE_ASSET_BUILD}/triangle.mesh"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${RPE_ASSET_BUILD}"
+            COMMAND asset_converter
+                "${RPE_ASSET_SOURCE}/triangle.gltf"
+                "${RPE_ASSET_BUILD}/triangle.mesh"
+            DEPENDS
+                asset_converter
+                "${RPE_ASSET_SOURCE}/triangle.gltf"
+            COMMENT "asset_converter: triangle.gltf → triangle.mesh"
+            VERBATIM)
+        add_custom_target(convert_triangle_asset ALL
+            DEPENDS
+                "${RPE_ASSET_BUILD}/triangle.mesh")
+    endif()
 endif()
 
 # --- Примеры: зависят только от retro_engine (ни от SDL3/OpenGL/PSn00bSDK) ----

@@ -7,6 +7,10 @@
 #                             12 треугольников, NORMAL+TEXCOORD_0, embedded buffer);
 #   assets/source/texture.png — 256×256 RGBA8 (65536 уникальных цветов —
 #                             честный стресс Median Cut до ≤256).
+# Детерминированный источник ассета Спринта 11–12 (неделя 21):
+#   assets/source/triangle.gltf — одного треугольника (3 вершины, NORMAL+
+#                             TEXCOORD_0, embedded buffer); winding CCW «к
+#                             камере» по конвенции ядра (экрана A<0, y-вниз).
 #
 # Запуск: python3 scripts/make_source_assets.py [корень репо]
 # Байтовая детерминированность: сортированный JSON, без таймстёмпов.
@@ -68,6 +72,90 @@ def pack_float32(values):
 
 def pack_uint16(values):
     return b"".join(struct.pack("<H", int(v)) for v in values)
+
+
+def build_triangle_buffers():
+    # Один треугольник в плоскости XY (z=0), glTF right-handed Y-up:
+    #   v0 (-1,-1,0) — низ-лево; v1 (1,-1,0) — низ-право; v2 (0,1,0) — верх.
+    # Winding: обход v0→v1→v2 — CCW «от наблюдателя со стороны +Z» при
+    # screen-projected y-вниз (front-face конвенция ядра рендера, A < 0;
+    # см. tests/visual/w0_scene.cpp W0_CASE_VISIBLE — тот же порядок BL→BR→TOP).
+    #
+    # ЧИСЛО индексных записей: формальный контракт §8.3 требует
+    # index_count % 3 == 0 (MeshIndex = 6-байтовая запись-треугольник;
+    # правило сохранено дословно из SAMPLE-загрузчика, docs/ASSETS.md §2.1
+    # «избыточно, но нормативно»). Ровно 1 треугольник в файле этот гейт
+    # не проходит, поэтому источник несёт ТРИ идентичные индексные записи
+    # (0,1,2)×3 на общих вершинах: пиксельный и hash-результат кадра
+    # идентичен одиночному треугольнику (одинаковые вершины/UV/цвета;
+    # вершина Painter's-сортировки — одна и та же). Решение зафиксировано
+    # в docs/plans/sprint_11_12.md (неделя 21).
+    positions = [(-1, -1, 0), (1, -1, 0), (0, 1, 0)]
+    normals = [(0, 0, 1), (0, 0, 1), (0, 0, 1)]
+    # UV: покрывают текстуру по низу и верху (v=1 в апексе; u=0.5 в апексе —
+    # паттерн texture.png читается целиком, шов по u=0.5 нейтрален).
+    texcoords = [(0.0, 0.0), (1.0, 0.0), (0.5, 1.0)]
+    indices = [0, 1, 2, 0, 1, 2, 0, 1, 2]
+    return positions, normals, texcoords, indices
+
+
+def make_triangle_gltf(path):
+    positions, normals, texcoords, indices = build_triangle_buffers()
+    pos_bytes = pack_float32(v for triple in positions for v in triple)
+    nrm_bytes = pack_float32(v for triple in normals for v in triple)
+    uv_bytes = pack_float32(v for pair in texcoords for v in pair)
+    idx_bytes = pack_uint16(indices)
+
+    xs = [c[0] for c in positions]
+    ys = [c[1] for c in positions]
+    zs = [c[2] for c in positions]
+    pos_min = [min(xs), min(ys), min(zs)]
+    pos_max = [max(xs), max(ys), max(zs)]
+
+    buffers_blob = idx_bytes + pos_bytes + nrm_bytes + uv_bytes
+    b64 = base64.b64encode(buffers_blob).decode("ascii")
+
+    views = [
+        {"buffer": 0, "byteOffset": 0, "byteLength": len(idx_bytes),
+         "target": 34963},
+        {"buffer": 0, "byteOffset": len(idx_bytes), "byteLength": len(pos_bytes),
+         "target": 34962},
+        {"buffer": 0, "byteOffset": len(idx_bytes) + len(pos_bytes),
+         "byteLength": len(nrm_bytes), "target": 34962},
+        {"buffer": 0,
+         "byteOffset": len(idx_bytes) + len(pos_bytes) + len(nrm_bytes),
+         "byteLength": len(uv_bytes), "target": 34962},
+    ]
+    accessors = [
+        {"bufferView": 0, "componentType": 5123, "count": len(indices),
+         "type": "SCALAR"},
+        {"bufferView": 1, "componentType": 5126, "count": len(positions),
+         "type": "VEC3", "min": pos_min, "max": pos_max},
+        {"bufferView": 2, "componentType": 5126, "count": len(positions),
+         "type": "VEC3"},
+        {"bufferView": 3, "componentType": 5126, "count": len(positions),
+         "type": "VEC2"},
+    ]
+    gltf = {
+        "asset": {"version": "2.0", "generator": "RetroPolyEngine sprint_11_12"},
+        "scene": 0,
+        "scenes": [{"nodes": [0]}],
+        "nodes": [{"mesh": 0, "name": "Triangle"}],
+        "meshes": [{"name": "TriangleMesh", "primitives": [{
+            "attributes": {
+                "POSITION": 1, "NORMAL": 2, "TEXCOORD_0": 3,
+            },
+            "indices": 0, "mode": 4,
+        }]}],
+        "accessors": accessors,
+        "bufferViews": views,
+        "buffers": [{"byteLength": len(buffers_blob),
+                     "uri": "data:application/octet-stream;base64," + b64}],
+    }
+    text = json.dumps(gltf, sort_keys=True, indent=2) + "\n"
+    with open(path, "w", encoding="utf-8", newline="\n") as f:
+        f.write(text)
+    print("wrote", path, len(text), "bytes (json)", len(buffers_blob), "buffer bytes")
 
 
 def make_cube_gltf(path):
@@ -156,6 +244,7 @@ def main():
     os.makedirs(src, exist_ok=True)
     make_cube_gltf(os.path.join(src, "cube.gltf"))
     make_texture_png(os.path.join(src, "texture.png"), 256)
+    make_triangle_gltf(os.path.join(src, "triangle.gltf"))
     return 0
 
 

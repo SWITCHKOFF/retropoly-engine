@@ -446,3 +446,53 @@ TEST(MeshLoader, RealBlenderCubeAssetLoadsAndValidates)
     EXPECT_EQ(mesh->bounding_sphere_radius, 113511);
     EXPECT_LT(mesh->bounding_sphere_radius, INT32_MAX);
 }
+
+TEST(MeshLoader, RealPipelineTriangleAssetLoadsAndValidates)
+{
+    // Артефакт CMake-пайплайна Спринта 11–12 (неделя 21):
+    // asset_converter assets/source/triangle.gltf → triangle.mesh —
+    // ОДИН треугольник в ТРЁХ идентичных индексных записях (0,1,2)×3
+    // (нормативный гейт §8.3 index_count % 3 == 0 — docs/ASSETS.md §2.1;
+    // решение зафиксировано в sprint_11_12.md): 3 вершины, 3 записи,
+    // winding BL→BR→TOP (CCW при screen y-вниз — конвенция ядра).
+    const std::string path = std::string(RPE_TEST_SOURCE_DIR) + "/assets/build/triangle.mesh";
+    std::vector<uint8_t> bytes;
+    ASSERT_TRUE(read_file_bytes(path, &bytes)) << "нет артефакта " << path;
+
+    ArenaFixture arena;
+    MeshAsset* mesh = nullptr;
+    expect_load_ok(bytes, arena, &mesh);
+
+    EXPECT_EQ(mesh->vertex_count, 3u);
+    EXPECT_EQ(mesh->index_count, 3u);
+    EXPECT_EQ(mesh->texture_id, 0u);
+    // Радиус: max ‖p‖ = √2 (угол (±1,−1) в плоскости z=0);
+    // floor(1.414213562… × 65536) = 92681.
+    EXPECT_EQ(mesh->bounding_sphere_radius, 92681);
+
+    // Вера-поля (детерминированный источник scripts/make_source_assets.py):
+    // v0 (−1,−1,0) нормаль (0,0,127), v1 (1,−1,0), v2 (0,1,0); UV
+    // (0,0)/(255,0)/(128,255); цвет — белый (конвертер default COLOR).
+    struct ExpectedVertex
+    {
+        fixed_t x, y, z;
+        uint8_t u, v;
+    };
+    static const ExpectedVertex expected[3] = {{-FIXED_ONE, -FIXED_ONE, 0u, 0u, 0u},
+                                               {FIXED_ONE, -FIXED_ONE, 0u, 255u, 0u},
+                                               {0u, FIXED_ONE, 0u, 128u, 255u}};
+    for (uint32_t i = 0; i < 3u; ++i) {
+        EXPECT_EQ(mesh->vertices[i].x, expected[i].x) << "i=" << i;
+        EXPECT_EQ(mesh->vertices[i].y, expected[i].y) << "i=" << i;
+        EXPECT_EQ(mesh->vertices[i].z, expected[i].z) << "i=" << i;
+        EXPECT_EQ(mesh->vertices[i].nz, 127) << "i=" << i;
+        EXPECT_EQ(mesh->vertices[i].u, expected[i].u) << "i=" << i;
+        EXPECT_EQ(mesh->vertices[i].v, expected[i].v) << "i=" << i;
+    }
+    // Все три записи — один и тот же CCW-треугольник (0,1,2).
+    for (uint32_t i = 0; i < 3u; ++i) {
+        EXPECT_EQ(mesh->indices[i].v0, 0u) << "i=" << i;
+        EXPECT_EQ(mesh->indices[i].v1, 1u) << "i=" << i;
+        EXPECT_EQ(mesh->indices[i].v2, 2u) << "i=" << i;
+    }
+}
