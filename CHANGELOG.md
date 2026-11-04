@@ -6,6 +6,42 @@
 
 ### Added
 
+- Спринт 9–10 — конвертер ассетов (недели 17–20, M3): (1) host-only CLI-тулза
+  `tools/asset_converter` — glTF 2.0 → `.mesh` v1 (cgltf-вендор: world-позиции
+  в fixed 16.16 через `fixed_from_float` (усечение), нормали → i8 с сатурацией
+  ±127, UV/цвет → u8 half-up, radius по сериализованным позициям (знаковое
+  чтение i32), flat-нормали при отсутствии NORMAL; только TRIANGLES,
+  ≤65535 вершин) и PNG/JPG/TGA/BMP → `.tex` v1 (stb_image → RGBA8 → Median
+  Cut ≤255 цветов → палитра RGB555+STP по bit layout §1.2.5 (8→5 бит — `>>3`),
+  политика слота 0: reserved «transparent black» `0x0000`, CI8-индекс 0 никогда
+  не входит в пиксели, STP=0 во всех слотах — MVP-прозрачность выключена);
+  сериализация обоих форматов побайтовая LE (assets_read/write_le_u16/u32,
+  никаких struct→bytes кастов), детерминированная (повторный прогон —
+  байт-идентичный файл); (2) безопасные загрузчики движка `src/assets/` —
+  `mesh_validate_and_load` / `texture_validate_and_load` по контракту §1.2.7:
+  7-шаговая валидация в заданном порядке, uint64-арифметика ДО size_t,
+  аллокация — только после валидации, rollback арены при любой
+  пост-аллокационной ошибке (malformed-вход расходует persistent-память
+  0 байт), 10 диагностических кодов `AssetDiag`; (3) интеграционные тесты
+  `tests/integration/mesh_loader_test.cpp`/`texture_loader_test.cpp` —
+  malformed-кейсы (truncated header (включая нулевую длину среза),
+  overflow counts, out-of-range indices, overlapping payloads, неверные
+  dims/offsets) с проверкой, что арена не изменилась; кросс-проверка
+  палитры против движкового `pack_rgb555_stp`; тесты real-ассетов пайплайна
+  (canonical cube: 24 верш/12 треуг/radius 113511; texture 256×256, слот 0 =
+  0x0000, пиксели ≥1) — читают `assets/build/*` по compile-time
+  `RPE_TEST_SOURCE_DIR`; (4) CMake-пайплайн: `add_custom_command` +
+  `convert_assets ALL` (только в PC-конфигурации; ps1-release тулзу не
+  собирает — потребляет закоммиченные versioned-ассеты; локальная проверка
+  структурная — PS1-тулчейн в песочнице недоступен); сгенерированные артефакты
+  `assets/build/cube.mesh` (600 байт) и `assets/build/texture.tex` (66068
+  байт) + генератор источников `scripts/make_source_assets.py` (детерминированный
+  glTF-куб 24 вершины/12 треугольников; PNG 256×256 из 65536 уникальных цветов);
+  (5) документация `docs/ASSETS.md` — байтовые форматы v1, политика решений
+  MVP (index_count = число 6-байтовых записей MeshIndex; Octree-фоллбек
+  Median Cut не реализован), коды возврата CLI 0..7, коды загрузчиков
+  0..9.
+
 - Спринт 7–8, недели 15–16 — закрывающий хвост (M2) — числовой конформанс +
   инвентарь draw + CI-рендер-гейт: (1) `tests/visual/render_golden_test.cpp` —
   `W0Golden.AffineNumericConformanceOnSlantedPlane` — программная реплика
