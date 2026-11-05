@@ -59,6 +59,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     if(BUILD_RENDER_INTEGRATION_TESTS)
         add_executable(retro_engine_visual_tests
             visual/render_golden_test.cpp
+            visual/golden_protocol.cpp
+            visual/hello_triangle_golden_test.cpp
             visual/w0_scene.cpp
         )
         target_compile_features(retro_engine_visual_tests PRIVATE cxx_std_14)
@@ -68,8 +70,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
             retro_engine GTest::gtest_main)
         retro_engine_apply_flags(retro_engine_visual_tests)
         # Путь эталонов (golden reference) — compile-time, getenv-fallback.
+        # HT_ASSET_DIR — пути ассетов примера (scene.h), mirrors main.cpp.
         target_compile_definitions(retro_engine_visual_tests PRIVATE
-            RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+            RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+            HT_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets/build")
         gtest_discover_tests(retro_engine_visual_tests DISCOVERY_TIMEOUT 60)
     endif()
 endif()
