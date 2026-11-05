@@ -49,19 +49,31 @@ power_mode: >-
   AC (сетевое питание); governor/частоты не пинились — «правило честных
   замеров»: сравнение только внутри одного снапшота этого файла.
 
-measurement_seconds: 120
+measurement_seconds: 60
 
 git_revision: >-
-  9af3ab8 (W0-golden конформанс; ядро рендера — 0139caa). Снапшот окружения
-  снят при фиксации golden-эталонов tests/visual/reference/*.bin.
+  dfa123c (W1 hello_triangle; игровой слой примера — a32ce48, HAL-мышь
+  0dcacf8). Снапшот окружения снят при замере W1-полки
+  bench-режимом examples/hello_triangle (60 с).
 
 asset_set_sha256: >-
-  427c8d6664cfbd238265c61ce7bbe6cffd753797a71f9557c5255686e4e3a316 —
-  sha256-сумма (sum over sorted file-hashes) для src/render/shaders/*
-  и tests/visual/*.
+  235ef802ce58341f22468aaaad603ba9f6b6af670815e3b37cdeb6a1ee6f34fe —
+  sha256 над sorted-списком SHA-256 каждого файла assets/build/*
+  (cube.mesh, texture.tex, triangle.mesh); рецепт — в notes.
 
-notes: >-
-  Снапшот 2026-11-01 (W0-golden): golden-хэши tests/visual/reference/*.bin
-  зафиксированы на этом окружении; перенос на другое OSD/драйвер: перезаписать
-  поля и золотить эталон только через сознательный rebase
-  (RENDER_GOLDEN_REBASE=1) с инженерным обоснованием в журнале.
+notes: |-
+  Снапшот 2026-11-05 (W1 hello_triangle): bench-режим
+  `./build/pc-release/game/hello_triangle 60` — итог 28996 кадров за
+  60058 мс, среднее fps=482.79; секундные окна 287–1160 fps (окно 1 ~1160 —
+  прогрев Mesa, далее устойчиво ~375–570). Полка W1 («≥ 60 FPS на
+  эталонном стенде») выполнена с запасом ≈ ×8. Бинарь pc-release
+  (git_revision выше), дисплей поверх Mesa GL; рендер-фреймбуфер 320×240
+  (nearest→окно 1280×960).
+  Рецепт asset_set_sha256:
+  `sha256sum assets/build/* | LC_ALL=C sort -k2 | awk '{print $1}' | sha256sum`.
+  Предыдущий снапшот 2026-11-01 (W0-golden, 9af3ab8, assets
+  src/render/shaders/* + tests/visual/*) снят на том же стенде; OSD/драйвер
+  не менялись — эталоны tests/visual/reference/*.bin действительны.
+  Перенос на другое OSD/драйвер: перезаписать поля и золотить эталон
+  только через сознательный rebase (RENDER_GOLDEN_REBASE=1) с инженерным
+  обоснованием в журнале.

@@ -6,6 +6,31 @@
 
 ### Added
 
+- Спринт 11–12 — слой игры и пример hello_triangle (недели 21–24, M4
+  «Hello Triangle PC»): (1) HAL-мышь — расширение SDK-ввода
+  (`Input_SetMouseRelativeMode(bool)` / `Input_GetMouseDelta(int32_t*, int32_t*)`):
+  consume-семантика, накопление только в relative mode, сброс при выключении
+  режима и Shutdown; (2) `game/` — слой игры поверх ECS ядра: тонкий манифест
+  `game/components.h` (единственная точка включения `registry.h`) и header-only
+  системы `game/systems/` — Camera/Input/Movement/Collision (+ `camera_math.h`,
+  общая формула fps-камеры для input и render); (3) `examples/hello_triangle/`
+  — полный пример Camera + MeshRender + PlayerControl: меш из `.mesh`, текстура
+  из `.tex` (загрузчики пайплайна), управление WASD/стрелки/Space/Shift + мышь
+  (grab, ESC — выход), цикл 60 Гц по §10; CLI `hello_triangle <секунды>` —
+  bench-режим замера W1 с fps-логом в file-sink Logger'а
+  («fps=N (окно M)» + итог); golden-скриншот-эталон
+  `tests/visual/reference/hello_triangle_default.bin` (+px-партнёр),
+  тест `HelloTriangleGolden.DefaultSceneView` (сборка сцены общим
+  `examples/hello_triangle/scene.h` → `game::RenderSystem`, бюджет 128 px);
+  FPS-лог документирован в `examples/hello_triangle/README.md`; (4) замер W1
+  (pc-release, 60 с, снапшот окружения в
+  `docs/benchmarks/reference_environment.yaml`): среднее 482.79 fps (28996
+  кадров/60058 мс) — полка «≥ 60 FPS» с запасом ≈ ×8; (5) golden-протокол
+  визуальной регрессии выделен из W0-теста в
+  `tests/visual/golden_protocol.{h,cpp}` (namespace golden: display/capture/
+  check/rebase-протоколы) — hello_triangle golden считает тем же методом, что
+  и W0-конформанс.
+
 - Спринт 9–10 — конвертер ассетов (недели 17–20, M3): (1) host-only CLI-тулза
   `tools/asset_converter` — glTF 2.0 → `.mesh` v1 (cgltf-вендор: world-позиции
   в fixed 16.16 через `fixed_from_float` (усечение), нормали → i8 с сатурацией
