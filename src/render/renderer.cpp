@@ -363,6 +363,9 @@ void Render_SetCamera(const Mat4* view, const Mat4* proj)
         return;
     }
     s_camera_set = true;
+    // Backend получает камеру ПОСЛЕ валидации (PC — no-op; PS1 — GTE-параметры
+    // H/OFX/OFY + диапазон depth-бакетов из proj, Спринты 13–14).
+    hal_render_backend_set_camera(&s_view, &s_proj);
     render_diag(RENDER_DIAG_OK);
 }
 

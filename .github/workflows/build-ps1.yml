@@ -1,0 +1,66 @@
+# ============================================================================
+# Третий CI-контур — Спринты 13–14 (docs/plans/sprint_13_14.md):
+# сборка PS-EXE + CD-образа (RETRO.bin/RETRO.cue) на ubuntu через канонический
+# пресет ps1-release. SDK — PSn00bSDK v0.24 (pinned release-zip, проверка
+# sha256 по ci/psn00bsdk-v0.24-linux.sha256 — §3.2 «SDK pinned + sha256»).
+# Эмулятор (DuckStation) в CI не запускается: ручная приёмка на железе/эмуляторе.
+# ============================================================================
+name: build-ps1
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-ps1:
+    name: PS1 (ubuntu, ps1-release, PSn00bSDK v0.24)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout (без submodules: PS1-конфигурация не тянет SDL3/glad)
+        uses: actions/checkout@v4
+
+      - name: Тулчейн-хост (ninja + unzip)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build unzip
+
+      - name: PSn00bSDK v0.24 (pinned zip + sha256 verify)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/psn00bsdk"
+          cd "$RUNNER_TEMP/psn00bsdk"
+          curl -fSL --retry 2 -o PSn00bSDK-0.24-Linux.zip \
+            https://github.com/Lameguy64/PSn00bSDK/releases/download/v0.24/PSn00bSDK-0.24-Linux.zip
+          sha256sum -c "$GITHUB_WORKSPACE/ci/psn00bsdk-v0.24-linux.sha256"
+          unzip -q PSn00bSDK-0.24-Linux.zip -d "$HOME"
+          mv "$HOME/PSn00bSDK-0.24-Linux" "$HOME/PSn00bSDK"
+          echo "PSN00BSDK_LIBS=$HOME/PSn00bSDK/lib/libpsn00b" >> "$GITHUB_ENV"
+
+      - name: "Configure (canon: cmake --preset ps1-release)"
+        run: cmake --preset ps1-release
+
+      - name: "Build (canon: cmake --build --preset ps1-release)"
+        run: cmake --build --preset ps1-release
+
+      - name: Проверка артефактов (PS-EXE + CD-образ)
+        run: |
+          set -euo pipefail
+          cd build/ps1-release/src/hal/ps1
+          test -s retro_ps1.elf
+          test -s retro_ps1.exe
+          test -s RETRO.bin
+          test -s RETRO.cue
+          grep -Fx 'BOOT = cdrom:\RETRO.EXE;1' system.cnf
+
+      - name: Upload CD-образ (RETRO.bin/.cue + PS-EXE)
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-ps1-disc
+          path: |
+            build/ps1-release/src/hal/ps1/RETRO.bin
+            build/ps1-release/src/hal/ps1/RETRO.cue
+            build/ps1-release/src/hal/ps1/retro_ps1.exe
+          if-no-files-found: error

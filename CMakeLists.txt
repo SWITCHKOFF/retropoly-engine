@@ -121,11 +121,13 @@ if(PLATFORM_PC)
     endif()
 endif()
 
-# --- Примеры: зависят только от retro_engine (ни от SDL3/OpenGL/PSn00bSDK) ----
-add_subdirectory(examples/hello_triangle)
-add_subdirectory(examples/rotating_cube)
-
+# --- Примеры: зависят только от retro_engine (ни от SDL3/OpenGL/PSn00bSDK) ---
+# PC-only: PS1-конфигурация публикует PS-EXE через HAL
+# (src/hal/ps1/CMakeLists.txt: retro_ps1 → retro_disc, Спринты 13–14).
 if(PLATFORM_PC)
+    add_subdirectory(examples/hello_triangle)
+    add_subdirectory(examples/rotating_cube)
+
     # Каноническое расположение рантайм-бинарей примеров: build/<preset>/game/
     set_target_properties(hello_triangle rotating_cube PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/game")

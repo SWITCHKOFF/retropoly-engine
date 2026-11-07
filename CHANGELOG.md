@@ -6,6 +6,31 @@
 
 ### Added
 
+- Спринт 13–14 — HAL PS1 на PSn00bSDK v0.24 (недели 25–28, M5
+  «PS1-платформа»): (1) кросс-сборка PS-EXE через пресет `ps1-release`
+  (toolchain `sdk.cmake`; ретро-библиотеки — NOGPREL, `retro_ps1` — GPREL;
+  ручная ld-группа `--start-group/--end-group` на ретро+SDK-архивах) и CD-образ
+  `RETRO.bin/.cue` через mkpsxiso (`SYSTEM.CNF`, `RETRO.EXE`,
+  `TRIANGLE.MSH`/`TEXTURE.TEX` в ISO9660 8.3); примеры/тесты — PC-only,
+  asset_converter — host-only, ровно один бэкенд (PLATFORM_PC XOR
+  PLATFORM_PS1); (2) `src/hal/ps1/` — платформа (`ResetGraph`/`InitGeom` в
+  Platform_Init, кадр DrawSync→VSync→present/flip двойного буфера 320×240,
+  виртуальное время по vsync), ввод DualShock через BIOS pad-драйвер
+  (типы 0x4/0x5/0x7, active-low, стики −128..127, L2/R2 квантованы),
+  CD-ROM ФС (CdSearchFile→CdRead/CdReadSync, буфер round_up_2048) и
+  рендер-бэкенд GTE+GPU+OT (pose normalizer D=diag(1,−1,−1), rotation=identity,
+  translation=D·Centroid·k; дельты вершин int16; предельные проверки — явный
+  FAIL без clamp; NCLIP-cull с pool_rollback; OT 1024 бакета ClearOTagR +
+  tail-append; overflow = false+диагностика); текстуры 8bpp в VRAM через
+  LoadImage (texture pages x=384+128·slot, CLUT y=240+slot, 5 слотов);
+  (3) `main_ps1.cpp` — hello_triangle поверх общего слоя игры: ассеты с диска,
+  D-pad/лицевые кнопки → Velocity треугольника, START — выход; (4) CI-контур
+  `.github/workflows/build-ps1.yml` — pinned `PSn00bSDK-0.24-Linux.zip` с
+  проверкой sha256 (`ci/psn00bsdk-v0.24-linux.sha256`), configure/build
+  ps1-release, upload-artifact диска. Локально: кросс-сборка и PC-регрессия
+  (161/161) зелёные; запуск в DuckStation — ручная приёмка. Post-MVP:
+  frustum fan-клиппинг, асинхронный CD staging 64 KiB, аналоговое давление DS2.
+
 - Спринт 11–12 — слой игры и пример hello_triangle (недели 21–24, M4
   «Hello Triangle PC»): (1) HAL-мышь — расширение SDK-ввода
   (`Input_SetMouseRelativeMode(bool)` / `Input_GetMouseDelta(int32_t*, int32_t*)`):

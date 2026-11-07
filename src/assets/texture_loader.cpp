@@ -144,8 +144,9 @@ bool texture_validate_and_load(const uint8_t* data, size_t file_size, LinearAllo
             goto finish_fail;
         }
 
-        // payload'ы валидны: копирование из файла в арену с LE-декодированием.
-        for (uint32_t i = 0u; i < h.width * h.height; ++i) {
+        // Valid payloads: copy from file to arena (LE decode). Size compare
+        // in uint32 (uint16 fields promote to signed int on some ABIs).
+        for (uint32_t i = 0u; i < (uint32_t)h.width * (uint32_t)h.height; ++i) {
             pixels[i] = data[(size_t)h.pixel_offset + i];
         }
         for (uint32_t i = 0u; i < ASSETS_TEX_PALETTE_ENTRIES; ++i) {

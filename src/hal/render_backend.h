@@ -4,7 +4,7 @@
 // ВНУТРЕННИЙ интерфейс рендер-бэкенда HAL (НЕ публичный API; ядро
 // src/render/renderer.cpp вызывает его, реализация выбирается компиляцией —
 // «ровно один HAL»: PC → src/hal/pc/render_opengl.cpp (Спринт 7–8),
-// PS1 → src/hal/ps1/render_gpu.cpp (Спринт 13–14)).
+// PS1 → src/hal/ps1/gpu_backend.cpp (Спринт 13–14)).
 //
 // SDL/glad/PSn00bSDK НЕ включаются в этот заголовок (контракт platform.h:
 // бэкенды подключают зависимости только в .cpp). Конвертация engine-
@@ -47,6 +47,30 @@ bool hal_render_backend_init(uint32_t width, uint32_t height);
 
 /** Деинициализация backend'а (идемпотентна; безопасна без Init). */
 void hal_render_backend_shutdown(void);
+
+/**
+ * Подача камеры в backend (ДО DrawMesh текущего кадра; вызывается ядром
+ * из Render_SetCamera ПОСЛЕ валидации near/far).
+ *
+ * PC-backend: no-op — проекция выполняется на GPU через per-triangle
+ * u_mvp (draw_triangle получает mvp_gl), состояние камеры backend'у
+ * не нужно (контракт Спринтов 7–8).
+ *
+ * PS1-backend (Спринты 13–14): из proj (fixed 16.16) выводятся GTE-параметры
+ * проекции (H = f·(height/2) в пикселях, OFX/OFY = центр фреймбуфера) и
+ * диапазон depth-бакетов OT (near = B/(A−1), far = B/(A+1), A = m[10],
+ * B = m[14] — та же fixed-математика, что в renderer.cpp
+ * derive_near_far_from_projection; дублирование ЦЕЛЕННОЕ: слоёный бэкенд
+ * не ходит в ядро). Near/far-клип выполняется ЯДРОМ в view-space ДО подачи
+ * в бэкенд (Visibility contract) — бэкенд клип НЕ дублирует (решение
+ * Спринтов 13–14).
+ *
+ * @param view View-матрица (fixed 16.16; PS1 не читает — вершины приходят
+ *             уже в view-space, GTE-адаптер подаёт их pose-нормализатором);
+ *             параметр под общий контракт обеих платформ.
+ * @param proj Projection-матрица (fixed 16.16, column-major).
+ */
+void hal_render_backend_set_camera(const Mat4* view, const Mat4* proj);
 
 /**
  * Начало кадра: привязка reference-FBO, glClear цветом очистки кадра

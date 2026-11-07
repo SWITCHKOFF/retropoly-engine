@@ -349,6 +349,17 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     return true;
 }
 
+/**
+ * PC-backend: камера backend'у не нужна — проекция выполняется на GPU
+ * через per-triangle u_mvp (draw_triangle). Контракт render_backend.h:
+ * тело PC-реализации — осознанный no-op, состояние не изменяется.
+ */
+void hal_render_backend_set_camera(const Mat4* view, const Mat4* proj)
+{
+    (void)view;
+    (void)proj; // Проекция PC выполняется шейдером (u_mvp per-triangle).
+}
+
 void hal_render_backend_shutdown(void)
 {
     if (!s_backend_inited) {

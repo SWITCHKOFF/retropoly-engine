@@ -1,0 +1,26 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- RetroPolyEngine — PS1 CD-ROM образ (Спринты 13–14).
+     Подстановки @VAR@ — configure_file из src/hal/ps1/CMakeLists.txt;
+     mkpsxiso делает переименование 8.3 имени (file name= vs source=).
+     Коммитнутые ассеты: triangle.mesh → TRIANGLE.MSH, texture.tex →
+     TEXTURE.TEX (ISO9660 8.3-ограничения; ";1" добавляется BOOT-строкой). -->
+<iso_project image_name="RETRO" cue_sheet="RETRO.cue">
+  <track type="data">
+    <identifiers
+        system       ="PLAYSTATION"
+        volume       ="@RPE_DISC_VOLUME@"
+        volume_set   ="@RPE_DISC_VOLUME@"
+        publisher    ="RETROPOLYENGINE"
+        data_preparer="PSN00BSDK ${PSN00BSDK_VERSION}"
+        application  ="PLAYSTATION"
+    />
+
+    <directory_tree>
+      <file name="SYSTEM.CNF"   type="data" source="@RPE_SYSTEM_CNF@" />
+      <file name="RETRO.EXE"    type="data" source="@RPE_PS1_EXE@" />
+      <file name="TRIANGLE.MSH" type="data" source="@RPE_DISC_MESH@" />
+      <file name="TEXTURE.TEX"  type="data" source="@RPE_DISC_TEX@" />
+      <dummy sectors="16"/>
+    </directory_tree>
+  </track>
+</iso_project>

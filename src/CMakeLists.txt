@@ -62,3 +62,14 @@ target_include_directories(retro_engine PRIVATE "${RPE_GENERATED_INCLUDE_DIR}")
 
 target_link_libraries(retro_engine PUBLIC retro_engine_hal retro_engine_log)
 retro_engine_apply_flags(retro_engine)
+
+# --- PS1: NOGPREL-кодогенерация статических библиотек (SDK-паттерн) ---------
+# PsN00bSDK компилирует библиотечные объекты БЕЗ gp-относительного доступа
+# (-G0 -mno-gpopt; psn00bsdk INTERFACE генекс по свойству PSN00BSDK_TARGET_
+# TYPE); PS-EXE retro_ps1 собирается GPREL (-G8) — легко живёт с NOGPREL
+# либами (стандартный SDK-вой пример-роль). Свойство ставится ПОСЛЕ создания
+# всех трёх библиотек-слоёв.
+if(PLATFORM_PS1)
+    set_target_properties(retro_engine_log retro_engine_hal retro_engine
+        PROPERTIES PSN00BSDK_TARGET_TYPE EXECUTABLE_NOGPREL)
+endif()
