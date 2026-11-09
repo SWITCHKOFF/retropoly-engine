@@ -9,6 +9,11 @@
 duckstation_test.log
 coverage.info
 
+# Релизные артефакты (генерируются CI / scripts/create_release_archive.sh)
+/release_contract_report.json
+/dist/
+/retro-engine-*.tar.gz
+
 # Локальные артефакты агентов/инструментов (не часть движка)
 testsprite_tests/
 tests/visual/reference/*.dump.px

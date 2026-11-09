@@ -4,7 +4,23 @@
 
 ## [Unreleased]
 
+## [0.1.0] — 2026-11-09
+
 ### Added
+
+- Спринт 19–20 — Релиз v0.1.0 (недели 37–40, M8 «Релиз»):
+  (1) полный доксет: `README.md`, `docs/ARCHITECTURE.md`,
+  `docs/BUILDING.md`, `docs/API.md`, `docs/TESTING.md`,
+  `docs/TROUBLESHOOTING.md`, `docs/CONTRIBUTING.md`,
+  `docs/CODE_OF_CONDUCT.md`, `docs/LEGAL.md`; финализация `docs/ASSETS.md`;
+  (2) `ci/normative_contracts.yaml` — машинно-читаемый манифест канонических
+  пресетов, бюджетов RAM/VRAM/EXE, W0-конформанса, W1-FPS и asset v1;
+  (3) `scripts/verify_release_contract.py` — 9 assert-ов релизного гейта
+  с публикацией артефакта `release_contract_report.json`;
+  (4) `.github/workflows/release.yml` — релиз по тегу `v*`: PC+PS1 сборки,
+  валидация артефактов, архив `retro-engine-<tag>.tar.gz`, GitHub Release;
+  (5) `CHANGELOG.md` — перенос [Unreleased] → [0.1.0] + известные issues
+  (audio stub, demo-level physics, no networking).
 
 - Спринт 17–18 — Rotating Cube — демо MVP (недели 33–36, M7
   «Rotating Cube»): (1) `examples/rotating_cube/` — полная демка W1-сцены:
@@ -58,6 +74,12 @@
   краша/деградации; гейт ≥ 60 FPS выполнен с запасом ≈ ×3.2 (снапшот —
   `docs/benchmarks/reference_environment.yaml`). Ручная приёмка
   DuckStation-стресса и видео демки — в чек-листе плана спринта.
+
+### Known issues
+
+- Audio: только диагностический beep; полный PCM-миксер — post-MVP.
+- Physics: demo-level AABB (гравитация/прыжок), не полноценный движок.
+- Networking: отсутствует (post-MVP).
 
 - Спринт 15–16 — Hello Triangle PS1 (недели 29–32, M6
   «Hello Triangle PS1»): (1) единый `game::InputSystem` теперь работает и
@@ -229,3 +251,5 @@
 - Спринт 3–4, Неделя 6 (M1): `src/core/memory/pool_allocator.h` — `Pool<T, N>` с free-list `uint16_t`, валидацией foreign/interior/double-free без UB, `for_each`; тесты `tests/memory/pool_allocator_test.cpp` (reuse, OOM, итерация, 256 объектов + 10 000 циклов alloc/free); AddressSanitizer-прогон — 0 findings.
 - Спринт 3–4, Неделя 7 (M1): `src/core/memory/stack_allocator.h` — `push/mark/pop/reset_frame` с overflow-safe проверками, owner/bounds-check marker и выравниванием адреса; тесты `tests/memory/stack_allocator_test.cpp` (nested frames, foreign/future markers, unaligned base); интеграционный сценарий загрузки уровня тремя аллокаторами `tests/memory/allocator_integration_test.cpp` (static-арены 448 KiB/64 KiB, не на CPU-стеке).
 - Спринт 3–4, Неделя 8 (M1): ECS — `src/core/ecs/entity.h` (24-bit index + 8-bit generation, `INVALID_ENTITY=0`), `src/core/ecs/registry.h/.cpp`: 7 MVP-пулов (Position/Rotation/Velocity 1024, MeshRenderer/Collider 256, Camera/PlayerControl 8), dense ComponentPool с swap-back, generation-increment и retirement слота при 255, `Registry::view<...>()` с кэшированием прямых dense-указателей; `sizeof(Registry)=239 648 B` (≤ 256 KiB budget). Тесты `tests/ecs/entity_test.cpp`, `tests/ecs/registry_test.cpp` (stale handle, generation wrap, dense order, 10 000 сущностей) — итого 88 юнит-тестов, 100% pass (pc-debug, pc-release, pc-asan); `ps1-release` ELF собирается.
+
+[0.1.0]: https://github.com/RetroPolyEngine/retro-engine/releases/tag/v0.1.0
