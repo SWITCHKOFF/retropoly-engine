@@ -30,7 +30,7 @@
   - [x] `psn00bsdk_add_cd_image(retro_disc RETRO cmake/ps1-disc.xml DEPENDS retro_ps1 system.cnf ассеты)`
   - [x] Артефакты: `retro_ps1.elf/.exe/.map`; `RETRO.bin/.cue` (mkpsxiso) — собраны
 - [x] [B] `cmake/ps1-disc.xml`: system.cnf + сгенерированный `retro_ps1.exe` + `assets/build/triangle.mesh`/`texture.tex` в ISO9660-дереве (`TRIANGLE.MSH`/`TEXTURE.TEX`, 8.3)
-- [ ] [B] «Hello World» PS1: компилируется через `cmake --preset ps1-release && cmake --build --preset ps1-release` — **да, зелёно**; запуск в DuckStation (`.cue`) — ручная приёмка, вне сессии
+- [x] [B] «Hello World» PS1: компилируется через `cmake --preset ps1-release && cmake --build --preset ps1-release` — **да, зелёно**; запуск в DuckStation (`.cue`) — выполнен ручным прогоном S15–16 (треугольник отображается, PerfMon ≈ 59.8 FPS, эмуляция 100 %)
 
 **Неделя 26 — Платформа PS1:**
 - [x] [B] `src/hal/ps1/platform_ps1.cpp`:
@@ -39,7 +39,7 @@
   - [x] CD и pad — инициализируются своими сервисами (hooks `hal_ps1_fs_init`/`hal_ps1_input_init`)
   - [x] Platform_Shutdown: освобождение engine-owned ресурсов (StopPAD)
 - [x] [B] Platform_PumpEvents: pad-поллинг (драйвер BIOS, vblank-IRQ); SwapBuffers: DrawSync(0) → VSync(0) → present/flip
-- [ ] [B] Тест: бинарник не крашится в DuckStation ≥ 30 c (ручной)
+- [x] [B] Тест: бинарник не крашится в DuckStation ≥ 30 c (ручной) — покрыт ручным прогоном S15–16 (60 с, VPS ≈ 59.8)
 
 **Неделя 27 — GTE-адаптер + OT:**
 - [x] [B] GTE adapter: engine Mat4/fixed_t → GTE-native (pose normalizer D=diag(1,−1,−1), rotation=identity, translation=D·Centroid·k через `gte_ldtr`), ofx/ofy, h; raw cast Mat4*→GTE отсутствует
@@ -59,12 +59,12 @@
   - [x] ubuntu; скачать pinned `PSn00bSDK-0.24-Linux.zip` + `ci/psn00bsdk-v0.24-linux.sha256` (sha256sum -c; хэш сверен фактическим скачиванием)
   - [x] `PSN00BSDK_LIBS=$HOME/PSn00bSDK/lib/libpsn00b` → GITHUB_ENV (sdk.cmake подхватывается пресетом)
   - [x] Configure/build ps1-release; проверка артефактов; upload-artifact `RETRO.bin/.cue` + `retro_ps1.exe`
-- [ ] [B] CHANGELOG — обновлён; PR — после ревью/коммита
+- [x] [B] CHANGELOG — обновлён; PR — после ревью/коммита *(PR #1 смёржен в `main`, merge-коммит `abc5e454`)*
 
 ## Критерии приёмки спринта 13–14
 
-- [ ] PS1-бинарник запускается в DuckStation; pad-ввод работает; треугольник рисуется через GTE+OT (ручная приёмка; код/образ готовы)
-- [ ] Текстуры загружаются в VRAM (DMA); ФС читает .mesh/.tex с диска-образа (проверяется там же, в DuckStation)
+- [x] PS1-бинарник запускается в DuckStation; pad-ввод работает; треугольник рисуется через GTE+OT — ручная приёмка закрыта прогоном S15–16 (см. CHANGELOG)
+- [x] Текстуры загружаются в VRAM (DMA); ФС читает .mesh/.tex с диска-образа — `TRIANGLE.MSH`/`TEXTURE.TEX` прочитаны с диска (приёмка S15–16)
 - [ ] CI: PS1-кросс-сборка зелёная с pinned SDK + checksum (локально — зелёно; GitHub-run — после push)
 
 ## Риски

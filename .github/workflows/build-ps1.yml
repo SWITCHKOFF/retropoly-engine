@@ -19,7 +19,7 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout (без submodules: PS1-конфигурация не тянет SDL3/glad)
+      - name: "Checkout (без submodules: PS1-конфигурация не тянет SDL3/glad)"
         uses: actions/checkout@v4
 
       - name: Тулчейн-хост (ninja + unzip)
