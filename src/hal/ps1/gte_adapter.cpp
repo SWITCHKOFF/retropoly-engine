@@ -137,8 +137,7 @@ void hal_ps1_adapter_set_camera(const Mat4* view, const Mat4* proj)
     const fixed_t h_fixed = fixed_mul(proj->m[5], fixed_from_int(120));
     const int32_t h_px = fixed_to_int(h_fixed);
     if (h_px < 16 || h_px > 4095) {
-        Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "set_camera: H вне [16..4095] (%d px)",
-                    (int)h_px);
+        Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "set_camera: H вне [16..4095] (%d px)", (int)h_px);
         return;
     }
 
@@ -203,8 +202,7 @@ void hal_ps1_adapter_set_camera(const Mat4* view, const Mat4* proj)
     gte_SetGeomOffset(s_ofx, s_ofy);
     gte_SetRotMatrix(&s_rot_identity[0]);
 
-    Log_Message(LOG_LEVEL_INFO, "ps1_hal",
-                "set_camera: H=%d px, near=%u/{far=%u units}, k=%d",
+    Log_Message(LOG_LEVEL_INFO, "ps1_hal", "set_camera: H=%d px, near=%u/{far=%u units}, k=%d",
                 (int)s_h_pixels, (unsigned)hal_ps1_adapter_state.depth_min,
                 (unsigned)hal_ps1_adapter_state.depth_max, (int)s_k);
 }
@@ -237,10 +235,10 @@ void hal_ps1_adapter_reset(void)
 // transform: rtpt → nclip → stsxy
 // ---------------------------------------------------------------------------
 
-HalPs1AdapterStatus hal_ps1_adapter_transform(const float* vx, const float* vy, const float* vz,
-                                              void* prim, uint32_t textured)
+HalPs1AdapterStatus hal_ps1_adapter_transform(const HalRenderBackendVertex vertices[3], void* prim,
+                                              uint32_t textured)
 {
-    if (!s_camera_valid || prim == NULL || vx == NULL || vy == NULL || vz == NULL) {
+    if (!s_camera_valid || prim == NULL || vertices == NULL) {
         return HAL_PS1_ADAPTER_FAIL; // Камера не подана / входы невалидны.
     }
 
@@ -249,9 +247,9 @@ HalPs1AdapterStatus hal_ps1_adapter_transform(const float* vx, const float* vy, 
     fixed_t fz[3]; // dzps = −z_view (глубина d > 0 после клип-гейта ядра)
     fixed_t fy[3]; // dy = −y_view (SY-DOWN конвенция GTE)
     for (uint32_t i = 0; i < 3u; ++i) {
-        fx[i] = fixed_from_float(vx[i]);
-        fy[i] = fixed_sub(0, fixed_from_float(vy[i]));  // D: y ↦ −y
-        fz[i] = fixed_sub(0, fixed_from_float(vz[i]));  // D: z ↦ +d (в глубину)
+        fx[i] = fixed_from_float(vertices[i].x);
+        fy[i] = fixed_sub(0, fixed_from_float(vertices[i].y));  // D: y ↦ −y
+        fz[i] = fixed_sub(0, fixed_from_float(vertices[i].z));  // D: z ↦ +d (в глубину)
     }
 
     // ---- Centroid (координатный центр треугольника; avg fixed 16.16) -----
@@ -276,12 +274,11 @@ HalPs1AdapterStatus hal_ps1_adapter_transform(const float* vx, const float* vy, 
         const int32_t dvx = adapter_scale_raw(fixed_sub(fx[i], cx), s_k);
         const int32_t dvy = adapter_scale_raw(fixed_sub(fy[i], cy), s_k);
         const int32_t dvz = adapter_scale_raw(fixed_sub(fz[i], cz), s_k);
-        if (dvx > ADAPTER_SVECTOR_MAX || dvx < -ADAPTER_SVECTOR_MAX ||
-            dvy > ADAPTER_SVECTOR_MAX || dvy < -ADAPTER_SVECTOR_MAX ||
-            dvz > ADAPTER_SVECTOR_MAX || dvz < -ADAPTER_SVECTOR_MAX) {
+        if (dvx > ADAPTER_SVECTOR_MAX || dvx < -ADAPTER_SVECTOR_MAX || dvy > ADAPTER_SVECTOR_MAX ||
+            dvy < -ADAPTER_SVECTOR_MAX || dvz > ADAPTER_SVECTOR_MAX || dvz < -ADAPTER_SVECTOR_MAX) {
             Log_Message(LOG_LEVEL_ERROR, "ps1_hal",
-                        "дельта v−Centroid вне int16 SVECTOR (dv=%d,%d,%d)",
-                        (int)dvx, (int)dvy, (int)dvz);
+                        "дельта v−Centroid вне int16 SVECTOR (dv=%d,%d,%d)", (int)dvx, (int)dvy,
+                        (int)dvz);
             return HAL_PS1_ADAPTER_FAIL;
         }
 
@@ -292,13 +289,13 @@ HalPs1AdapterStatus hal_ps1_adapter_transform(const float* vx, const float* vy, 
         const int32_t mac_z = trz + dvz;
         if (mac_x > ADAPTER_IR_MAX || mac_x < -ADAPTER_IR_MAX || mac_y > ADAPTER_IR_MAX ||
             mac_y < -ADAPTER_IR_MAX) {
-            Log_Message(LOG_LEVEL_ERROR, "ps1_hal",
-                        "x·k/y·k вне IR1/IR2 int16 (mac_x=%d)", (int)mac_x);
+            Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "x·k/y·k вне IR1/IR2 int16 (mac_x=%d)",
+                        (int)mac_x);
             return HAL_PS1_ADAPTER_FAIL;
         }
         if (mac_z < 2 || mac_z > (int32_t)HAL_PS1_SZ3_RAW_MAX) {
-            Log_Message(LOG_LEVEL_ERROR, "ps1_hal",
-                        "глубина d·k вне SZ3 [2..65532] (mac_z=%d)", (int)mac_z);
+            Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "глубина d·k вне SZ3 [2..65532] (mac_z=%d)",
+                        (int)mac_z);
             return HAL_PS1_ADAPTER_FAIL;
         }
 
@@ -308,8 +305,7 @@ HalPs1AdapterStatus hal_ps1_adapter_transform(const float* vx, const float* vy, 
         const int64_t ax = (int64_t)(mac_x < 0 ? -mac_x : mac_x);
         const int64_t ay = (int64_t)(mac_y < 0 ? -mac_y : mac_y);
         const int64_t az = (int64_t)mac_z;
-        const int64_t screen_swing_px =
-            (int64_t)ADAPTER_SCREEN_MAX_PX - (int64_t)s_ofx;
+        const int64_t screen_swing_px = (int64_t)ADAPTER_SCREEN_MAX_PX - (int64_t)s_ofx;
         if (ax * (int64_t)s_h_pixels > az * screen_swing_px ||
             ay * (int64_t)s_h_pixels > az * screen_swing_px) {
             Log_Message(LOG_LEVEL_ERROR, "ps1_hal",

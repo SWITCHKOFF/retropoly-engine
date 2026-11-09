@@ -1,11 +1,14 @@
 // SPDX-License-Identifier: MIT
 // RetroPolyEngine — game/systems/input_system.h
 //
-// Система ввода слоя игры (header-only): клавиатура WASD/стрелки/Space/
-// Shift, мышь-взгляд (yaw/pitch по consume-дельтам), ESC-выход.
-// Норматив: docs/plans/sprint_11_12.md, неделя 23; §10 — InputSystem тик
-// ПЕРВЫЙ внутри тика фикс-симуляции (60 Гц), мышь аккумулируется платформой
-// между тиками (Input_GetMouseDelta — consume ровно один раз за тик).
+// Система ввода слоя игры (header-only): единая абстракция для PC
+// (клавиатура + мышь + геймпад) и PS1 (геймпад). Норматив:
+// docs/plans/sprint_11_12.md, неделя 23 (мышь/клавиатура) и
+// docs/plans/sprint_15_16.md, неделя 31 (геймпад на PC+PS1).
+//
+// §10 — InputSystem тик ПЕРВЫЙ внутри тика фикс-симуляции (60 Гц), мышь
+// аккумулируется платформой между тиками (Input_GetMouseDelta — consume
+// ровно один раз за тик).
 //
 // Контракты:
 //   - игрок = сущность с PlayerControl+Camera+Position+Rotation+Velocity:
@@ -13,10 +16,12 @@
 //     интеграция позиции — MovementSystem (разделение фаз §10);
 //   - масштаб скорости от dt НЕ зависит: move_speed — units/секунду,
 //     MovementSystem умножает на длину тика;
-//   - направление диагонали нормируется (равная скорость WASD-A и W);
+//   - направление диагонали нормируется (равная скорость всех направлений);
 //   - мышь двигает yaw/pitch ТОЛЬКО в относительном режиме (платформа копит
 //     дельты только в нём; в bench-режиме дельты всегда 0);
-//   - @return true — запрошен выход (ESC зажат).
+//   - геймпад: левый стик / D-pad — движение камеры в плоскости yaw;
+//     правый стик — yaw/pitch; START (PC/PS1) — выход;
+//   - @return true — запрошен выход (ESC зажат или START на геймпаде).
 #pragma once
 
 #include "core/ecs/registry.h"
@@ -31,16 +36,53 @@ namespace game {
  *  look_at (forward ∥ up делило бы на ноль — контракт mat4_look_at). */
 constexpr fixed_t CAMERA_PITCH_LIMIT = FIXED_HALF_PI - (FIXED_ONE / 32);
 
+/** Deadzone для аналоговых осей геймпада (в сжатом масштабе −128..127). */
+constexpr int16_t INPUT_PAD_AXIS_DEADZONE = 16;
+
+/** Множитель скорости взгляда правого стика относительно сенсы мыши.
+ *  Full deflection правого стика ≈ rotate_speed * kPadRotateScale за тик. */
+const fixed_t kPadRotateScale = fixed_from_int(8);
+
+namespace {
+
+/**
+ * Сжатая ось геймпада → коэффициент −1..1 в fixed 16.16 с deadzone.
+ */
+inline fixed_t pad_axis_ratio(int16_t axis)
+{
+    if (axis > -INPUT_PAD_AXIS_DEADZONE && axis < INPUT_PAD_AXIS_DEADZONE) {
+        return 0;
+    }
+    if (axis < -128) {
+        axis = -128;
+    } else if (axis > 127) {
+        axis = 127;
+    }
+    return fixed_div(fixed_from_int(axis), fixed_from_int(128));
+}
+
+inline void clamp_pitch(fixed_t* pitch)
+{
+    if (*pitch > CAMERA_PITCH_LIMIT) {
+        *pitch = CAMERA_PITCH_LIMIT;
+    } else if (*pitch < -CAMERA_PITCH_LIMIT) {
+        *pitch = -CAMERA_PITCH_LIMIT;
+    }
+}
+
+} // namespace
+
 class InputSystem {
 public:
     /**
-     * Тик ввода 60 Гц: мышь → yaw/pitch игрока; клавиши → Velocity.
+     * Тик ввода 60 Гц: мышь/правый стик → yaw/pitch игрока; клавиши/
+     * левый стик/D-pad → Velocity.
      *
      * @param registry ECS-реестр сцены.
      * @param dt Дельта тика (FIXED_ONE/60); масштаб скорости от dt не
      *        зависит (см. контракты) — параметр под единый сигнатурный
      *        контракт систем тика.
-     * @return true — ESC зажат в этом тике (игрок просит выход).
+     * @return true — ESC зажат или START на геймпаде (запрос выхода).
      */
     static bool update(Registry& registry, fixed_t dt);
 };
@@ -59,61 +101,88 @@ inline bool InputSystem::update(Registry& registry, fixed_t dt)
         return true;
     }
 
+    // START на геймпаде — единый запрос выхода на PC и PS1.
+    if (Input_IsPadButtonDown(0, INPUT_PAD_START)) {
+        return true;
+    }
+
     for (auto row : registry.view<PlayerControl, Camera, Position, Rotation, Velocity>()) {
         const PlayerControl* control = &row.get<PlayerControl>();
-        Position* position = &row.get<Position>();
         Rotation* rotation = &row.get<Rotation>();
         Velocity* velocity = &row.get<Velocity>();
-        (void)position; // позиция читается копированием в MovementSystem
 
-        // --- Мышь-взгляд ---------------------------------------------------
-        // dx > 0 (вправо) → yaw увеличивается (взгляд уходит в +X при yaw=0);
-        // dy > 0 (вниз) → pitch уменьшается (взгляд вниз), кламп ±предел.
+        // --- Мышь-взгляд (PC) --------------------------------------------
         if (mouse_dx != 0 || mouse_dy != 0) {
             rotation->yaw = fixed_add(rotation->yaw,
                                       fixed_mul(fixed_from_int(mouse_dx), control->rotate_speed));
             rotation->pitch = fixed_sub(rotation->pitch,
                                         fixed_mul(fixed_from_int(mouse_dy), control->rotate_speed));
-            if (rotation->pitch > CAMERA_PITCH_LIMIT) {
-                rotation->pitch = CAMERA_PITCH_LIMIT;
-            } else if (rotation->pitch < -CAMERA_PITCH_LIMIT) {
-                rotation->pitch = -CAMERA_PITCH_LIMIT;
-            }
+            clamp_pitch(&rotation->pitch);
         }
 
-        // --- Клавиатура → целевая скорость входа тика -----------------------
+        // --- Правый стик — взгляд (геймпад PC+PS1) ------------------------
+        const fixed_t rx = pad_axis_ratio(Input_GetPadAxis(0, INPUT_AXIS_RIGHTX));
+        const fixed_t ry = pad_axis_ratio(Input_GetPadAxis(0, INPUT_AXIS_RIGHTY));
+        if (rx != 0 || ry != 0) {
+            rotation->yaw = fixed_add(
+                rotation->yaw, fixed_mul(fixed_mul(rx, control->rotate_speed), kPadRotateScale));
+            rotation->pitch = fixed_sub(
+                rotation->pitch, fixed_mul(fixed_mul(ry, control->rotate_speed), kPadRotateScale));
+            clamp_pitch(&rotation->pitch);
+        }
+
+        // --- Направление движения (камера в плоскости yaw) ----------------
         const Vec3 forward = camera_forward(rotation->yaw, rotation->pitch);
         const Vec3 right = camera_right(rotation->yaw);
 
-        const bool move_fwd = Input_IsKeyDown(INPUT_KEY_W) || Input_IsKeyDown(INPUT_KEY_UP);
-        const bool move_back = Input_IsKeyDown(INPUT_KEY_S) || Input_IsKeyDown(INPUT_KEY_DOWN);
-        const bool move_right = Input_IsKeyDown(INPUT_KEY_D) || Input_IsKeyDown(INPUT_KEY_RIGHT);
-        const bool move_left = Input_IsKeyDown(INPUT_KEY_A) || Input_IsKeyDown(INPUT_KEY_LEFT);
-        const bool move_up = Input_IsKeyDown(INPUT_KEY_SPACE);
-        const bool move_down =
-            Input_IsKeyDown(INPUT_KEY_LSHIFT) || Input_IsKeyDown(INPUT_KEY_RSHIFT);
-
         Vec3 direction = vec3_make(0, 0, 0);
-        if (move_fwd) {
+
+        // Клавиатура PC.
+        if (Input_IsKeyDown(INPUT_KEY_W) || Input_IsKeyDown(INPUT_KEY_UP)) {
             direction = vec3_add(direction, forward);
         }
-        if (move_back) {
+        if (Input_IsKeyDown(INPUT_KEY_S) || Input_IsKeyDown(INPUT_KEY_DOWN)) {
             direction = vec3_sub(direction, forward);
         }
-        if (move_right) {
+        if (Input_IsKeyDown(INPUT_KEY_D) || Input_IsKeyDown(INPUT_KEY_RIGHT)) {
             direction = vec3_add(direction, right);
         }
-        if (move_left) {
+        if (Input_IsKeyDown(INPUT_KEY_A) || Input_IsKeyDown(INPUT_KEY_LEFT)) {
             direction = vec3_sub(direction, right);
         }
-        if (move_up) {
+        if (Input_IsKeyDown(INPUT_KEY_SPACE)) {
             direction = vec3_add(direction, vec3_make(0, FIXED_ONE, 0));
         }
-        if (move_down) {
+        if (Input_IsKeyDown(INPUT_KEY_LSHIFT) || Input_IsKeyDown(INPUT_KEY_RSHIFT)) {
             direction = vec3_sub(direction, vec3_make(0, FIXED_ONE, 0));
         }
 
-        // Нормирование диагоналей (равная скорость всех 8 направлений).
+        // Геймпад: левый стик.
+        const fixed_t lx = pad_axis_ratio(Input_GetPadAxis(0, INPUT_AXIS_LEFTX));
+        const fixed_t ly = pad_axis_ratio(Input_GetPadAxis(0, INPUT_AXIS_LEFTY));
+        if (lx != 0) {
+            direction = vec3_add(direction, vec3_scale(right, lx));
+        }
+        if (ly != 0) {
+            // Ось Y стика: вверх (отрицательная) → вперёд.
+            direction = vec3_sub(direction, vec3_scale(forward, ly));
+        }
+
+        // Геймпад: D-pad (PC-эмуляция клавиатурой тоже попадает сюда).
+        if (Input_IsPadButtonDown(0, INPUT_PAD_UP)) {
+            direction = vec3_add(direction, forward);
+        }
+        if (Input_IsPadButtonDown(0, INPUT_PAD_DOWN)) {
+            direction = vec3_sub(direction, forward);
+        }
+        if (Input_IsPadButtonDown(0, INPUT_PAD_RIGHT)) {
+            direction = vec3_add(direction, right);
+        }
+        if (Input_IsPadButtonDown(0, INPUT_PAD_LEFT)) {
+            direction = vec3_sub(direction, right);
+        }
+
+        // Нормирование диагоналей (равная скорость всех направлений).
         // Нулевое направление НЕ нормируется: контракт vec3_normalize делит
         // на нулевую длину (debug assert / release-насыщение) — честная
         // ветка пустого хода прямо здесь.

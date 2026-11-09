@@ -42,6 +42,7 @@ target_sources(retro_engine PRIVATE
     core/math/fixed.cpp
     core/math/math.cpp
     core/ecs/registry.cpp
+    core/memory/memory_profiler.cpp
     render/texture.cpp
     render/renderer.cpp
     assets/mesh_loader.cpp

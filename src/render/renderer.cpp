@@ -93,6 +93,11 @@ RenderDiagnostics render_diagnostics(void)
     return s_diag;
 }
 
+uint32_t render_command_buffer_used_bytes(void)
+{
+    return s_command_buffer.used_bytes();
+}
+
 // ---------------------------------------------------------------------------
 // Depth-контракт (§1.2.6 — normative, формат 1:1)
 // ---------------------------------------------------------------------------

@@ -77,3 +77,28 @@ notes: |-
   Перенос на другое OSD/драйвер: перезаписать поля и золотить эталон
   только через сознательный rebase (RENDER_GOLDEN_REBASE=1) с инженерным
   обоснованием в журнале.
+
+ps1_emulator:
+  build: ps1-release
+  toolchain: PSn00bSDK v0.24 (pinned)
+  renderer_backend: GTE+GPU+OT (320×240, NTSC)
+  region: NTSC
+  host_os: >-
+    Freedesktop SDK 25.08 (Flatpak runtime), Linux 7.0.0-42 x86_64
+  host_cpu: >-
+    Intel Core i5-11300H (11th Gen, Tiger Lake-H35, 4C/8T @ 3.10–4.40 GHz)
+  git_revision: >-
+    0a19d94 (HEAD develop, S13–14 HAL PS1) + локальные изменения S15–16.
+  asset_set_sha256: >-
+    235ef802ce58341f22468aaaad603ba9f6b6af670815e3b37cdeb6a1ee6f34fe
+  measurement: >-
+    DuckStation 0.1-12640-gbb4e9ac5e, Software renderer, fast boot,
+    NTSC-U, 60 s ручного прогона (2026-11-09). PerfMon: FPS 59.7–60.3
+    (среднее ≈ 59.9), VPS 59.7–60.3, avg frame time ≈ 16.7 ms,
+    эмулятор держит 100 % скорости (≥ 98 % гейт выполнен). Это
+    emulator validation gate, НЕ доказательство 30 FPS на реальном
+    железе. RAM: engine-owned static + арены ≈ 815 KiB
+    (бюджет 1.5 MiB); VRAM: два 16bpp фреймбуфера 320×240 + CLUT +
+    одна 256×256 texture page ≈ 366 KiB (бюджет 800 KiB).
+    PS-EXE size: 96 256 bytes ≤ 512 000 bytes. Скриншот:
+    screenshots/hello_triangle_ps1.png.

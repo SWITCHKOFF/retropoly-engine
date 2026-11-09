@@ -6,6 +6,27 @@
 
 ### Added
 
+- Спринт 15–16 — Hello Triangle PS1 (недели 29–32, M6
+  «Hello Triangle PS1»): (1) единый `game::InputSystem` теперь работает и
+  на PS1: D-pad / левый стик — движение камеры, правый стик — yaw/pitch,
+  Triangle/Cross — вверх/вниз, START — выход; сохранена полная поддержка
+  клавиатуры/мыши на PC; (2) `src/core/memory/memory_profiler.h/.cpp` —
+  учёт RAM/VRAM по зарегистрированным источникам (аллокаторы + статические
+  блоки), `print_stats()` и `check_thresholds()` с алертом >90%; в
+  `main_ps1.cpp` регистрируются Registry, asset/frame арены, command buffer,
+  texture pool, GPU packet pool, OT и VRAM PS1 (бюджеты 1.5 MiB RAM /
+  800 KiB VRAM); (3) `scripts/check_binary_size.sh` — гейт размера PS-EXE
+  ≤ 500 KiB; (4) `docs/benchmarks/reference_environment.yaml` дополнен
+  секцией `ps1_emulator` с методикой ручного замера в DuckStation
+  (emulator validation gate, ≥ 30 completed engine frames/s, эмуляция ≥ 98%);
+  (5) PC-скриншот `screenshots/hello_triangle_pc.png` сгенерирован из
+  golden-эталона; PS1-скриншот `screenshots/hello_triangle_ps1.png` получен
+  ручным захватом в DuckStation (Software renderer, NTSC-U, fast boot).
+  Ручной прогон DuckStation 0.1-12640: PerfMon FPS/VPS ≈ 59.8 (avg 16.7 ms),
+  эмуляция 100 %; RAM ≈ 815 KiB engine-owned / 1.5 MiB бюджет,
+  VRAM ≈ 366 KiB / 800 KiB бюджет, PS-EXE 96 256 bytes / 512 000 bytes.
+  Локально: PC-регрессия и ps1-release кросс-сборка зелёные.
+
 - Спринт 13–14 — HAL PS1 на PSn00bSDK v0.24 (недели 25–28, M5
   «PS1-платформа»): (1) кросс-сборка PS-EXE через пресет `ps1-release`
   (toolchain `sdk.cmake`; ретро-библиотеки — NOGPREL, `retro_ps1` — GPREL;

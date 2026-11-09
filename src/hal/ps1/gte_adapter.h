@@ -12,7 +12,8 @@
 // треугольник), platform_ps1.cpp (reset при инициализации устройства).
 #pragma once
 
-#include "hal/platform.h" // Mat4 + fixed_t (ключевой контракт; PSn00bSDK — в .cpp)
+#include "hal/platform.h"       // Mat4 + fixed_t
+#include "hal/render_backend.h" // HalRenderBackendVertex (контракт бэкенда)
 #include "hal/ps1/hal_ps1_internal.h"
 
 /**
@@ -63,7 +64,7 @@ void hal_ps1_adapter_set_camera(const Mat4* view, const Mat4* proj);
 /**
  * Трансформация одного треугольника через GTE (rtpt → nclip → stsxy).
  *
- * Вход: ТРИ view-space float вершины (граница бэкенда §4.4: ядро
+ * Вход: массив из трёх HalRenderBackendVertex (граница бэкенда §4.4: ядро
  * конвертировало fixed→float, здесь обратный snap через fixed_from_float —
  * побитно однозначный для 16.16-точности входа). Далее все значения — fixed:
  * поза нормализуется D = diag(1,−1,−1) (y вниз, z в глубину), Centroid
@@ -81,14 +82,12 @@ void hal_ps1_adapter_set_camera(const Mat4* view, const Mat4* proj);
  *   |sx|, |sy| ≤ 1023 px (GPU-окно + защита от wrap 12.4-инт16);
  *   |Centroid·k| ≤ 524287 (int32 MAC при sf = 1).
  *
- * @param vx ВХОД: float x трёх вершин (не NULL).
- * @param vy ВХОД: float y трёх вершин (не NULL).
- * @param vz ВХОД: float z трёх вершин (не NULL).
+ * @param vertices ВХОД: ровно 3 вершины backend-подачи (не NULL).
  * @param prim указатель на экземпляр POLY_GT3 или POLY_G3 (поля SXY ЗАПИСАНЫ
  *             здесь; остальные поля — задача gpu_backend).
  * @param textured 1 — prim = POLY_GT3 (офсеты 8/20/32); 0 — POLY_G3 (8/16/24).
  *
  * @return Статус (OK/CULLED/FAIL).
  */
-HalPs1AdapterStatus hal_ps1_adapter_transform(const float* vx, const float* vy, const float* vz,
-                                              void* prim, uint32_t textured);
+HalPs1AdapterStatus hal_ps1_adapter_transform(const HalRenderBackendVertex vertices[3], void* prim,
+                                              uint32_t textured);

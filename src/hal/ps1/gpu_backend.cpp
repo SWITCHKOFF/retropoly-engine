@@ -47,8 +47,7 @@
 alignas(8) uint32_t s_ot[HAL_PS1_OT_LEN];
 
 /** Единый packet-pool кадра (32 KiB; POLY_GT3 = 40 Б, POLY_G3 = 28 Б). */
-#define GPU_POOL_SIZE (32u * 1024u)
-alignas(8) uint8_t s_pool[GPU_POOL_SIZE];
+alignas(8) uint8_t s_pool[HAL_PS1_GPU_POOL_SIZE];
 static uint32_t s_pool_used = 0u;   /**< Использованных байт. */
 static uint32_t s_pool_count = 0u;  /**< Примитивов в кадре (диагностика). */
 
@@ -83,7 +82,7 @@ extern HalPs1BackendState hal_ps1_backend_state;
  */
 static void* pool_alloc(uint32_t bytes)
 {
-    if (s_pool_used + bytes > GPU_POOL_SIZE) {
+    if (s_pool_used + bytes > HAL_PS1_GPU_POOL_SIZE) {
         return NULL; // Явный отказ БЕЗ silent drop.
     }
     void* prim = &s_pool[s_pool_used];
@@ -142,8 +141,7 @@ static inline uint8_t attr_u8_from_float01(float f)
 static inline uint8_t uv_to_texel_u8(fixed_t u_fixed, uint32_t dim)
 {
     // u_fixed = trunc((engine_u/255)·65536) ⇒ texel = floor(u_fixed·dim/2^16).
-    const uint32_t texel =
-        (uint32_t)(((int64_t)u_fixed * (int64_t)dim) / (int64_t)FIXED_ONE);
+    const uint32_t texel = (uint32_t)(((int64_t)u_fixed * (int64_t)dim) / (int64_t)FIXED_ONE);
     return (texel >= dim) ? (uint8_t)(dim - 1u) : (uint8_t)texel;
 }
 
@@ -158,10 +156,8 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     }
     // Фреймбуфер фиксирован ядром (320×240); разладка — ошибка ABI.
     if (width != RENDER_FB_WIDTH || height != RENDER_FB_HEIGHT) {
-        Log_Message(LOG_LEVEL_ERROR, "ps1_hal",
-                    "init: несовпадение фреймбуфера %ux%u ≠ %ux%u",
-                    (unsigned)width, (unsigned)height, RENDER_FB_WIDTH,
-                    RENDER_FB_HEIGHT);
+        Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "init: несовпадение фреймбуфера %ux%u ≠ %ux%u",
+                    (unsigned)width, (unsigned)height, RENDER_FB_WIDTH, RENDER_FB_HEIGHT);
         return false;
     }
 
@@ -170,19 +166,21 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
 
     // Двойной буфер: draw A @ (0,0) показывает disp B @ (320,0) — и наоборот.
     for (uint32_t i = 0; i < 2u; ++i) {
-        SetDefDrawEnv(&s_draw_env[i], (int)(RENDER_FB_WIDTH * i), 0,
-                      (int)RENDER_FB_WIDTH, (int)RENDER_FB_HEIGHT);
+        SetDefDrawEnv(&s_draw_env[i], (int)(RENDER_FB_WIDTH * i), 0, (int)RENDER_FB_WIDTH,
+                      (int)RENDER_FB_HEIGHT);
         s_draw_env[i].isbg = 1; // Очистка области в PutDrawEnv (BeginFrame).
         s_draw_env[i].dfe = 0;
         setRGB0(&s_draw_env[i], RENDER_CLEAR_DEFAULT_R, RENDER_CLEAR_DEFAULT_G,
                 RENDER_CLEAR_DEFAULT_B);
 
-        SetDefDispEnv(&s_disp_env[i], (int)(RENDER_FB_WIDTH * (1u - i)), 0,
-                      (int)RENDER_FB_WIDTH, (int)RENDER_FB_HEIGHT);
+        SetDefDispEnv(&s_disp_env[i], (int)(RENDER_FB_WIDTH * (1u - i)), 0, (int)RENDER_FB_WIDTH,
+                      (int)RENDER_FB_HEIGHT);
     }
     s_cur = 0u;
     PutDrawEnv(&s_draw_env[s_cur]);
-    PutDispEnv(&s_disp_env[1u - s_cur]);
+    // disp_env[s_cur] указывает на draw_env[1 - s_cur]; при s_cur=0 рисуем в
+    // A(0,0), показываем B(320,0). Переключение — в hal_ps1_backend_present.
+    PutDispEnv(&s_disp_env[s_cur]);
 
     // Ordering table: «R» chain (reversed): рисование от 1023 к 0.
     for (uint32_t b = 0; b < HAL_PS1_OT_LEN; ++b) {
@@ -200,9 +198,8 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     s_inited = true;
 
     Log_Message(LOG_LEVEL_INFO, "ps1_hal",
-                "backend PS1 init: OT %u бакетов, pool %u KiB, ~%u GT3 max",
-                HAL_PS1_OT_LEN, GPU_POOL_SIZE / 1024u,
-                GPU_POOL_SIZE / (uint32_t)sizeof(POLY_GT3));
+                "backend PS1 init: OT %u бакетов, pool %u KiB, ~%u GT3 max", HAL_PS1_OT_LEN,
+                HAL_PS1_GPU_POOL_SIZE / 1024u, HAL_PS1_GPU_POOL_SIZE / (uint32_t)sizeof(POLY_GT3));
     return true;
 }
 
@@ -297,8 +294,7 @@ void hal_ps1_backend_present(void)
 bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_t h,
                                        const uint8_t* pixels_ci8, const uint16_t* palette)
 {
-    if (!s_inited || pixels_ci8 == NULL || palette == NULL ||
-        handle == RENDER_TEXTURE_INVALID) {
+    if (!s_inited || pixels_ci8 == NULL || palette == NULL || handle == RENDER_TEXTURE_INVALID) {
         return false;
     }
 
@@ -326,8 +322,7 @@ bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_
         }
     }
     if (slot == HAL_PS1_TEXTURE_MAX) {
-        Log_Message(LOG_LEVEL_ERROR, "ps1_hal",
-                    "create_texture: VRAM слоты переполнены (%u)",
+        Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "create_texture: VRAM слоты переполнены (%u)",
                     HAL_PS1_TEXTURE_MAX);
         return false; // Явный отказ — диагностическая цепочка fail-fast.
     }
@@ -339,7 +334,8 @@ bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_
     // Данные 4-выровнены (арена ассетов, alignment 8 по умолчанию).
     // Байт-слой CI8 == halfword-grid: левый пиксель — младший байт.
     RECT page_rect = {(int16_t)page_x, (int16_t)page_y, (int16_t)(w / 2u), (int16_t)h};
-    if (LoadImage(&page_rect, (const uint32_t*)pixels_ci8) == 0) {
+    // LoadImage: 0 — перенос запущен сразу, >0 — позиция в очереди, -1 — отказ.
+    if (LoadImage(&page_rect, (const uint32_t*)pixels_ci8) < 0) {
         Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "create_texture: LoadImage отказ (page)");
         return false;
     }
@@ -347,7 +343,7 @@ bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_
     // CLUT: палитра 256 halfwords в строке slot.
     const uint32_t clut_y = HAL_PS1_CLUT_Y_BASE + slot;
     RECT clut_rect = {(int16_t)HAL_PS1_CLUT_X, (int16_t)clut_y, 256, 1};
-    if (LoadImage(&clut_rect, (const uint32_t*)palette) == 0) {
+    if (LoadImage(&clut_rect, (const uint32_t*)palette) < 0) {
         Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "create_texture: LoadImage отказ (CLUT)");
         return false;
     }
@@ -415,13 +411,11 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
     const fixed_t z1 = fixed_from_float(vertices[1].z);
     const fixed_t z2 = fixed_from_float(vertices[2].z);
     const int64_t depth_sum =
-        fixed_sat_add_i64(fixed_sat_add_i64((int64_t)fixed_sub(0, z0),
-                                            (int64_t)fixed_sub(0, z1)),
+        fixed_sat_add_i64(fixed_sat_add_i64((int64_t)fixed_sub(0, z0), (int64_t)fixed_sub(0, z1)),
                           (int64_t)fixed_sub(0, z2));
     const fixed_t depth_avg = fixed_clamp_i64(depth_sum / 3);
-    const uint32_t bucket =
-        depth_key_from_camera_z(fixed_to_int(depth_avg), hal_ps1_adapter_state.depth_min,
-                                hal_ps1_adapter_state.depth_max);
+    const uint32_t bucket = depth_key_from_camera_z(
+        fixed_to_int(depth_avg), hal_ps1_adapter_state.depth_min, hal_ps1_adapter_state.depth_max);
     if (bucket == DEPTH_REJECT || bucket >= HAL_PS1_OT_LEN) {
         Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "draw_triangle: bucket вне OT (depth invalid)");
         return false; // Явный отказ — диагностическая цепочка fail-fast.
@@ -445,8 +439,7 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
         }
         setPolyG3(p); // setlen(6) + code 0x30.
 
-        const HalPs1AdapterStatus st =
-            hal_ps1_adapter_transform(&vertices[0].x, &vertices[0].y, &vertices[0].z, p, 0u);
+        const HalPs1AdapterStatus st = hal_ps1_adapter_transform(vertices, p, 0u);
         if (st == HAL_PS1_ADAPTER_CULLED) {
             pool_rollback(sizeof(POLY_G3));
             return true; // Нормальная CULL-стадия; БЕЗ диагностики вниз.
@@ -485,8 +478,7 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
     }
     setPolyGT3(p); // setlen(9) + code 0x34.
 
-    const HalPs1AdapterStatus st =
-        hal_ps1_adapter_transform(&vertices[0].x, &vertices[0].y, &vertices[0].z, p, 1u);
+    const HalPs1AdapterStatus st = hal_ps1_adapter_transform(vertices, p, 1u);
     if (st == HAL_PS1_ADAPTER_CULLED) {
         pool_rollback(sizeof(POLY_GT3));
         return true;
