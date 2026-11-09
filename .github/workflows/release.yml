@@ -1,0 +1,116 @@
+# ============================================================================
+# Релизный workflow — Спринт 19–20 (docs/plans/sprint_19_20.md, неделя 40).
+# Триггер: annotated tag v*.
+# Собирает PC (hello_triangle + rotating_cube) и PS1 (PS-EXE + CD-образ),
+# валидирует артефакты, публикует GitHub Release.
+# ============================================================================
+name: release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    name: Release ${{ github.ref_name }}
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout with submodules
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake ninja-build libgl1-mesa-dev \
+            libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+            libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev \
+            xvfb python3-yaml
+
+      - name: Verify vendored dependencies
+        run: sh ci/verify_vendored.sh
+
+      - name: Build pc-debug + tests
+        run: |
+          cmake --preset pc-debug
+          cmake --build --preset pc-debug
+
+      - name: Build pc-debug-render
+        run: |
+          cmake --preset pc-debug-render
+          cmake --build --preset pc-debug-render
+
+      - name: Build pc-release + examples
+        run: |
+          cmake --preset pc-release
+          cmake --build --preset pc-release
+
+      - name: Unit tests
+        run: ctest --preset pc-debug --output-on-failure
+
+      - name: Render tests (xvfb)
+        run: xvfb-run -a ctest --preset pc-debug-render --output-on-failure
+
+      - name: PSn00bSDK v0.24 (pinned)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/psn00bsdk"
+          cd "$RUNNER_TEMP/psn00bsdk"
+          curl -fSL --retry 2 -o PSn00bSDK-0.24-Linux.zip \
+            https://github.com/Lameguy64/PSn00bSDK/releases/download/v0.24/PSn00bSDK-0.24-Linux.zip
+          sha256sum -c "$GITHUB_WORKSPACE/ci/psn00bsdk-v0.24-linux.sha256"
+          unzip -q PSn00bSDK-0.24-Linux.zip -d "$HOME"
+          mv "$HOME/PSn00bSDK-0.24-Linux" "$HOME/PSn00bSDK"
+          echo "PSN00BSDK_LIBS=$HOME/PSn00bSDK/lib/libpsn00b" >> "$GITHUB_ENV"
+
+      - name: Build ps1-release
+        run: |
+          cmake --preset ps1-release
+          cmake --build --preset ps1-release
+
+      - name: Validate PS1 artifacts
+        run: |
+          set -euo pipefail
+          cd build/ps1-release/src/hal/ps1
+          test -s retro_ps1.elf
+          test -s retro_ps1.exe
+          test -s RETRO.bin
+          test -s RETRO.cue
+          grep -Fx 'BOOT = cdrom:\RETRO.EXE;1' system.cnf
+
+      - name: Release contract
+        run: |
+          python3 scripts/verify_release_contract.py --w1-seconds 60
+
+      - name: Upload release contract report
+        uses: actions/upload-artifact@v4
+        with:
+          name: release_contract_report
+          path: release_contract_report.json
+
+      - name: Package release archive
+        run: |
+          set -euo pipefail
+          tag="${GITHUB_REF_NAME}"
+          mkdir -p "dist/retro-engine-${tag}"
+          cp -r build/pc-release/game "dist/retro-engine-${tag}/pc"
+          mkdir -p "dist/retro-engine-${tag}/ps1"
+          cp build/ps1-release/src/hal/ps1/RETRO.bin \
+             build/ps1-release/src/hal/ps1/RETRO.cue \
+             build/ps1-release/src/hal/ps1/retro_ps1.exe \
+             "dist/retro-engine-${tag}/ps1/"
+          cp README.md LICENSE docs/LEGAL.md "dist/retro-engine-${tag}/"
+          tar -czf "retro-engine-${tag}.tar.gz" -C dist "retro-engine-${tag}"
+
+      - name: Create GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            retro-engine-*.tar.gz
+            release_contract_report.json
+          generate_release_notes: true
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

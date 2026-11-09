@@ -1,0 +1,26 @@
+# ============================================================================
+# Stale-обработка issue/PR — пост-релиз (docs/DEVELOPMENT_PLAN.md §6, §12).
+# 30 дней без активности → stale, ещё 7 дней → close.
+# ============================================================================
+name: stale
+
+on:
+  schedule:
+    - cron: '0 0 * * *'
+  workflow_dispatch:
+
+jobs:
+  stale:
+    runs-on: ubuntu-latest
+    permissions:
+      issues: write
+      pull-requests: write
+    steps:
+      - uses: actions/stale@v9
+        with:
+          stale-issue-message: 'Этот issue неактивен 30 дней. Если он всё ещё актуален — добавьте комментарий.'
+          stale-pr-message: 'Этот PR неактивен 30 дней. Добавьте комментарий, чтобы избежать закрытия.'
+          close-issue-message: 'Issue закрыт по неактивности. Откройте заново, если нужно.'
+          close-pr-message: 'PR закрыт по неактивности.'
+          days-before-stale: 30
+          days-before-close: 7
