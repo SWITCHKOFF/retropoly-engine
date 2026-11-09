@@ -6,6 +6,113 @@
 
 ### Added
 
+- Спринт 15–16 — Hello Triangle PS1 (недели 29–32, M6
+  «Hello Triangle PS1»): (1) единый `game::InputSystem` теперь работает и
+  на PS1: D-pad / левый стик — движение камеры, правый стик — yaw/pitch,
+  Triangle/Cross — вверх/вниз, START — выход; сохранена полная поддержка
+  клавиатуры/мыши на PC; (2) `src/core/memory/memory_profiler.h/.cpp` —
+  учёт RAM/VRAM по зарегистрированным источникам (аллокаторы + статические
+  блоки), `print_stats()` и `check_thresholds()` с алертом >90%; в
+  `main_ps1.cpp` регистрируются Registry, asset/frame арены, command buffer,
+  texture pool, GPU packet pool, OT и VRAM PS1 (бюджеты 1.5 MiB RAM /
+  800 KiB VRAM); (3) `scripts/check_binary_size.sh` — гейт размера PS-EXE
+  ≤ 500 KiB; (4) `docs/benchmarks/reference_environment.yaml` дополнен
+  секцией `ps1_emulator` с методикой ручного замера в DuckStation
+  (emulator validation gate, ≥ 30 completed engine frames/s, эмуляция ≥ 98%);
+  (5) PC-скриншот `screenshots/hello_triangle_pc.png` сгенерирован из
+  golden-эталона; PS1-скриншот `screenshots/hello_triangle_ps1.png` получен
+  ручным захватом в DuckStation (Software renderer, NTSC-U, fast boot).
+  Ручной прогон DuckStation 0.1-12640: PerfMon FPS/VPS ≈ 59.8 (avg 16.7 ms),
+  эмуляция 100 %; RAM ≈ 815 KiB engine-owned / 1.5 MiB бюджет,
+  VRAM ≈ 366 KiB / 800 KiB бюджет, PS-EXE 96 256 bytes / 512 000 bytes.
+  Локально: PC-регрессия и ps1-release кросс-сборка зелёные.
+
+- Спринт 13–14 — HAL PS1 на PSn00bSDK v0.24 (недели 25–28, M5
+  «PS1-платформа»): (1) кросс-сборка PS-EXE через пресет `ps1-release`
+  (toolchain `sdk.cmake`; ретро-библиотеки — NOGPREL, `retro_ps1` — GPREL;
+  ручная ld-группа `--start-group/--end-group` на ретро+SDK-архивах) и CD-образ
+  `RETRO.bin/.cue` через mkpsxiso (`SYSTEM.CNF`, `RETRO.EXE`,
+  `TRIANGLE.MSH`/`TEXTURE.TEX` в ISO9660 8.3); примеры/тесты — PC-only,
+  asset_converter — host-only, ровно один бэкенд (PLATFORM_PC XOR
+  PLATFORM_PS1); (2) `src/hal/ps1/` — платформа (`ResetGraph`/`InitGeom` в
+  Platform_Init, кадр DrawSync→VSync→present/flip двойного буфера 320×240,
+  виртуальное время по vsync), ввод DualShock через BIOS pad-драйвер
+  (типы 0x4/0x5/0x7, active-low, стики −128..127, L2/R2 квантованы),
+  CD-ROM ФС (CdSearchFile→CdRead/CdReadSync, буфер round_up_2048) и
+  рендер-бэкенд GTE+GPU+OT (pose normalizer D=diag(1,−1,−1), rotation=identity,
+  translation=D·Centroid·k; дельты вершин int16; предельные проверки — явный
+  FAIL без clamp; NCLIP-cull с pool_rollback; OT 1024 бакета ClearOTagR +
+  tail-append; overflow = false+диагностика); текстуры 8bpp в VRAM через
+  LoadImage (texture pages x=384+128·slot, CLUT y=240+slot, 5 слотов);
+  (3) `main_ps1.cpp` — hello_triangle поверх общего слоя игры: ассеты с диска,
+  D-pad/лицевые кнопки → Velocity треугольника, START — выход; (4) CI-контур
+  `.github/workflows/build-ps1.yml` — pinned `PSn00bSDK-0.24-Linux.zip` с
+  проверкой sha256 (`ci/psn00bsdk-v0.24-linux.sha256`), configure/build
+  ps1-release, upload-artifact диска. Локально: кросс-сборка и PC-регрессия
+  (161/161) зелёные; запуск в DuckStation — ручная приёмка. Post-MVP:
+  frustum fan-клиппинг, асинхронный CD staging 64 KiB, аналоговое давление DS2.
+
+- Спринт 11–12 — слой игры и пример hello_triangle (недели 21–24, M4
+  «Hello Triangle PC»): (1) HAL-мышь — расширение SDK-ввода
+  (`Input_SetMouseRelativeMode(bool)` / `Input_GetMouseDelta(int32_t*, int32_t*)`):
+  consume-семантика, накопление только в relative mode, сброс при выключении
+  режима и Shutdown; (2) `game/` — слой игры поверх ECS ядра: тонкий манифест
+  `game/components.h` (единственная точка включения `registry.h`) и header-only
+  системы `game/systems/` — Camera/Input/Movement/Collision (+ `camera_math.h`,
+  общая формула fps-камеры для input и render); (3) `examples/hello_triangle/`
+  — полный пример Camera + MeshRender + PlayerControl: меш из `.mesh`, текстура
+  из `.tex` (загрузчики пайплайна), управление WASD/стрелки/Space/Shift + мышь
+  (grab, ESC — выход), цикл 60 Гц по §10; CLI `hello_triangle <секунды>` —
+  bench-режим замера W1 с fps-логом в file-sink Logger'а
+  («fps=N (окно M)» + итог); golden-скриншот-эталон
+  `tests/visual/reference/hello_triangle_default.bin` (+px-партнёр),
+  тест `HelloTriangleGolden.DefaultSceneView` (сборка сцены общим
+  `examples/hello_triangle/scene.h` → `game::RenderSystem`, бюджет 128 px);
+  FPS-лог документирован в `examples/hello_triangle/README.md`; (4) замер W1
+  (pc-release, 60 с, снапшот окружения в
+  `docs/benchmarks/reference_environment.yaml`): среднее 482.79 fps (28996
+  кадров/60058 мс) — полка «≥ 60 FPS» с запасом ≈ ×8; (5) golden-протокол
+  визуальной регрессии выделен из W0-теста в
+  `tests/visual/golden_protocol.{h,cpp}` (namespace golden: display/capture/
+  check/rebase-протоколы) — hello_triangle golden считает тем же методом, что
+  и W0-конформанс.
+
+- Спринт 9–10 — конвертер ассетов (недели 17–20, M3): (1) host-only CLI-тулза
+  `tools/asset_converter` — glTF 2.0 → `.mesh` v1 (cgltf-вендор: world-позиции
+  в fixed 16.16 через `fixed_from_float` (усечение), нормали → i8 с сатурацией
+  ±127, UV/цвет → u8 half-up, radius по сериализованным позициям (знаковое
+  чтение i32), flat-нормали при отсутствии NORMAL; только TRIANGLES,
+  ≤65535 вершин) и PNG/JPG/TGA/BMP → `.tex` v1 (stb_image → RGBA8 → Median
+  Cut ≤255 цветов → палитра RGB555+STP по bit layout §1.2.5 (8→5 бит — `>>3`),
+  политика слота 0: reserved «transparent black» `0x0000`, CI8-индекс 0 никогда
+  не входит в пиксели, STP=0 во всех слотах — MVP-прозрачность выключена);
+  сериализация обоих форматов побайтовая LE (assets_read/write_le_u16/u32,
+  никаких struct→bytes кастов), детерминированная (повторный прогон —
+  байт-идентичный файл); (2) безопасные загрузчики движка `src/assets/` —
+  `mesh_validate_and_load` / `texture_validate_and_load` по контракту §1.2.7:
+  7-шаговая валидация в заданном порядке, uint64-арифметика ДО size_t,
+  аллокация — только после валидации, rollback арены при любой
+  пост-аллокационной ошибке (malformed-вход расходует persistent-память
+  0 байт), 10 диагностических кодов `AssetDiag`; (3) интеграционные тесты
+  `tests/integration/mesh_loader_test.cpp`/`texture_loader_test.cpp` —
+  malformed-кейсы (truncated header (включая нулевую длину среза),
+  overflow counts, out-of-range indices, overlapping payloads, неверные
+  dims/offsets) с проверкой, что арена не изменилась; кросс-проверка
+  палитры против движкового `pack_rgb555_stp`; тесты real-ассетов пайплайна
+  (canonical cube: 24 верш/12 треуг/radius 113511; texture 256×256, слот 0 =
+  0x0000, пиксели ≥1) — читают `assets/build/*` по compile-time
+  `RPE_TEST_SOURCE_DIR`; (4) CMake-пайплайн: `add_custom_command` +
+  `convert_assets ALL` (только в PC-конфигурации; ps1-release тулзу не
+  собирает — потребляет закоммиченные versioned-ассеты; локальная проверка
+  структурная — PS1-тулчейн в песочнице недоступен); сгенерированные артефакты
+  `assets/build/cube.mesh` (600 байт) и `assets/build/texture.tex` (66068
+  байт) + генератор источников `scripts/make_source_assets.py` (детерминированный
+  glTF-куб 24 вершины/12 треугольников; PNG 256×256 из 65536 уникальных цветов);
+  (5) документация `docs/ASSETS.md` — байтовые форматы v1, политика решений
+  MVP (index_count = число 6-байтовых записей MeshIndex; Octree-фоллбек
+  Median Cut не реализован), коды возврата CLI 0..7, коды загрузчиков
+  0..9.
+
 - Спринт 7–8, недели 15–16 — закрывающий хвост (M2) — числовой конформанс +
   инвентарь draw + CI-рендер-гейт: (1) `tests/visual/render_golden_test.cpp` —
   `W0Golden.AffineNumericConformanceOnSlantedPlane` — программная реплика

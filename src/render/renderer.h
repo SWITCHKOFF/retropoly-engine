@@ -102,6 +102,15 @@ typedef struct RenderDiagnostics
  */
 RenderDiagnostics render_diagnostics(void);
 
+/**
+ * Занятое место в командном буфере кадра (байт).
+ *
+ * Используется MemoryProfiler для учёта RAM рендера (Спринт 15–16).
+ *
+ * @return Использовано байт в текущем/последнем кадре; 0 до Render_Init.
+ */
+uint32_t render_command_buffer_used_bytes(void);
+
 // ---------------------------------------------------------------------------
 // W0-конформанс: framebuffer readback + hash (§1.2.9, план недели 16)
 // ---------------------------------------------------------------------------

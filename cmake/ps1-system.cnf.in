@@ -1,0 +1,7 @@
+# RetroPolyEngine — PS1 system.cnf (генерируется через configure_file,
+# см. src/hal/ps1/CMakeLists.txt; формат — PS1 BIOS, Спринты 13–14).
+# TCB=4, EVENT=10, STACK=801ffff0 — значения SDK-примеров (cdstream).
+BOOT = @RPE_PS1_BOOT@
+TCB = 4
+EVENT = 10
+STACK = @RPE_PS1_STACK@

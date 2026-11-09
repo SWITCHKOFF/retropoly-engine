@@ -1,5 +1,8 @@
 # Канонический .gitignore — Спринт 0 (§3.4, docs/plans/sprint_00.md)
-build/
+# Якорь на корень репо: assets/build/ НЕ игнорируется — артефакты пайплайна
+# коммитятся как versioned-ассеты (Спринт 9–10: PS1-checkout потребляет их
+# без перегенерации; PC-сборка перегенерирует локально).
+/build/
 .vs/
 .cache/
 *.log
@@ -9,3 +12,5 @@ coverage.info
 # Локальные артефакты агентов/инструментов (не часть движка)
 testsprite_tests/
 tests/visual/reference/*.dump.px
+testsprite_tests/tmp/
+testsprite_tests/tmp/config.json

@@ -36,11 +36,19 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         render/command_buffer_test.cpp
         render/contract_test.cpp
         integration/hal_test.cpp
+        integration/mesh_loader_test.cpp
+        integration/texture_loader_test.cpp
     )
     target_compile_features(retro_engine_tests PRIVATE cxx_std_14)
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)
     # Канонические флаги применяются только к коду тестов движка.
     retro_engine_apply_flags(retro_engine_tests)
+    # Путь к пайплайн-артефактам (assets/build/*) — compile-time, CWD-независимо.
+    # PLATFORM_PC — специализация платформы для тестов HAL (tests/ добавляются
+    # только при PLATFORM_PC; mirrors retro_engine / retro_engine_log).
+    target_compile_definitions(retro_engine_tests PRIVATE
+        RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+        PLATFORM_PC=1)
 
     include(GoogleTest)
     gtest_discover_tests(retro_engine_tests DISCOVERY_TIMEOUT 60)
@@ -51,6 +59,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     if(BUILD_RENDER_INTEGRATION_TESTS)
         add_executable(retro_engine_visual_tests
             visual/render_golden_test.cpp
+            visual/golden_protocol.cpp
+            visual/hello_triangle_golden_test.cpp
             visual/w0_scene.cpp
         )
         target_compile_features(retro_engine_visual_tests PRIVATE cxx_std_14)
@@ -60,8 +70,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
             retro_engine GTest::gtest_main)
         retro_engine_apply_flags(retro_engine_visual_tests)
         # Путь эталонов (golden reference) — compile-time, getenv-fallback.
+        # HT_ASSET_DIR — пути ассетов примера (scene.h), mirrors main.cpp.
         target_compile_definitions(retro_engine_visual_tests PRIVATE
-            RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+            RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
+            HT_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets/build")
         gtest_discover_tests(retro_engine_visual_tests DISCOVERY_TIMEOUT 60)
     endif()
 endif()

@@ -37,12 +37,16 @@ add_library(retro_engine STATIC)
 # Математическое ядро (Спринт 1–2): fixed_t 16.16. Дальше — правила SRC LAYOUT.
 # ECS (Спринт 3–4): Registry; аллокаторы — header-only (core/memory).
 # Рендер-ядро (Спринт 7–8): pipeline + пул текстур; backend — ровно один HAL.
+# Ассеты (Спринт 9–10): безопасные загрузчики .mesh/.tex v1 (core/assets).
 target_sources(retro_engine PRIVATE
     core/math/fixed.cpp
     core/math/math.cpp
     core/ecs/registry.cpp
+    core/memory/memory_profiler.cpp
     render/texture.cpp
     render/renderer.cpp
+    assets/mesh_loader.cpp
+    assets/texture_loader.cpp
 )
 
 # Compile-time специализация платформы (renderer.cpp: readback/hash — PC-only,
@@ -59,3 +63,14 @@ target_include_directories(retro_engine PRIVATE "${RPE_GENERATED_INCLUDE_DIR}")
 
 target_link_libraries(retro_engine PUBLIC retro_engine_hal retro_engine_log)
 retro_engine_apply_flags(retro_engine)
+
+# --- PS1: NOGPREL-кодогенерация статических библиотек (SDK-паттерн) ---------
+# PsN00bSDK компилирует библиотечные объекты БЕЗ gp-относительного доступа
+# (-G0 -mno-gpopt; psn00bsdk INTERFACE генекс по свойству PSN00BSDK_TARGET_
+# TYPE); PS-EXE retro_ps1 собирается GPREL (-G8) — легко живёт с NOGPREL
+# либами (стандартный SDK-вой пример-роль). Свойство ставится ПОСЛЕ создания
+# всех трёх библиотек-слоёв.
+if(PLATFORM_PS1)
+    set_target_properties(retro_engine_log retro_engine_hal retro_engine
+        PROPERTIES PSN00BSDK_TARGET_TYPE EXECUTABLE_NOGPREL)
+endif()

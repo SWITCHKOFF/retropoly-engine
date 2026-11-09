@@ -31,3 +31,10 @@ assets/**          binary
 *.mesh             binary
 *.texture          binary
 *.elf              binary
+
+# glTF-исходники конвертера (Спринт 9–10): читабельный JSON — diff-friendly;
+# правило перекрывает assets/** binary для текстовых исходников.
+assets/source/*.gltf text eol=lf
+
+# Текстурный формат движка (Спринт 9–10): бинарный payload — без нормализации.
+*.tex binary

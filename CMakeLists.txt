@@ -71,13 +71,63 @@ add_subdirectory(src)
 if(PLATFORM_PC)
     # asset_converter — host-only инструмент, никогда не компилируется MIPS-тулчейном.
     add_subdirectory(tools/asset_converter)
+
+    # --- Ассеты примеров: конвертация источников (Спринт 9–10, неделя 20, §4.5)
+    # Выходы — assets/build/ (детерминированные; коммитятся как versioned‑ассеты
+    # для PS1-checkout, Спринт 15–16; PC-сборка перегенерирует при изменении).
+    set(RPE_ASSET_SOURCE "${CMAKE_SOURCE_DIR}/assets/source")
+    set(RPE_ASSET_BUILD "${CMAKE_SOURCE_DIR}/assets/build")
+    if(EXISTS "${RPE_ASSET_SOURCE}/cube.gltf" AND EXISTS "${RPE_ASSET_SOURCE}/texture.png")
+        add_custom_command(
+            OUTPUT
+                "${RPE_ASSET_BUILD}/cube.mesh"
+                "${RPE_ASSET_BUILD}/texture.tex"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${RPE_ASSET_BUILD}"
+            COMMAND asset_converter
+                "${RPE_ASSET_SOURCE}/cube.gltf"
+                "${RPE_ASSET_BUILD}/cube.mesh"
+            COMMAND asset_converter
+                "${RPE_ASSET_SOURCE}/texture.png"
+                "${RPE_ASSET_BUILD}/texture.tex"
+            DEPENDS
+                asset_converter
+                "${RPE_ASSET_SOURCE}/cube.gltf"
+                "${RPE_ASSET_SOURCE}/texture.png"
+            COMMENT "asset_converter: cube.gltf → cube.mesh, texture.png → texture.tex"
+            VERBATIM)
+        add_custom_target(convert_assets ALL
+            DEPENDS
+                "${RPE_ASSET_BUILD}/cube.mesh"
+                "${RPE_ASSET_BUILD}/texture.tex")
+    endif()
+    # Ассет примера hello_triangle (Спринт 11–12, неделя 21): triangle.gltf →
+    # .mesh v1. Текстура примера — та же texture.tex (256×256 паттерн).
+    if(EXISTS "${RPE_ASSET_SOURCE}/triangle.gltf")
+        add_custom_command(
+            OUTPUT
+                "${RPE_ASSET_BUILD}/triangle.mesh"
+            COMMAND ${CMAKE_COMMAND} -E make_directory "${RPE_ASSET_BUILD}"
+            COMMAND asset_converter
+                "${RPE_ASSET_SOURCE}/triangle.gltf"
+                "${RPE_ASSET_BUILD}/triangle.mesh"
+            DEPENDS
+                asset_converter
+                "${RPE_ASSET_SOURCE}/triangle.gltf"
+            COMMENT "asset_converter: triangle.gltf → triangle.mesh"
+            VERBATIM)
+        add_custom_target(convert_triangle_asset ALL
+            DEPENDS
+                "${RPE_ASSET_BUILD}/triangle.mesh")
+    endif()
 endif()
 
-# --- Примеры: зависят только от retro_engine (ни от SDL3/OpenGL/PSn00bSDK) ----
-add_subdirectory(examples/hello_triangle)
-add_subdirectory(examples/rotating_cube)
-
+# --- Примеры: зависят только от retro_engine (ни от SDL3/OpenGL/PSn00bSDK) ---
+# PC-only: PS1-конфигурация публикует PS-EXE через HAL
+# (src/hal/ps1/CMakeLists.txt: retro_ps1 → retro_disc, Спринты 13–14).
 if(PLATFORM_PC)
+    add_subdirectory(examples/hello_triangle)
+    add_subdirectory(examples/rotating_cube)
+
     # Каноническое расположение рантайм-бинарей примеров: build/<preset>/game/
     set_target_properties(hello_triangle rotating_cube PROPERTIES
         RUNTIME_OUTPUT_DIRECTORY "${CMAKE_BINARY_DIR}/game")
