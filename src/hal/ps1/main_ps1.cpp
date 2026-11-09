@@ -1,27 +1,30 @@
 // SPDX-License-Identifier: MIT
 // RetroPolyEngine — src/hal/ps1/main_ps1.cpp
 //
-// PS1-EXE примера hello_triangle (веха M6, Спринты 15–16): тот же общий
-// слой игры, что на PC (examples/hello_triangle/scene.h + game/systems/*),
-// поверх HAL PS1 — GT3/G3 через GTE+GPU и файлы с CD-ROM.
+// PS1-EXE демо MVP rotating_cube (веха M7, Спринты 17–18): тот же общий слой
+// игры, что на PC (examples/rotating_cube/scene.h + game/systems/*), поверх
+// HAL PS1 — GT3/G3 через GTE+GPU и файлы с CD-ROM.
 //
 // Управление:
-//   - D-pad / левый стик — движение камеры в плоскости yaw;
-//   - правый стик — yaw/pitch;
+//   - Крестик — прыжок всех кубов (demo-level гравитация, неделя 34);
+//   - Select — debug overlay (FPS/TRI/RAM; неделя 36);
 //   - START — выход.
+//   (Камера фиксированная — эталонная расстановка W1; PlayerControl в сцене
+//   нет, D-pad/стики не читаются.)
 //
 // Пути ассетов: ISO9660 8.3 на диске (mkpsxiso переименовывает
-// triangle.mesh → TRIANGLE.MSH; texture.tex → TEXTURE.TEX; ";1" — номер
+// cube.mesh → CUBE.MSH; texture_{0..3}.tex → TEX0..3.TEX; ";1" — номер
 // версии; см. cmake/ps1-disc.xml).
 //
 // Память долгоживущего состояния — static storage (норматив §5.4: Registry и
 // арены НИКОГДА не на CPU-стеке); арена кадра сбрасывается после EndFrame.
-#include "examples/hello_triangle/scene.h"
+#include "examples/rotating_cube/scene.h"
 #include "game/components.h"
 #include "game/systems/collision_system.h"
 #include "game/systems/input_system.h"
 #include "game/systems/movement_system.h"
 #include "game/systems/render_system.h"
+#include "game/systems/rotation_system.h"
 #include "core/log/log.h"                 // Log_Message (репортинг сессии)
 #include "core/memory/memory_profiler.h"  // MemoryProfiler (Спринт 15–16)
 #include "core/memory/stack_allocator.h"  // StackAllocator (арена кадра)
@@ -31,9 +34,12 @@
 #include "render/sort_key.h"  // SortRef
 #include "render/texture.h"  // RENDER_TEXTURE_POOL_BYTES / RENDER_TEXTURE_MAX
 
+#include <stdio.h>  // snprintf (overlay-строки)
+
 // --- Пути PS1-диска (ISO9660 8.3; контент — те же ассеты, что на PC) -------
-static const char* const kDiscMeshPath = "\\TRIANGLE.MSH;1";
-static const char* const kDiscTexPath = "\\TEXTURE.TEX;1";
+static const char* const kDiscMeshPath = "\\CUBE.MSH;1";
+static const char* const kDiscTexPaths[rotating_cube::kTextureCount] = {
+    "\\TEX0.TEX;1", "\\TEX1.TEX;1", "\\TEX2.TEX;1", "\\TEX3.TEX;1"};
 
 // ---------------------------------------------------------------------------
 // Static storage: реестр сцены и аллокаторы (§5.4)
@@ -41,7 +47,9 @@ static const char* const kDiscTexPath = "\\TEXTURE.TEX;1";
 
 Registry s_registry;  // бюджет ~234 KiB (§5.6) — static, не CPU-стек
 
-alignas(16) uint8_t s_asset_arena[256u * 1024u];  // persistent-ассеты (.mesh/.tex)
+// W1-ассеты: 1 mesh + 4 текстуры 256×256 CI8 — persistent-арена 384 KiB
+// (как у PC-демо; PS1 RAM-бюджет 1.5 MiB — см. profiler ниже).
+alignas(16) uint8_t s_asset_arena[384u * 1024u];
 LinearAllocator s_assets(s_asset_arena, sizeof(s_asset_arena));
 
 alignas(16) uint8_t s_frame_arena[64u * 1024u];  // арена кадра (контракт §10)
@@ -112,8 +120,37 @@ static void register_memory_profiler(void)
 }
 
 // ---------------------------------------------------------------------------
-// Главный цикл PS1
+// Контент и главный цикл PS1
 // ---------------------------------------------------------------------------
+
+/// Загрузка 1 .mesh + 4 .tex с CD-ROM в persistent-арену.
+static bool load_content(MeshAsset** out_mesh,
+                         TextureAsset* out_textures[rotating_cube::kTextureCount],
+                         uint32_t* diag_code)
+{
+    *out_mesh = nullptr;
+
+    FileData mesh_file = FileSystem_LoadFile(kDiscMeshPath);
+    if (mesh_file.data != nullptr) {
+        if (!mesh_validate_and_load(mesh_file.data, mesh_file.size, &s_assets, out_mesh,
+                                    diag_code)) {
+            *out_mesh = nullptr;
+        }
+        FileSystem_FreeFile(&mesh_file);  // арена владеет копией — файл можно освободить
+    }
+    for (int i = 0; i < rotating_cube::kTextureCount; ++i) {
+        out_textures[i] = nullptr;
+        FileData tex_file = FileSystem_LoadFile(kDiscTexPaths[i]);
+        if (tex_file.data != nullptr) {
+            if (!texture_validate_and_load(tex_file.data, tex_file.size, &s_assets,
+                                           &out_textures[i], diag_code)) {
+                out_textures[i] = nullptr;
+            }
+            FileSystem_FreeFile(&tex_file);
+        }
+    }
+    return *out_mesh != nullptr;
+}
 
 int main()
 {
@@ -122,83 +159,98 @@ int main()
         return 1;
     }
     if (!Render_Init(RENDER_FB_WIDTH, RENDER_FB_HEIGHT)) {
-        Log_Message(LOG_LEVEL_ERROR, "hello_triangle", "Render_Init(320x240) провалена");
+        Log_Message(LOG_LEVEL_ERROR, "rotating_cube", "Render_Init(320x240) провалена");
         Platform_Shutdown();
         return 1;
     }
 
     // --- Контент: ассеты с CD-ROM -------------------------------------------
     MeshAsset* mesh = nullptr;
-    TextureAsset* texture_asset = nullptr;
+    TextureAsset* texture_assets[rotating_cube::kTextureCount] = {nullptr, nullptr, nullptr,
+                                                                   nullptr};
     uint32_t diag_code = 0u;
-    FileData mesh_file = FileSystem_LoadFile(kDiscMeshPath);
-    if (mesh_file.data != nullptr) {
-        if (!mesh_validate_and_load(mesh_file.data, mesh_file.size, &s_assets, &mesh, &diag_code)) {
-            mesh = nullptr;
+    if (!load_content(&mesh, texture_assets, &diag_code)) {
+        Log_Message(LOG_LEVEL_ERROR, "rotating_cube",
+                    "ассеты CD недоступны (диагностика %u)", (unsigned)diag_code);
+        Render_Shutdown();
+        Platform_Shutdown();
+        return 1;
+    }
+    for (int i = 0; i < rotating_cube::kTextureCount; ++i) {
+        if (texture_assets[i] == nullptr) {
+            Log_Message(LOG_LEVEL_ERROR, "rotating_cube",
+                        "текстура %d недоступна (диагностика %u)", i, (unsigned)diag_code);
+            Render_Shutdown();
+            Platform_Shutdown();
+            return 1;
         }
-        FileSystem_FreeFile(&mesh_file);  // арена владеет копией — файл можно освободить
     }
-    FileData tex_file = FileSystem_LoadFile(kDiscTexPath);
-    if (tex_file.data != nullptr) {
-        if (!texture_validate_and_load(tex_file.data, tex_file.size, &s_assets, &texture_asset,
-                                       &diag_code)) {
-            texture_asset = nullptr;
+
+    TextureHandle texture_handles[rotating_cube::kTextureCount] = {
+        RENDER_TEXTURE_INVALID, RENDER_TEXTURE_INVALID, RENDER_TEXTURE_INVALID,
+        RENDER_TEXTURE_INVALID};
+    for (int i = 0; i < rotating_cube::kTextureCount; ++i) {
+        texture_handles[i] = Render_CreateTexture(texture_assets[i]->width,
+                                                  texture_assets[i]->height,
+                                                  texture_assets[i]->pixels,
+                                                  texture_assets[i]->palette);
+        if (texture_handles[i] == RENDER_TEXTURE_INVALID) {
+            Log_Message(LOG_LEVEL_ERROR, "rotating_cube",
+                        "Render_CreateTexture недоступен (слот %d)", i);
+            Render_Shutdown();
+            Platform_Shutdown();
+            return 1;
         }
-        FileSystem_FreeFile(&tex_file);
     }
-    if (mesh == nullptr || texture_asset == nullptr) {
-        Log_Message(LOG_LEVEL_ERROR, "hello_triangle", "ассеты CD недоступны (диагностика %u)",
-                    (unsigned)diag_code);
+
+    const rotating_cube::SceneHandles handles = rotating_cube::rc_build_scene(s_registry);
+    if (handles.camera == INVALID_ENTITY || handles.ground == INVALID_ENTITY ||
+        handles.cubes[0] == INVALID_ENTITY || handles.cubes[3] == INVALID_ENTITY) {
+        Log_Message(LOG_LEVEL_ERROR, "rotating_cube", "сцена не собрана (пул/слоты)");
         Render_Shutdown();
         Platform_Shutdown();
         return 1;
     }
 
-    const TextureHandle texture = Render_CreateTexture(
-        texture_asset->width, texture_asset->height, texture_asset->pixels, texture_asset->palette);
-    if (texture == RENDER_TEXTURE_INVALID) {
-        Log_Message(LOG_LEVEL_ERROR, "hello_triangle", "Render_CreateTexture недоступен");
-        Render_Shutdown();
-        Platform_Shutdown();
-        return 1;
-    }
-
-    const hello_triangle::SceneHandles handles = hello_triangle::ht_build_scene(s_registry);
-    if (handles.camera == INVALID_ENTITY || handles.triangle == INVALID_ENTITY) {
-        Log_Message(LOG_LEVEL_ERROR, "hello_triangle", "сцена не собрана (пул/слоты)");
-        Render_Shutdown();
-        Platform_Shutdown();
-        return 1;
-    }
-
-    // Банк текстур кадра: единственный слот примера (MeshRenderer::texture_id 0).
+    // Банки кадра: 1 mesh на 4 куба + 4 текстуры + эталонный свет W1
+    // (vertex lighting — тот же банк, что на PC; lit-копии в арене кадра).
     game::RenderBanks banks;
     banks.meshes = mesh;
     banks.mesh_count = 1u;
-    const TextureHandle texture_bank[1] = {texture};
-    banks.textures = texture_bank;
-    banks.texture_count = 1u;
+    banks.textures = texture_handles;
+    banks.texture_count = (uint32_t)rotating_cube::kTextureCount;
     banks.aspect = fixed_from_float((float)RENDER_FB_WIDTH / (float)RENDER_FB_HEIGHT);
+    banks.lights = &rotating_cube::rc_light_bank();
+    banks.frame_scratch = &s_frame_stack;
 
     // MemoryProfiler: регистрация источников и стартовая сверка бюджетов.
     register_memory_profiler();
     memory_profiler_print_stats();
     if (!memory_profiler_check_thresholds(90u, 90u)) {
-        Log_Message(LOG_LEVEL_WARNING, "hello_triangle",
+        Log_Message(LOG_LEVEL_WARNING, "rotating_cube",
                     "MemoryProfiler: бюджеты RAM/VRAM близки к порогу на старте");
     }
 
-    Log_Message(LOG_LEVEL_INFO, "hello_triangle",
-                "PS1-сцена готова (mesh: вершин %u, записей %u; текстура %ux%u)",
+    Log_Message(LOG_LEVEL_INFO, "rotating_cube",
+                "PS1 W1-сцена готова (mesh: вершин %u, записей %u; текстур %u)",
                 (unsigned)mesh->vertex_count, (unsigned)mesh->index_count,
-                (unsigned)texture_asset->width, (unsigned)texture_asset->height);
+                (unsigned)rotating_cube::kTextureCount);
 
     // --- Главный цикл §10 (PS1: кадр = vsync, тик 60 Гц по виртуальному времени)
     uint32_t last_time = Platform_GetTimeMs();
     uint64_t accumulator_60hz = 0;
     uint32_t total_frames = 0;
-    bool quit = false;
 
+    // Debug-overlay (неделя 36): Select — тумблер; FPS — окно 1 с; TRI —
+    // delta кумулятивного submitted; RAM — профилировщик.
+    bool overlay_on = false;
+    bool overlay_toggle_prev = false;
+    uint32_t submitted_prev = 0u;
+    uint32_t fps_display = 0u;
+    uint32_t second_frames = 0u;
+    uint64_t second_ms = 0u;
+
+    bool quit = false;
     while (!quit && Platform_PumpEvents()) {  // false недостижимо на PS1
         const uint32_t now = Platform_GetTimeMs();
         const uint32_t elapsed_ms = now - last_time;  // uint32-разность: wrap-safe
@@ -208,30 +260,62 @@ int main()
         while (accumulator_60hz >= 1000u) {
             accumulator_60hz -= 1000u;
 
-            // 1. Ввод (единая абстракция: геймпад на PS1, клавиатура/мышь+геймпад на PC).
+            // 1. Ввод (единая абстракция: геймпад на PS1).
             if (game::InputSystem::update(s_registry, SIM_DT)) {
                 quit = true;
             }
-            // 2. GameUpdate — сцена без геймплея; фаза зарезервирована §10.
-            // 3. Коллизии (no-op для сцен без Collider).
+            // 2. GameUpdate демо: вращение 90°/сек + гравитация/прыжок.
+            const bool jump_requested = Input_IsPadButtonDown(0u, INPUT_PAD_CROSS);
+            game::RotationSystem::update(s_registry, SIM_DT);
+            rotating_cube::rc_gravity_and_jump(s_registry, SIM_DT, jump_requested);
+            // 3. Коллизии (AABB intersect + response; пол и куб-куб).
             game::CollisionSystem::update(s_registry, SIM_DT);
             // 4. Движение (интеграция позиций по длине тика).
             game::MovementSystem::update(s_registry, SIM_DT);
         }
 
         // 5. Рендер КАЖДОГО кадра независимо от числа тиков.
+        const bool overlay_toggle_now = Input_IsPadButtonDown(0u, INPUT_PAD_SELECT);
+        if (overlay_toggle_now && !overlay_toggle_prev) {
+            overlay_on = !overlay_on;
+        }
+        overlay_toggle_prev = overlay_toggle_now;
+
+        const uint32_t submitted_now = render_diagnostics().submitted;
+        const uint32_t frame_triangles = submitted_now - submitted_prev;
+        submitted_prev = submitted_now;
+
         Render_BeginFrame();
         Render_Clear(RENDER_CLEAR_DEFAULT_R, RENDER_CLEAR_DEFAULT_G, RENDER_CLEAR_DEFAULT_B);
         game::RenderSystem::update(s_registry, banks);
+        if (overlay_on) {
+            char line[32];
+            snprintf(line, sizeof(line), "FPS %u", (unsigned)fps_display);
+            Render_OverlayText(4, 4, 255, 255, 255, 1, line);
+            snprintf(line, sizeof(line), "TRI %u", (unsigned)frame_triangles);
+            Render_OverlayText(4, 11, 180, 255, 180, 1, line);
+            snprintf(line, sizeof(line), "RAM %uK",
+                     (unsigned)(memory_profiler_total_used(MEMORY_PROFILER_RAM) / 1024u));
+            Render_OverlayText(4, 18, 180, 200, 255, 1, line);
+        }
         Render_EndFrame();
         s_frame_stack.reset_frame();  // стадия 6 §10: кадровые траты — в ноль
 
         // Показ: DrawSync → VSync → flip (буфер A/B).
         Platform_SwapBuffers();
         ++total_frames;
+
+        // FPS-окно overlay (1 с; завершённое окно — в строку FPS).
+        ++second_frames;
+        second_ms += elapsed_ms;
+        if (second_ms >= 1000u) {
+            fps_display = (uint32_t)((uint64_t)second_frames * 1000u / second_ms);
+            second_frames = 0u;
+            second_ms -= 1000u;
+        }
     }
 
-    Log_Message(LOG_LEVEL_INFO, "hello_triangle", "сессия завершена (кадров %u)",
+    Log_Message(LOG_LEVEL_INFO, "rotating_cube", "сессия завершена (кадров %u)",
                 (unsigned)total_frames);
 
     Render_Shutdown();

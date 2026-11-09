@@ -49,31 +49,37 @@ power_mode: >-
   AC (сетевое питание); governor/частоты не пинились — «правило честных
   замеров»: сравнение только внутри одного снапшота этого файла.
 
-measurement_seconds: 60
+measurement_seconds: 600
 
 git_revision: >-
-  dfa123c (W1 hello_triangle; игровой слой примера — a32ce48, HAL-мышь
-  0dcacf8). Снапшот окружения снят при замере W1-полки
-  bench-режимом examples/hello_triangle (60 с).
+  caf8c06 (HEAD develop до S17–18) + локальные изменения Спринта 17–18.
+  Снапшот окружения снят при стресс-замере W1-полки bench-режимом
+  examples/rotating_cube (600 с, неделя 36).
 
 asset_set_sha256: >-
-  235ef802ce58341f22468aaaad603ba9f6b6af670815e3b37cdeb6a1ee6f34fe —
+  bf62abda74d26c6b7adbb5575d9bbe57f29c8c588f56f4dcb3e8562866d3007d —
   sha256 над sorted-списком SHA-256 каждого файла assets/build/*
-  (cube.mesh, texture.tex, triangle.mesh); рецепт — в notes.
+  (cube.mesh, texture.tex, texture_{0..3}.tex, triangle.mesh); рецепт — в notes.
 
 notes: |-
-  Снапшот 2026-11-05 (W1 hello_triangle): bench-режим
-  `./build/pc-release/game/hello_triangle 60` — итог 28996 кадров за
-  60058 мс, среднее fps=482.79; секундные окна 287–1160 fps (окно 1 ~1160 —
-  прогрев Mesa, далее устойчиво ~375–570). Полка W1 («≥ 60 FPS на
-  эталонном стенде») выполнена с запасом ≈ ×8. Бинарь pc-release
+  Снапшот 2026-11-09 (W1 rotating_cube, Спринт 17–18): стресс-режим
+  `./build/pc-release/game/rotating_cube 600` — итог 116736 кадров за
+  600056 мс, среднее fps=194.54, минимум секундного окна 122, максимум 478
+  (окно 1 — прогрев Mesa; устойчиво ~120–280). Гейт W1 («≥ 60 FPS на
+  эталонном стенде») выполнен с запасом ≈ ×3.2 по среднему и ×2 по
+  минимуму; 10 минут без краша/деградации (exit 0). Бинарь pc-release
   (git_revision выше), дисплей поверх Mesa GL; рендер-фреймбуфер 320×240
-  (nearest→окно 1280×960).
+  (nearest→окно 1280×960). Сцена: 4 куба (48 треугольников, CI8/256,
+  Gouraud + vertex lighting ambient+directional), 4 текстуры 256×256.
   Рецепт asset_set_sha256:
   `sha256sum assets/build/* | LC_ALL=C sort -k2 | awk '{print $1}' | sha256sum`.
-  Предыдущий снапшот 2026-11-01 (W0-golden, 9af3ab8, assets
-  src/render/shaders/* + tests/visual/*) снят на том же стенде; OSD/драйвер
-  не менялись — эталоны tests/visual/reference/*.bin действительны.
+  Предыдущий снапшот 2026-11-05 (W1 hello_triangle, dfa123c): 60 с,
+  среднее 482.79 fps — та же полка, другой ворклоад (1 треугольник); числа
+  сравнимы только внутри ворклоада. Снапшот 2026-11-01 (W0-golden, 9af3ab8,
+  assets src/render/shaders/* + tests/visual/*) снят на том же стенде;
+  OSD/драйвер не менялись — эталоны tests/visual/reference/*.bin
+  действительны (rotating_cube/overlay добавлены в S17–18 осознанным
+  rebase по тому же протоколу).
   Перенос на другое OSD/драйвер: перезаписать поля и золотить эталон
   только через сознательный rebase (RENDER_GOLDEN_REBASE=1) с инженерным
   обоснованием в журнале.
@@ -88,17 +94,24 @@ ps1_emulator:
   host_cpu: >-
     Intel Core i5-11300H (11th Gen, Tiger Lake-H35, 4C/8T @ 3.10–4.40 GHz)
   git_revision: >-
-    0a19d94 (HEAD develop, S13–14 HAL PS1) + локальные изменения S15–16.
+    caf8c06 (HEAD develop до S17–18) + локальные изменения S17–18
+    (PS1-порт W1-сцены rotating_cube).
   asset_set_sha256: >-
-    235ef802ce58341f22468aaaad603ba9f6b6af670815e3b37cdeb6a1ee6f34fe
+    bf62abda74d26c6b7adbb5575d9bbe57f29c8c588f56f4dcb3e8562866d3007d
   measurement: >-
     DuckStation 0.1-12640-gbb4e9ac5e, Software renderer, fast boot,
-    NTSC-U, 60 s ручного прогона (2026-11-09). PerfMon: FPS 59.7–60.3
-    (среднее ≈ 59.9), VPS 59.7–60.3, avg frame time ≈ 16.7 ms,
-    эмулятор держит 100 % скорости (≥ 98 % гейт выполнен). Это
-    emulator validation gate, НЕ доказательство 30 FPS на реальном
-    железе. RAM: engine-owned static + арены ≈ 815 KiB
+    NTSC-U. Снапшот S15–16 (hello_triangle): 60 s ручного прогона
+    (2026-11-09). PerfMon: FPS 59.7–60.3 (среднее ≈ 59.9), VPS 59.7–60.3,
+    avg frame time ≈ 16.7 ms, эмулятор держит 100 % скорости (≥ 98 % гейт
+    выполнен). Это emulator validation gate, НЕ доказательство 30 FPS на
+    реальном железе. RAM: engine-owned static + арены ≈ 815 KiB
     (бюджет 1.5 MiB); VRAM: два 16bpp фреймбуфера 320×240 + CLUT +
     одна 256×256 texture page ≈ 366 KiB (бюджет 800 KiB).
     PS-EXE size: 96 256 bytes ≤ 512 000 bytes. Скриншот:
     screenshots/hello_triangle_ps1.png.
+    S17–18: PS1-порт W1-сцены (4 куба/48 треугольников, 4 текстуры
+    256×256, vertex lighting, overlay) собран кросс-сборкой локально —
+    PS-EXE 110 592 bytes, CD-образ 533 904 bytes; статические бюджеты
+    сходятся (texture pool 256 KiB W1 + framebuffer A/B ≈ 494/800 KiB
+    VRAM). Ручной прогон DuckStation и замер FPS/VPS ≥ 30 для W1 —
+    чек-лист docs/plans/sprint_17_18.md (ручная приёмка).

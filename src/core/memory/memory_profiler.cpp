@@ -70,6 +70,21 @@ void memory_profiler_register_static(const char* name, MemoryProfilerSourceType 
     memory_profiler_register_source(name, type, size, static_used_callback, (void*)(uintptr_t)size);
 }
 
+size_t memory_profiler_total_used(MemoryProfilerSourceType type)
+{
+    if (type > MEMORY_PROFILER_VRAM) {
+        return 0u;
+    }
+    size_t total = 0u;
+    for (size_t i = 0u; i < s_source_count; ++i) {
+        const MemorySource* src = &s_sources[i];
+        if (src->type == type) {
+            total += (src->used_fn != nullptr) ? src->used_fn(src->user) : 0u;
+        }
+    }
+    return total;
+}
+
 void memory_profiler_print_stats(void)
 {
     size_t total_used[2] = {0u, 0u};

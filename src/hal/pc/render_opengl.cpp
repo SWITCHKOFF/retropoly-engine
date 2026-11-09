@@ -572,6 +572,54 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
     return true;
 }
 
+bool hal_render_backend_draw_overlay(const HalRenderBackendOverlayVertex* vertices, uint32_t count)
+{
+    if (!s_backend_inited || vertices == NULL || count == 0u || (count % 3u) != 0u) {
+        return false;
+    }
+    // Overlay-вершины в одном пакете: максимум соответствует ёмкости
+    // ядра (RENDER_OVERLAY_MAX_VERTICES = 1024); больше — отказ контракта.
+    const uint32_t max_vertices = 1024u;
+    if (count > max_vertices) {
+        return false;
+    }
+    backend_gl_sweep();
+    glUseProgram(s_emu_program);
+    glUniform1i(s_emu_u_has_texture, 0); // Нетекстурированный Gouraud.
+    // Identity-MVP: вершины подаются сразу в NDC (пиксели → NDC ниже).
+    static const float identity_mvp[16] = {1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+                                           0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f};
+    glUniformMatrix4fv(s_emu_u_mvp, 1, GL_FALSE, identity_mvp);
+
+    // Interleaved-строка подачи: pos3 uv2 rgba4 (контракт s_draw_vao).
+    static float packed[9u * 1024u];
+    for (uint32_t v = 0u; v < count; ++v) {
+        // Пиксельные координаты FBO (y вниз) → NDC (y вверх GL):
+        // x_ndc = x/w·2 − 1; y_ndc = 1 − y/h·2.
+        packed[v * 9u + 0u] = (float)vertices[v].x / (float)s_fb_w * 2.0f - 1.0f;
+        packed[v * 9u + 1u] = 1.0f - (float)vertices[v].y / (float)s_fb_h * 2.0f;
+        packed[v * 9u + 2u] = 0.0f; // depth-тест выключен — z не участвует.
+        packed[v * 9u + 3u] = 0.0f; // uv не используются (u_has_texture=0).
+        packed[v * 9u + 4u] = 0.0f;
+        packed[v * 9u + 5u] = (float)vertices[v].r / 255.0f;
+        packed[v * 9u + 6u] = (float)vertices[v].g / 255.0f;
+        packed[v * 9u + 7u] = (float)vertices[v].b / 255.0f;
+        packed[v * 9u + 8u] = 1.0f;
+    }
+    glBindVertexArray(s_draw_vao);
+    glBindBuffer(GL_ARRAY_BUFFER, s_draw_vbo);
+    glBufferData(GL_ARRAY_BUFFER, (GLsizeiptr)((size_t)count * 9u * sizeof(float)), packed,
+                 GL_DYNAMIC_DRAW);
+    glDrawArrays(GL_TRIANGLES, 0, (GLsizei)count);
+    ++s_gl_draw_calls;
+
+    if (glGetError() != GL_NO_ERROR) {
+        Log_Message(LOG_LEVEL_ERROR, "render", "draw_overlay GL failure");
+        return false;
+    }
+    return true;
+}
+
 void hal_render_backend_end_frame(void)
 {
     if (!s_backend_inited) {

@@ -6,6 +6,59 @@
 
 ### Added
 
+- Спринт 17–18 — Rotating Cube — демо MVP (недели 33–36, M7
+  «Rotating Cube»): (1) `examples/rotating_cube/` — полная демка W1-сцены:
+  4 видимых куба (48 текстурированных треугольников) двумя башнями (нижние
+  на полу, верхние стоят на них — контакт куб-куб с первого кадра),
+  фиксированная камера (0, 3.2, 7), pitch −0.15, FOV 70°, near/far 1/100;
+  CI8/256, Gouraud on, transparency off; bench-режим `rotating_cube <сек>`
+  с FPS-логом окон и итогом мин/макс/средн (стресс недели 36); README с
+  эталонной расстановкой/физикой/протоколом замера; (2) ассеты: четыре
+  CI8 256×256 текстуры-варианта (`texture_{0..3}.png`, каждая — 65 536
+  уникальных цветов, детерминированный генератор
+  `scripts/make_source_assets.py`; стресс Median Cut ≤256), конверсия
+  CMake-целью `convert_rotating_cube_assets`; меш один на 4 куба
+  (`MeshRenderer::mesh_id 0` — RAM-бюджет); (3) `RotationSystem`
+  (game/systems/rotation_system.h) — fixed yaw 90°/сек на все сущности
+  MeshRenderer+Rotation (fixed-накопление, кламп насыщения); (4)
+  `CollisionSystem` (game/systems/collision_system.h) — парное AABB-
+  разрешение: контакт по ЗАМКНУТЫМ интервалам (касание = контакт: push 0 +
+  обнуление скорости «в поверхность» — сходимость к точному покою без
+  sink-jitter цикла), выталкивание по оси минимального проникновения
+  (ничья X→Y→Z), двигается только динамика (Velocity), статика (пол)
+  неподвижна, D-vs-D — первый в dense-порядке; гравитация −9.8 и прыжок
+  +4.9 (demo-level, фаза GameUpdate, синхронно всем кубам);
+  (5) `LightingSystem` (game/systems/lighting_system.h) — vertex lighting
+  ambient + directional на fixed 16.16: color = clamp255(ambient +
+  light·max(0, dot(R·n, L))), lit-копия вершин в арене кадра, поворот
+  нормали моделью (масштаб запрещён), деградация при исчерпании арены —
+  явная (неосвещённый меш); Gouraud-интерполяция — существующий конвейер
+  PC (varying vec4) и PS1 (POLY_GT3 r/g/b per vertex); RenderBanks
+  расширен `lights` + `frame_scratch` (NSDMI — безопасный default nullptr);
+  (6) debug overlay: `Render_OverlayText` (ядро) + шрифт 3×5
+  (src/render/overlay_text.h, целочисленная геометрия) + backend-путь
+  `hal_render_backend_draw_overlay` (PC: identity-MVP NDC; PS1: POLY_G3 в
+  OT bucket 0 — поверх сцены), тумблер TAB/Select, строки FPS/TRI/RAM;
+  `memory_profiler_total_used()` и `render_texture_pool_used_bytes()` —
+  запросы для overlay/метрик; (7) бюджет пула текстур ядра расширен
+  128→256 KiB (4×256×256 CI8 — ровно W1-ворклоад «one 256x256 texture per
+  cube at most» × 4 куба; VRAM PS1: +128 KiB, ≈ 494/800 KiB);
+  (8) тесты: `tests/ecs/collision_test.cpp` (intersect/касание/разделение,
+  приземление без прохода, стек кубов, скольжение вдоль стены, 60 Гц-реплей
+  демо-сцены — совпадение хэшей и инвариант «не ниже пола»),
+  `tests/ecs/lighting_test.cpp` (точные каналы осевых нормалей, ambient-only,
+  поворот нормали, неизменность геометрии/UV, деградация арены,
+  детерминизм), golden-эталоны `rotating_cube_default.bin` (+px) и
+  `overlay_text_default.bin` (+px, строгий hash); (9) PC-скриншот
+  `screenshots/rotating_cube_pc.png` из golden-эталона. Локальные гейты:
+  177/177 unit+integration, 16/16 visual (включая W0/hello_triangle),
+  ps1-release кросс-сборка (PS-EXE 102 400→110 592 Б после PS1-порта W1,
+  ISO 533 904 Б), W1-метрики PC: стресс 600 с — 116 736 кадров за
+  600 056 мс, среднее fps=194.54, мин 122 / макс 478 (окно), exit 0, без
+  краша/деградации; гейт ≥ 60 FPS выполнен с запасом ≈ ×3.2 (снапшот —
+  `docs/benchmarks/reference_environment.yaml`). Ручная приёмка
+  DuckStation-стресса и видео демки — в чек-листе плана спринта.
+
 - Спринт 15–16 — Hello Triangle PS1 (недели 29–32, M6
   «Hello Triangle PS1»): (1) единый `game::InputSystem` теперь работает и
   на PS1: D-pad / левый стик — движение камеры, правый стик — yaw/pitch,

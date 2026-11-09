@@ -142,7 +142,7 @@ TEST_F(TexturePoolTest, AcquireRejectsMalformedInput)
     EXPECT_EQ(render_texture_acquire(64, 257, fixture_.pixels, fixture_.palette),
               RENDER_TEXTURE_INVALID);
     // 256×256 — на границе, ДОПУСТИМО (без содержимого в арена влезет
-    // ровно одна: 65536 байт из 131072).
+    // ровно одна: 65536 байт из 262144).
     EXPECT_EQ(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
               1u); // Первый хэндл = slot 0 + 1.
 }
@@ -175,12 +175,12 @@ TEST_F(TexturePoolTest, SlotsExhaustToLimitAndRefuse)
 
 TEST_F(TexturePoolTest, ArenaExhaustRefuses)
 {
-    // Арена 128 KiB: одна 256×256 (64 KiB) + вторая — ровно 128 KiB.
-    EXPECT_NE(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
-              RENDER_TEXTURE_INVALID);
-    EXPECT_NE(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
-              RENDER_TEXTURE_INVALID);
-    // Третья — явный отказ: арена исчерпана, никакого silent drop.
+    // Арена 256 KiB (W1, S17–18): четыре 256×256 (64 KiB) — ровно влезают.
+    for (int i = 0; i < 4; ++i) {
+        EXPECT_NE(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
+                  RENDER_TEXTURE_INVALID);
+    }
+    // Пятая — явный отказ: арена исчерпана, никакого silent drop.
     EXPECT_EQ(render_texture_acquire(256, 256, fixture_.pixels, fixture_.palette),
               RENDER_TEXTURE_INVALID);
     // Частичное место (1 байт) не создаёт текстуру 2×256 (512 байт).

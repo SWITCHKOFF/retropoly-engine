@@ -125,6 +125,33 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
                                       TextureHandle texture);
 
 /**
+ * Вершина debug-overlay: ПИКСЕЛЬНЫЕ координаты reference-фреймбуфера
+ * (x 0..width−1, y 0..height−1, y вниз от верхнего левого угла — общая
+ * конвенция PC/PS1) + Gouraud-цвет u8. Overlay рисуется ПОВЕРХ сцены:
+ * core-конвейер (CLIP/CULL/SORT) не участвует, вызов идёт один раз из
+ * Render_EndFrame после сортированных draws сцены и ДО выкладки кадра.
+ */
+typedef struct HalRenderBackendOverlayVertex
+{
+    int16_t x, y;     /**< Пиксельные координаты FBO (y вниз). */
+    uint8_t r, g, b;  /**< Цвет вершины (0..255; альфа не нужна). */
+} HalRenderBackendOverlayVertex;
+
+/**
+ * Подача списка треугольников debug-overlay (S17–18, неделя 36).
+ *
+ * Контракт: count кратен 3; треугольники рисуются в порядке подачи поверх
+ * ВСЕГО кадра; куллинг/клип/глубина не применяются (экранные координаты,
+ * порядок = z-порядок). PC: emu-программа с identity-MVP в NDC; PS1: G3
+ * пакеты в bucket 0 OT (рисуется последним = поверх).
+ *
+ * @param vertices Вершины (count штук).
+ * @param count Число вершин (кратно 3).
+ * @return true при успехе; false при отказе backend'а (без silent drop).
+ */
+bool hal_render_backend_draw_overlay(const HalRenderBackendOverlayVertex* vertices, uint32_t count);
+
+/**
  * Завершение кадра: выкладка reference-FBO на окно (fullscreen quad,
  * nearest sampling 320×240 → текущий размер окна). Swap окна выполняет
  * Platform_SwapBuffers (разделение владений сохранено с недели 9).

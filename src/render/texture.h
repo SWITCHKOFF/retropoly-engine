@@ -8,11 +8,15 @@
 //   - docs/plans/sprint_07_08.md, неделя 15 (CreateTexture/Destroy/Bind;
 //     «запрет тестовых заглушек вида (i<<8)|i вместо честной RGB555+STP»).
 //
+//   - docs/plans/sprint_17_18.md (неделя 33: ёмкость арены W1-ворклоада —
+//     4×256×256 CI8 = 256 KiB, по текстуре 256×256 на каждый из 4 кубов;
+//     «one 256x256 texture per cube at most» §W1 — release-ворклоад).
+//
 // Хранение: фиксированные статические области (без new/delete — §1 «Явное
 // управление памятью»): максимум RENDER_TEXTURE_MAX текстур, сторона одной —
 // не более RENDER_TEXTURE_MAX_DIM (256×256), общий байт CI8 — не более
-// RENDER_TEXTURE_POOL_BYTES (128 KiB). Переполнение — явный отказ
-// (hэндл 0), расширение памяти запрещено; backend'и читают данные по
+// RENDER_TEXTURE_POOL_BYTES (256 KiB — W1, см. выше). Переполнение — явный
+// отказ (hэндл 0), расширение памяти запрещено; backend'и читают данные по
 // хэндлу.
 #pragma once
 
@@ -24,8 +28,8 @@
 /** Максимум стороны одной текстуры (PS1-реалистичный CLUT-лимит MVP). */
 #define RENDER_TEXTURE_MAX_DIM 256u
 
-/** Общий объём арены пикселей CI8 (байт): 2×256×256 = 128 KiB. */
-#define RENDER_TEXTURE_POOL_BYTES (256u * 256u * 2u)
+/** Общий объём арены пикселей CI8 (байт): 4×256×256 = 256 KiB. */
+#define RENDER_TEXTURE_POOL_BYTES (256u * 256u * 4u)
 
 // ---------------------------------------------------------------------------
 // Нормативный bit-layout палитры (§1.2.5)
@@ -88,6 +92,13 @@ static inline void unpack_rgb555_stp(uint16_t packed, uint8_t* r8, uint8_t* g8, 
  * Вызывается Render_Init (детерминированное старт-состояние).
  */
 void render_texture_pool_reset(void);
+
+/**
+ * Занято байт арены CI8-пикселей (S17–18: debug-overlay / VRAM-метрики).
+ *
+ * @return Использовано байт (0 — пул пуст/после reset).
+ */
+uint32_t render_texture_pool_used_bytes(void);
 
 /**
  * Захват слота текстуры: копирует @p pixels (w×h CI8) и @p palette

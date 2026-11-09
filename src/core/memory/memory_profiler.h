@@ -64,6 +64,17 @@ void memory_profiler_register_source(const char* name, MemoryProfilerSourceType 
 void memory_profiler_register_static(const char* name, MemoryProfilerSourceType type, size_t size);
 
 /**
+ * Суммарное использование источников типа @p type (байт).
+ *
+ * Удобно для debug-overlay (S17–18) и внешних гейтов: сумма used_fn по
+ * зарегистрированным источникам RAM/VRAM.
+ *
+ * @param type RAM или VRAM.
+ * @return Суммарный used (0 при отсутствии источников/невалидном типе).
+ */
+size_t memory_profiler_total_used(MemoryProfilerSourceType type);
+
+/**
  * Печать статистики: per-source used/capacity/percent + total used/budget/percent.
  */
 void memory_profiler_print_stats(void);

@@ -25,7 +25,9 @@
 #include "core/math/fixed.h"
 #include "core/math/mat4.h"
 #include "core/math/vec3.h"
+#include "core/memory/stack_allocator.h"
 #include "game/systems/camera_math.h"
+#include "game/systems/lighting_system.h"
 #include "hal/platform.h" // Render_*, Vertex/Triangle, TextureHandle
 
 #include <stddef.h> // uint32_t через registry.h/stdint; NULL не нужен
@@ -35,11 +37,23 @@ namespace game {
 /** Банки ассетов для отрисовки (индексы mesh_id/texture_id → массивы). */
 struct RenderBanks
 {
-    const MeshAsset* meshes;       /**< Банк мешей по MeshRenderer::mesh_id. */
-    uint32_t mesh_count;           /**< Число слотов банка (0 — кадр без draws). */
-    const TextureHandle* textures; /**< Хэндлы текстур по MeshRenderer::texture_id. */
-    uint32_t texture_count;        /**< Число хэндлов банка (0 — все draws flat). */
-    fixed_t aspect;                /**< Ширина/высота фреймбуфера (16.16; 320/240). */
+    const MeshAsset* meshes = nullptr;       /**< Банк мешей по MeshRenderer::mesh_id. */
+    uint32_t mesh_count = 0u;                /**< Число слотов банка (0 — кадр без draws). */
+    const TextureHandle* textures = nullptr; /**< Хэндлы текстур по MeshRenderer::texture_id. */
+    uint32_t texture_count = 0u;             /**< Число хэндлов банка (0 — все draws flat). */
+    fixed_t aspect = FIXED_ONE;              /**< Ширина/высота фреймбуфера (16.16; 320/240). */
+    /**
+     * Банк света (S17–18, неделя 35): NULL — вершины рисуются цветами
+     * ассета как есть (поведение до S17–18); не-NULL — per-draw vertex
+     * lighting (ambient + directional, fixed) в lit-копии вершин.
+     */
+    const LightBank* lights = nullptr;
+    /**
+     * Арена кадра для lit-копий вершин (если lights != NULL): жизнь до
+     * reset_frame после Render_EndFrame (§10). Исчерпание — деградация к
+     * неосвещённому мешу (явная, документирована в lighting_system.h).
+     */
+    StackAllocator* frame_scratch = nullptr;
 };
 
 class RenderSystem {
@@ -101,7 +115,18 @@ inline void RenderSystem::update(Registry& registry, const RenderBanks& banks)
             Render_BindTexture(RENDER_TEXTURE_INVALID);
         }
 
-        Render_DrawMesh(mesh->vertices, mesh->vertex_count, mesh->indices, mesh->index_count,
+        // Vertex lighting (S17–18, неделя 35): lit-копия вершин в арене
+        // кадра; отказ арены — деградация к цветам ассета (не краш).
+        const Vertex* draw_vertices = mesh->vertices;
+        if (banks.lights != nullptr) {
+            Vertex* lit =
+                LightingSystem::light_mesh_copy(banks.frame_scratch, mesh, model, *banks.lights);
+            if (lit != nullptr) {
+                draw_vertices = lit;
+            }
+        }
+
+        Render_DrawMesh(draw_vertices, mesh->vertex_count, mesh->indices, mesh->index_count,
                         &model);
     }
 }

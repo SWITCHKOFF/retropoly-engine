@@ -170,6 +170,24 @@ void Render_SetCamera(const Mat4* view, const Mat4* proj);
 void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count, const Triangle* indices,
                      uint32_t index_count, const Mat4* model);
 
+/**
+ * Debug-overlay текст (Спринт 17–18, неделя 36): растровый шрифт 3×5
+ * (uppercase + цифры + пунктуация) в ПИКСЕЛЬНЫХ координатах reference-
+ * фреймбуфера (x 0..319, y 0..239, y вниз). Рисуется ПОВЕРХ сцены кадра
+ * (вне Painter's-сортировки и clip/cull) — flush в Render_EndFrame до
+ * выкладки. Вызов вне BeginFrame..EndFrame — диагностический no-op
+ * (RENDER_DIAG_DRAW_OUTSIDE_FRAME); текст сверх ёмкости буфера
+ * усекается детерминированно.
+ *
+ * @param x Пиксельный X (левый край первого глифа).
+ * @param y Пиксельный Y (верх первой строки).
+ * @param r,g,b Цвет текста (0..255).
+ * @param scale Целочисленный масштаб глифа (1 — 3×5 px; 2 — 6×10 px).
+ * @param text NUL-терминированная ASCII-строка ('\n' — новая строка).
+ */
+void Render_OverlayText(int32_t x, int32_t y, uint8_t r, uint8_t g, uint8_t b, uint32_t scale,
+                        const char* text);
+
 // ---------------------------------------------------------------------------
 // Input: клавиатура + геймпады (недели 9–11)
 // ---------------------------------------------------------------------------

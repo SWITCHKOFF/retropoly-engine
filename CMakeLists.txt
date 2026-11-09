@@ -100,6 +100,27 @@ if(PLATFORM_PC)
                 "${RPE_ASSET_BUILD}/cube.mesh"
                 "${RPE_ASSET_BUILD}/texture.tex")
     endif()
+    # Ассеты примера rotating_cube (Спринт 17–18, неделя 33): cube.gltf →
+    # .mesh v1 и ЧЕТЫРЕ текстуры-варианта (по одной на куб; ≤ 1 текстуры
+    # 256×256 на куб — docs/plans/sprint_17_18.md). Меш один на 4 куба:
+    # W1-геометрия однородна (±1 куб, 12 треугольников), банк мешей
+    # переиспользуется через MeshRenderer::mesh_id — RAM/VRAM-бюджет W1.
+    if(EXISTS "${RPE_ASSET_SOURCE}/cube.gltf")
+        foreach(rc_variant 0 1 2 3)
+            set(rc_tex_src "${RPE_ASSET_SOURCE}/texture_${rc_variant}.png")
+            set(rc_tex_out "${RPE_ASSET_BUILD}/texture_${rc_variant}.tex")
+            add_custom_command(
+                OUTPUT "${rc_tex_out}"
+                COMMAND ${CMAKE_COMMAND} -E make_directory "${RPE_ASSET_BUILD}"
+                COMMAND asset_converter "${rc_tex_src}" "${rc_tex_out}"
+                DEPENDS asset_converter "${rc_tex_src}"
+                COMMENT "asset_converter: texture_${rc_variant}.png → texture_${rc_variant}.tex"
+                VERBATIM)
+            list(APPEND RC_TEXTURE_OUTPUTS "${rc_tex_out}")
+        endforeach()
+        add_custom_target(convert_rotating_cube_assets ALL
+            DEPENDS "${RPE_ASSET_BUILD}/cube.mesh" ${RC_TEXTURE_OUTPUTS})
+    endif()
     # Ассет примера hello_triangle (Спринт 11–12, неделя 21): triangle.gltf →
     # .mesh v1. Текстура примера — та же texture.tex (256×256 паттерн).
     if(EXISTS "${RPE_ASSET_SOURCE}/triangle.gltf")

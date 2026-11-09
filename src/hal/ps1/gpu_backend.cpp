@@ -256,6 +256,43 @@ void hal_render_backend_clear(uint8_t r, uint8_t g, uint8_t b)
     PutDrawEnv(&s_draw_env[s_cur]);
 }
 
+bool hal_render_backend_draw_overlay(const HalRenderBackendOverlayVertex* vertices, uint32_t count)
+{
+    if (!s_inited || vertices == NULL || count == 0u || (count % 3u) != 0u) {
+        return false;
+    }
+    // Overlay поверх сцены: G3-пакеты (28 Б) в bucket 0 — DrawOTag читает
+    // цепь 1023 → 0, бакет 0 рисуется ПОСЛЕДНИМ (поверх всех draws кадра).
+    // GTE/NCLIP не задействованы: координаты уже экранные (SXY).
+    for (uint32_t t = 0u; t < count; t += 3u) {
+        POLY_G3* p = (POLY_G3*)pool_alloc(sizeof(POLY_G3));
+        if (p == NULL) {
+            Log_Message(LOG_LEVEL_ERROR, "ps1_hal", "overlay: pool переполнен (%u примитивов)",
+                        (unsigned)s_pool_count);
+            return false;
+        }
+        setPolyG3(p); // setlen(6) + code 0x30.
+        const HalRenderBackendOverlayVertex* v = &vertices[t];
+        p->r0 = v[0].r;
+        p->g0 = v[0].g;
+        p->b0 = v[0].b;
+        p->x0 = v[0].x;
+        p->y0 = v[0].y;
+        p->r1 = v[1].r;
+        p->g1 = v[1].g;
+        p->b1 = v[1].b;
+        p->x1 = v[1].x;
+        p->y1 = v[1].y;
+        p->r2 = v[2].r;
+        p->g2 = v[2].g;
+        p->b2 = v[2].b;
+        p->x2 = v[2].x;
+        p->y2 = v[2].y;
+        otag_push(0u, p);
+    }
+    return true;
+}
+
 void hal_render_backend_end_frame(void)
 {
     if (!s_inited) {
