@@ -189,6 +189,7 @@ void render_frame(const game::RenderBanks& banks, bool overlay_on, uint32_t over
         draw_debug_overlay(overlay_fps, overlay_triangles, overlay_ram_kib);
     }
     Render_EndFrame();
+    Platform_SwapBuffers(); // показ кадра: SDL_GL_SwapWindow (контракт platform.h)
     s_frame_stack.reset_frame(); // стадия 6 §10: кадровые траты — в ноль
 }
 

@@ -130,6 +130,7 @@ void render_frame(const game::RenderBanks& banks)
     // RenderSystem сам ставит bind по MeshRenderer::texture_id каждого draw.
     game::RenderSystem::update(s_registry, banks);
     Render_EndFrame();
+    Platform_SwapBuffers(); // показ кадра: SDL_GL_SwapWindow (контракт platform.h)
     s_frame_stack.reset_frame(); // стадия 6 §10: кадровые траты — в ноль
 }
 
