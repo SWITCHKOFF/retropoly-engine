@@ -1,0 +1,113 @@
+# SPDX-License-Identifier: MIT
+# RetroPolyEngine — ci/normative_contracts.yaml
+#
+# Машинно-читаемый манифест нормативных контрактов MVP v0.1.0.
+# CI и scripts/verify_release_contract.py сверяют фактические значения
+# против этого файла. Изменение любого значения = обновление этого файла,
+# соответствующего ADR и теста в одном изменении
+# (docs/DEVELOPMENT_PLAN.md §1, п. 6).
+
+project:
+  name: RetroPolyEngine
+  version: 0.1.0
+
+presets:
+  canonical:
+    - pc-debug
+    - pc-release
+    - pc-debug-render
+    - ps1-release
+  optional:
+    - pc-asan
+    - pc-bench
+    - pc-coverage
+
+engine_scalar:
+  format: Q16.16
+  type: int32_t
+  saturating_add: true
+  saturating_sub: true
+  saturating_mul: true
+  saturating_div: true
+  mul_rounding: truncate_toward_zero
+  div_by_zero:
+    debug: assert
+    release: INT32_MAX if a >= 0 else INT32_MIN
+
+memory_budgets_ps1:
+  peak_main_ram_bytes: 1572864        # 1.5 MiB
+  peak_vram_bytes: 819200             # 800 KiB
+  ecs_pool_budget_bytes: 262144       # 256 KiB
+  static_code_data_max_bytes: 65536   # 64 KiB (runtime SDK reserve separate)
+  runtime_sdk_reserve_bytes: 131072   # 128 KiB
+  cpu_stack_max_bytes: 65536          # 64 KiB
+  level_arena_max_bytes: 458752       # 448 KiB
+  per_frame_arena_max_bytes: 163840   # 160 KiB
+  cd_staging_cache_bytes: 65536       # 64 KiB
+  measurement_headroom_bytes: 163840  # 160 KiB
+  physical_reserve_bytes: 524288      # 512 KiB — never allocated by engine
+
+renderer:
+  reference_width: 320
+  reference_height: 240
+  pipeline:
+    - TRANSFORM
+    - CLIP
+    - CULL
+    - SORT
+    - PACK
+    - SUBMIT
+  depth_test_pc: disabled             # glDisable(GL_DEPTH_TEST)
+  depth_test_ps1: none                # PS1 has no Z-buffer in this pipeline
+  silent_drop_forbidden: true
+  command_buffer_bytes: 65536
+  sort_buckets: 1024
+  texture_max_dim: 256
+  texture_format: CI8_RGB555_STP
+
+assets:
+  mesh_version: 1
+  texture_version: 1
+  endianness: little
+  encoding: byte-wise_explicit          # no struct-cast
+  mesh_header_bytes: 24
+  mesh_vertex_bytes: 21
+  mesh_index_bytes: 6
+  tex_header_bytes: 20
+  tex_palette_entries: 256
+  tex_palette_bytes: 512
+  allowed_texture_dims: [64, 128, 256]
+
+release:
+  ps1_exe_max_bytes: 512000
+  required_artifacts_pc:
+    - hello_triangle
+    - rotating_cube
+  required_artifacts_ps1:
+    - retro_ps1.elf
+    - retro_ps1.exe
+    - RETRO.bin
+    - RETRO.cue
+    - system.cnf
+
+workloads:
+  w0:
+    name: conformance
+    width: 320
+    height: 240
+    triangles: 12
+    palette: CI8_256
+    gouraud: true
+    transparency: false
+    camera: fixed
+    method: framebuffer_readback_hash
+  w1:
+    name: performance
+    pc_min_fps: 60
+    ps1_emulator_min_fps: 30
+    measurement_seconds: 60
+    scene:
+      cubes: 4
+      triangles: 48
+      textures: 4
+      texture_size: 256x256

@@ -1,8 +1,10 @@
 # Ассеты RetroPolyEngine — форматы `.mesh` / `.tex` и конвертер
 
+> Статус: финализирован для MVP v0.1.0.
 > Нормативные источники: [`RetroEngine_Engineering_Documentation_v1.43.md`](RetroEngine_Engineering_Documentation_v1.43.md)
 > §8.1–8.3 (форматы и загрузчик), §1.2.5 (RGB555+STP), §1.2.7 (контракт валидации
-> 7 шагов), §4.5 (CMake-интеграция); [`plans/sprint_09_10.md`](plans/sprint_09_10.md).
+> 7 шагов), §4.5 (CMake-интеграция); [`plans/sprint_09_10.md`](plans/sprint_09_10.md),
+> [`plans/sprint_19_20.md`](plans/sprint_19_20.md) (финализация).
 > Этот документ фиксирует байтовые форматы, политику решений MVP и контракт CLI
 > конвертера. Единственный источник истины форматов в коде — [`../src/assets/assets.h`](../src/assets/assets.h).
 

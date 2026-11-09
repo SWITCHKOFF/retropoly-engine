@@ -1,0 +1,21 @@
+# Doxyfile 1.9+ — RetroPolyEngine API docs
+
+PROJECT_NAME           = "RetroPolyEngine"
+PROJECT_NUMBER         = 0.1.0
+PROJECT_BRIEF          = "Deterministic retro game engine (PC + PS1)"
+OUTPUT_DIRECTORY       = build/docs/doxygen
+INPUT                  = src hal/platform.h game examples docs/README.md
+FILE_PATTERNS          = *.h *.hpp *.c *.cpp *.md
+RECURSIVE              = YES
+USE_MDFILE_AS_MAINPAGE = docs/README.md
+EXTRACT_ALL            = YES
+EXTRACT_STATIC         = YES
+QUIET                  = YES
+WARNINGS               = YES
+WARN_IF_UNDOCUMENTED   = YES
+GENERATE_HTML          = YES
+GENERATE_LATEX         = NO
+HTML_OUTPUT            = html
+CALLER_GRAPH           = NO
+CALL_GRAPH             = NO
+HAVE_DOT               = NO

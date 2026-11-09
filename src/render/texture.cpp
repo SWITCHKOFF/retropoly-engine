@@ -42,6 +42,11 @@ void render_texture_pool_reset(void)
     s_texture_arena_used = 0u;
 }
 
+uint32_t render_texture_pool_used_bytes(void)
+{
+    return s_texture_arena_used;
+}
+
 TextureHandle render_texture_acquire(uint32_t w, uint32_t h, const uint8_t* pixels,
                                      const uint16_t* palette)
 {

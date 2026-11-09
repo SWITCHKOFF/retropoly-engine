@@ -1,4 +1,16 @@
-# Скриншоты Hello Triangle (PC vs PS1)
+# Скриншоты (PC vs PS1)
+
+## `rotating_cube_pc.png` — демо MVP, веха M7 (Спринт 17–18)
+
+Скриншот PC-версии `rotating_cube`, сгенерирован из golden-эталона
+`tests/visual/reference/rotating_cube_default.bin` (RGBA-dump кадра t=0
+через `RENDER_GOLDEN_DUMP=1`; конвертация dump → PNG с переворотом строк —
+`glReadPixels` отдаёт снизу-вверх):
+
+- W1-сцена: 4 куба (48 треугольников) двумя башнями, CI8/256, Gouraud,
+  vertex lighting ambient + directional, transparency off, фикс. камера;
+- инвентарь кадра: 20 подано / 28 backface (невидимые грани кубов), 0
+  clip/depth-отказов.
 
 ## `hello_triangle_pc.png`
 

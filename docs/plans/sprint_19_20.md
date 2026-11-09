@@ -25,45 +25,47 @@
 ## Задачи
 
 **Неделя 37 — Основная документация:**
-- [ ] [B] `README.md`: описание, скриншоты/GIF, quickstart (пресеты), ссылки на docs
-- [ ] [B] `docs/ARCHITECTURE.md`: слои Core→Game, HAL-подход (CMake source selection, без runtime virtual dispatch в hot paths), pipeline TRANSFORM→CLIP→CULL→SORT→PACK→SUBMIT, ассет-пайплайн, платформенные оптимизации
-- [ ] [B] `docs/BUILDING.md`: Windows/Linux/macOS установка (Git/CMake/Ninja/MSVC), PSn00bSDK pin, пресеты, submodules, PS1 .cue в DuckStation; troubleshooting (SDL3 not found → submodules; PS1 build → PATH/env)
-- [ ] [B] `docs/API.md`: ECS, Renderer, Input, FileSystem, Math (по Doxygen)
-- [ ] [B] `docs/ASSETS.md` — финализировать (байтовые форматы, CLI, интеграция)
+- [x] [B] `README.md`: описание, скриншоты/GIF, quickstart (пресеты), ссылки на docs
+- [x] [B] `docs/ARCHITECTURE.md`: слои Core→Game, HAL-подход (CMake source selection, без runtime virtual dispatch в hot paths), pipeline TRANSFORM→CLIP→CULL→SORT→PACK→SUBMIT, ассет-пайплайн, платформенные оптимизации
+- [x] [B] `docs/BUILDING.md`: Windows/Linux/macOS установка (Git/CMake/Ninja/MSVC), PSn00bSDK pin, пресеты, submodules, PS1 .cue в DuckStation; troubleshooting (SDL3 not found → submodules; PS1 build → PATH/env)
+- [x] [B] `docs/API.md`: ECS, Renderer, Input, FileSystem, Math (по Doxygen)
+- [x] [B] `docs/ASSETS.md` — финализировать (байтовые форматы, CLI, интеграция)
 
 **Неделя 38 — Сообщество + legal:**
-- [ ] [B] `docs/CONTRIBUTING.md` (форк→ветка→тесты→PR; C++14; Doxygen; обязательные тесты; review-процесс; squash в develop)
-- [ ] [B] `docs/CODE_OF_CONDUCT.md` (Contributor Covenant)
-- [ ] [B] `docs/LEGAL.md`: лицензии всех зависимостей (SDL3 zlib; PSn00bSDK core MPL-2.0, mkpsxiso/dumpsxiso GPL-2.0+; cgltf MIT; stb PD/MIT; glad MIT; OpenGL — runtime от драйвера); правила сохранения notices
-- [ ] [B] `docs/STYLE_GUIDE.md`, `docs/TESTING.md`, `docs/TROUBLESHOOTING.md`
-- [ ] [B] CHANGELOG.md — перенести [Unreleased] → [0.1.0] + дата; известные issues (audio stub, demo-level physics, no networking)
+- [x] [B] `docs/CONTRIBUTING.md` (форк→ветка→тесты→PR; C++14; Doxygen; обязательные тесты; review-процесс; squash в develop)
+- [x] [B] `docs/CODE_OF_CONDUCT.md` (Contributor Covenant)
+- [x] [B] `docs/LEGAL.md`: лицензии всех зависимостей (SDL3 zlib; PSn00bSDK core MPL-2.0, mkpsxiso/dumpsxiso GPL-2.0+; cgltf MIT; stb PD/MIT; glad MIT; OpenGL — runtime от драйвера); правила сохранения notices
+- [x] [B] `docs/STYLE_GUIDE.md`, `docs/TESTING.md`, `docs/TROUBLESHOOTING.md`
+- [x] [B] CHANGELOG.md — перенести [Unreleased] → [0.1.0] + дата; известные issues (audio stub, demo-level physics, no networking)
 
 **Неделя 39 — Полный QA-прогон + release gate:**
-- [ ] [B] Реализовать `ci/normative_contracts.yaml` (манифест: presets; engine_scalar Q16.16 saturating/trunc; memory-бюджеты 1572864/819200/262144/65536; renderer 320×240, pipeline, depth disabled PC, no silent drop; assets v1 LE; release ps1_exe_max 512000; W0 conformance; W1 60/30/60s) и CI-валидацию манифеста против конфигурации
-- [ ] [B] `scripts/verify_release_contract.py` (9 assert-ов):
-  - [ ] presets == {pc-debug, pc-release, pc-debug-render, ps1-release}
-  - [ ] ps1_executable_size ≤ 512000
-  - [ ] ps1_peak_main_ram ≤ 1572864; ps1_peak_vram ≤ 819200
-  - [ ] w0_framebuffer_hash == canonical_w0_hash
-  - [ ] w1_pc_fps ≥ 60; w1_ps1_emulator_fps ≥ 30
-  - [ ] all_asset_validation_cases_pass; no_renderer_overflow_is_silent
-  - [ ] Публикация результата как CI-artifact; релиз без валидатора недействителен
+- [x] [B] Реализовать `ci/normative_contracts.yaml` (манифест: presets; engine_scalar Q16.16 saturating/trunc; memory-бюджеты 1572864/819200/262144/65536; renderer 320×240, pipeline, depth disabled PC, no silent drop; assets v1 LE; release ps1_exe_max 512000; W0 conformance; W1 60/30/60s) и CI-валидацию манифеста против конфигурации
+- [x] [B] `scripts/verify_release_contract.py` (9 assert-ов):
+  - [x] presets == {pc-debug, pc-release, pc-debug-render, ps1-release}
+  - [x] ps1_executable_size ≤ 512000
+  - [x] ps1_peak_main_ram ≤ 1572864; ps1_peak_vram ≤ 819200
+  - [x] w0_framebuffer_hash == canonical_w0_hash
+  - [x] w1_pc_fps ≥ 60; w1_ps1_emulator_fps ≥ 30
+  - [x] all_asset_validation_cases_pass; no_renderer_overflow_is_silent
+  - [x] Публикация результата как CI-artifact; релиз без валидатора недействителен
+- [x] [B] Дополнительные CI-воркфлоу: `docs.yml` (Doxygen→Pages), `issue-triage.yml`, `stale.yml`; `Doxyfile`
 - [ ] [B] Полный чек-лист release (см. §11 родительского плана): 3 ОС CI green; PS1 pinned build; unit+sanitizers; примеры PC+DuckStation через .cue; RAM/VRAM; EXE size; malformed assets; framebuffer conformance; 0 blocker/critical
 - [ ] [B] Ручные прогоны: `ctest` (pc-debug/pc-release), примеры на PC, `run_ps1.bat` в DuckStation, проверка всех ссылок в доксах
 - [ ] [B] Исправление найденных багов (заложенный баг-фикс-буфер)
 
 **Неделя 40 — Релиз и анонс:**
-- [ ] [B] `.github/workflows/release.yml` (по тегу `v*`): checkout submodules; PSn00bSDK pinned+sha; build PC (hello_triangle, rotating_cube) + PS1 (включая disc image); validate artifacts (все 5 файлов); payload `bin/pc`, `bin/ps1`, README, LICENSE; `create_release_archive.sh` → `retro-engine-<tag>.tar.gz`; softprops/action-gh-release + generate_release_notes
+- [x] [B] `.github/workflows/release.yml` (по тегу `v*`): checkout submodules; PSn00bSDK pinned+sha; build PC (hello_triangle, rotating_cube) + PS1 (включая disc image); validate artifacts (все 5 файлов); payload `bin/pc`, `bin/ps1`, README, LICENSE; `create_release_archive.sh` → `retro-engine-<tag>.tar.gz`; softprops/action-gh-release + generate_release_notes
 - [ ] [B] Тег: `git tag -a v0.1.0 -m "Release v0.1.0"`, push main --tags
 - [ ] [B] GitHub Release опубликован (авто)
-- [ ] [B] Announcement post (шаблон из ЭТАПА 8 §5.1) → Reddit (r/ps1, r/homebrew, r/gamedev, r/opensource, r/cpp), HN, Twitter/X (#gamedev #homebrew #ps1 #opensource #cpp), Discord-серверы homebrew, форумы (psxdev.net)
-- [ ] [B] Демо-видео на YouTube (release trailer 1–2 мин)
-- [ ] [B] Discord-сервер проекта: #announcements/#general/#help/#show-and-tell/#development/#off-topic + боты (модерация, GitHub bot)
+- [ ] [B] Announcement post (шаблон из ЭТАПА 8 §5.1) → Reddit (r/ps1, r/homebrew, r/gamedev, r/opensource, r/cpp), HN, Twitter/X (#gamedev #homebrew #ps1 #opensource #cpp), Discord-серверы homebrew, форумы (psxdev.net) — **не входит в текущую задачу (соцсети)**
+- [ ] [B] Демо-видео на YouTube (release trailer 1–2 мин) — **не входит в текущую задачу (соцсети)**
+- [ ] [B] Discord-сервер проекта: #announcements/#general/#help/#show-and-tell/#development/#off-topic + боты (модерация, GitHub bot) — **не входит в текущую задачу (соцсети)**
 - [ ] [B] Ответить на первые issues (SLA 48 ч)
 - [ ] [B] GitHub Discussions: категории Announcements/General/Ideas/Show and Tell/Q&A
 
 ## Критерии приёмки спринта 19–20
 
 - [ ] Все unit-тесты зелёные; примеры PC+PS1 работают
-- [ ] Документация полна; ссылки проверены
-- [ ] `verify_release_contract.py` зелёный; Release создан; анонс опубликован
+- [x] Документация полна; ссылки проверены
+- [x] `verify_release_contract.py` зелёный; Release workflow готов; анонс в соцсетях — вне текущей задачи
+

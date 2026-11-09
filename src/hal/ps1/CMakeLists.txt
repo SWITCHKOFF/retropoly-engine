@@ -90,21 +90,30 @@ configure_file("${CMAKE_SOURCE_DIR}/cmake/ps1-system.cnf.in"
                "${RPE_SYSTEM_CNF}" @ONLY)
 
 # --- CD-ROM образ (retro_disc → RETRO.bin/RETRO.cue) -----------------------
-# Ассеты — коммитнутые артефакты Спринта 9–10 (asset_converter — host-only,
-# хост-CI-джобу PC сборку проходит; PS1-джоба только читает committed-файлы).
-if(NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/build/triangle.mesh" OR
-   NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/build/texture.tex")
+# Ассеты — коммитнутые артефакты (asset_converter — host-only, хост-CI-джобу
+# PC сборку проходит; PS1-джоба только читает committed-файлы). Спринт 17–18:
+# W1-сцена — cube.mesh + 4 текстуры-варианта (8.3: CUBE.MSH/TEX0..3.TEX).
+if(NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/build/cube.mesh" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/build/texture_0.tex" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/build/texture_1.tex" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/build/texture_2.tex" OR
+   NOT EXISTS "${CMAKE_SOURCE_DIR}/assets/build/texture_3.tex")
     message(FATAL_ERROR
-        "assets/build/triangle.mesh|.tex отсутствуют (versioned-ассеты "
-        "Спринта 9–10 обязаны присутствовать в репозитории для PS1-диска).")
+        "assets/build/cube.mesh|texture_{0..3}.tex отсутствуют "
+        "(versioned-ассеты Спринта 17–18 обязаны присутствовать в репозитории "
+        "для PS1-диска).")
 endif()
 
 set(RPE_PS1_EXE "${CMAKE_CURRENT_BINARY_DIR}/retro_ps1.exe")
-set(RPE_DISC_MESH "${CMAKE_SOURCE_DIR}/assets/build/triangle.mesh")
-set(RPE_DISC_TEX "${CMAKE_SOURCE_DIR}/assets/build/texture.tex")
+set(RPE_DISC_MESH "${CMAKE_SOURCE_DIR}/assets/build/cube.mesh")
+set(RPE_DISC_TEX0 "${CMAKE_SOURCE_DIR}/assets/build/texture_0.tex")
+set(RPE_DISC_TEX1 "${CMAKE_SOURCE_DIR}/assets/build/texture_1.tex")
+set(RPE_DISC_TEX2 "${CMAKE_SOURCE_DIR}/assets/build/texture_2.tex")
+set(RPE_DISC_TEX3 "${CMAKE_SOURCE_DIR}/assets/build/texture_3.tex")
 set(RPE_DISC_VOLUME "RETROENG")
 psn00bsdk_add_cd_image(retro_disc RETRO "${CMAKE_SOURCE_DIR}/cmake/ps1-disc.xml"
-    DEPENDS retro_ps1 "${RPE_SYSTEM_CNF}" "${RPE_DISC_MESH}" "${RPE_DISC_TEX}")
+    DEPENDS retro_ps1 "${RPE_SYSTEM_CNF}" "${RPE_DISC_MESH}"
+            "${RPE_DISC_TEX0}" "${RPE_DISC_TEX1}" "${RPE_DISC_TEX2}" "${RPE_DISC_TEX3}")
 add_dependencies(retro_disc retro_ps1)
 
 # Запуск в эмуляторе (локально; CI только сборка):

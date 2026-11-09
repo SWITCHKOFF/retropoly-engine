@@ -1,9 +1,10 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- RetroPolyEngine — PS1 CD-ROM образ (Спринты 13–14).
+<!-- RetroPolyEngine — PS1 CD-ROM образ (Спринты 13–14; ассеты W1 — S17–18).
      Подстановки @VAR@ — configure_file из src/hal/ps1/CMakeLists.txt;
      mkpsxiso делает переименование 8.3 имени (file name= vs source=).
-     Коммитнутые ассеты: triangle.mesh → TRIANGLE.MSH, texture.tex →
-     TEXTURE.TEX (ISO9660 8.3-ограничения; ";1" добавляется BOOT-строкой). -->
+     Коммитнутые ассеты: cube.mesh → CUBE.MSH, texture_{0..3}.tex →
+     TEX0.TEX..TEX3.TEX (ISO9660 8.3-ограничения: имя ≤ 8 символов до точки;
+     ";1" добавляется BOOT-строкой). -->
 <iso_project image_name="RETRO" cue_sheet="RETRO.cue">
   <track type="data">
     <identifiers
@@ -16,10 +17,13 @@
     />
 
     <directory_tree>
-      <file name="SYSTEM.CNF"   type="data" source="@RPE_SYSTEM_CNF@" />
-      <file name="RETRO.EXE"    type="data" source="@RPE_PS1_EXE@" />
-      <file name="TRIANGLE.MSH" type="data" source="@RPE_DISC_MESH@" />
-      <file name="TEXTURE.TEX"  type="data" source="@RPE_DISC_TEX@" />
+      <file name="SYSTEM.CNF" type="data" source="@RPE_SYSTEM_CNF@" />
+      <file name="RETRO.EXE"  type="data" source="@RPE_PS1_EXE@" />
+      <file name="CUBE.MSH"   type="data" source="@RPE_DISC_MESH@" />
+      <file name="TEX0.TEX"   type="data" source="@RPE_DISC_TEX0@" />
+      <file name="TEX1.TEX"   type="data" source="@RPE_DISC_TEX1@" />
+      <file name="TEX2.TEX"   type="data" source="@RPE_DISC_TEX2@" />
+      <file name="TEX3.TEX"   type="data" source="@RPE_DISC_TEX3@" />
       <dummy sectors="16"/>
     </directory_tree>
   </track>

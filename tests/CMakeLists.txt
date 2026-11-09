@@ -31,6 +31,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         memory/allocator_integration_test.cpp
         ecs/entity_test.cpp
         ecs/registry_test.cpp
+        ecs/collision_test.cpp
+        ecs/lighting_test.cpp
         log/log_test.cpp
         render/texture_test.cpp
         render/command_buffer_test.cpp
@@ -43,6 +45,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)
     # Канонические флаги применяются только к коду тестов движка.
     retro_engine_apply_flags(retro_engine_tests)
+    # game/* и examples/* — include от КОРНЯ репозитория (mirrors примеры).
+    target_include_directories(retro_engine_tests PRIVATE "${CMAKE_SOURCE_DIR}")
     # Путь к пайплайн-артефактам (assets/build/*) — compile-time, CWD-независимо.
     # PLATFORM_PC — специализация платформы для тестов HAL (tests/ добавляются
     # только при PLATFORM_PC; mirrors retro_engine / retro_engine_log).
@@ -61,6 +65,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
             visual/render_golden_test.cpp
             visual/golden_protocol.cpp
             visual/hello_triangle_golden_test.cpp
+            visual/rotating_cube_golden_test.cpp
+            visual/overlay_golden_test.cpp
             visual/w0_scene.cpp
         )
         target_compile_features(retro_engine_visual_tests PRIVATE cxx_std_14)
@@ -73,7 +79,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         # HT_ASSET_DIR — пути ассетов примера (scene.h), mirrors main.cpp.
         target_compile_definitions(retro_engine_visual_tests PRIVATE
             RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}"
-            HT_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets/build")
+            HT_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets/build"
+            RC_ASSET_DIR="${CMAKE_SOURCE_DIR}/assets/build")
         gtest_discover_tests(retro_engine_visual_tests DISCOVERY_TIMEOUT 60)
     endif()
 endif()

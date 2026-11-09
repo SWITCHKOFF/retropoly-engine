@@ -28,6 +28,7 @@
 
 #include "hal/render_backend.h"
 #include "render/command_buffer.h"
+#include "render/overlay_text.h" // шрифт 3×5 debug-overlay (S17–18)
 #include "render/sort_key.h"
 #include "render/texture.h"
 
@@ -70,6 +71,15 @@ static TextureHandle s_bound_texture = RENDER_TEXTURE_INVALID;
 
 /// Командный буфер кадра (64 KiB; static — НЕ на стеке).
 static CommandBuffer s_command_buffer;
+
+// --- Debug-overlay (S17–18, неделя 36) --------------------------------------
+
+/** Ёмкость overlay буфера кадра (вершин; 1024 = 341 треугольник). */
+#define RENDER_OVERLAY_MAX_VERTICES 1024u
+
+/** Накопитель overlay-треугольников кадра (пиксельные координаты). */
+static HalRenderBackendOverlayVertex s_overlay[RENDER_OVERLAY_MAX_VERTICES];
+static uint32_t s_overlay_count = 0u;
 
 /// Вместимость сортировки равна вместимости command buffer.
 #define RENDER_SORT_MAX (RENDER_COMMAND_BUFFER_BYTES / sizeof(RenderTriCmd))
@@ -232,6 +242,7 @@ void Render_Shutdown(void)
     s_camera_set = false;
     s_bound_texture = RENDER_TEXTURE_INVALID;
     s_command_buffer.reset();
+    s_overlay_count = 0u;
     memset(&s_diag, 0, sizeof(s_diag));
 }
 
@@ -246,6 +257,7 @@ void Render_BeginFrame(void)
     // BeginFrame — просто новый чистый кадр (idempotent semantics).
     s_command_buffer.reset();
     s_submission_counter = 0u;
+    s_overlay_count = 0u; // overlay кадра собирается заново
     render_diag(RENDER_DIAG_OK);
     s_state = RENDER_STATE_IN_FRAME;
 
@@ -335,9 +347,42 @@ void Render_EndFrame(void)
         }
     }
 
+    // ---- OVERLAY (S17–18): поверх сцены, вне сортировки ------------------
+    if (s_overlay_count != 0u) {
+        if (!hal_render_backend_draw_overlay(s_overlay, s_overlay_count)) {
+            render_diag(RENDER_DIAG_BACKEND_FAIL);
+        }
+        s_overlay_count = 0u; // кадр закрыт — буфер свободен
+    }
+
     // Выкладка FBO на окно (nearest) — независимо от числа треугольников.
     hal_render_backend_end_frame();
     s_state = RENDER_STATE_READY; // Кадр закрыт; следующий — BeginFrame.
+}
+
+// ---------------------------------------------------------------------------
+// Debug-overlay (Спринт 17–18, неделя 36)
+// ---------------------------------------------------------------------------
+
+void Render_OverlayText(int32_t x, int32_t y, uint8_t r, uint8_t g, uint8_t b, uint32_t scale,
+                        const char* text)
+{
+    if (s_state != RENDER_STATE_IN_FRAME) {
+        // Overlay вне кадра не определен (flush принадлежит EndFrame).
+        render_diag(RENDER_DIAG_DRAW_OUTSIDE_FRAME);
+        return;
+    }
+    if (text == nullptr || scale == 0u) {
+        render_diag(RENDER_DIAG_NULL_ARGUMENT);
+        return;
+    }
+    const uint32_t free_vertices = RENDER_OVERLAY_MAX_VERTICES - s_overlay_count;
+    const uint32_t written =
+        overlay_text::build(&s_overlay[s_overlay_count], free_vertices, x, y, r, g, b, scale,
+                            text);
+    s_overlay_count += written;
+    // Обрезка текста (written < заказанного) — детерминированная, не ошибка.
+    render_diag(RENDER_DIAG_OK);
 }
 
 // ---------------------------------------------------------------------------

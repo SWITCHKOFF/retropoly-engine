@@ -219,14 +219,30 @@ def png_chunk(kind, payload):
             struct.pack(">I", zlib.crc32(kind + payload) & 0xFFFFFFFF))
 
 
-def make_texture_png(path, size=256):
+def make_texture_png(path, size=256, variant=0):
+    # Варианты Спринта 17–18 (rotating_cube, 4 куба): перестановки/инверсии
+    # каналов базового паттерна (x, y, x^y) — каждый вариант несёт ровно
+    # 65536 уникальных цветов (тот же стресс Median Cut ≤256, что и
+    # texture.png), байтовая детерминированность сохранена.
+    def base(x, y):
+        return (x & 0xFF, y & 0xFF, (x ^ y) & 0xFF)
+
+    def channel(xy, i):
+        return (xy[i], xy[(i + 1) % 3], xy[(i + 2) % 3])
+
     raw = bytearray()
     for y in range(size):
         raw.append(0)  # filter type 0 (None) на каждую строку
         for x in range(size):
-            r = x & 0xFF
-            g = y & 0xFF
-            b = (x ^ y) & 0xFF
+            if variant == 0:
+                r, g, b = base(x, y)
+            elif variant == 1:      # циклический сдвиг каналов
+                r, g, b = channel(base(x, y), 1)
+            elif variant == 2:      # обратный циклический сдвиг
+                r, g, b = channel(base(x, y), 2)
+            else:                   # variant 3: инверсия базового
+                rx, gy, bx = base(x, y)
+                r, g, b = 255 - rx, 255 - gy, 255 - bx
             raw.extend((r, g, b, 255))
     idat = zlib.compress(bytes(raw), 9)
     ihdr = struct.pack(">IIBBBBB", size, size, 8, 6, 0, 0, 0)
@@ -245,6 +261,11 @@ def main():
     make_cube_gltf(os.path.join(src, "cube.gltf"))
     make_texture_png(os.path.join(src, "texture.png"), 256)
     make_triangle_gltf(os.path.join(src, "triangle.gltf"))
+    # Спринт 17–18: текстуры-варианты демо rotating_cube (по одной на куб;
+    # ≤ 1 текстуры 256×256 на куб — docs/plans/sprint_17_18.md, неделя 33).
+    for variant in range(4):
+        make_texture_png(
+            os.path.join(src, "texture_%d.png" % variant), 256, variant)
     return 0
 
 

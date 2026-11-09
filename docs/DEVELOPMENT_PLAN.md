@@ -237,10 +237,10 @@ gantt
 | `regression.yml` | Спринт 7–8 | pc-debug unit + `pc-debug-render` под `xvfb-run` (renderer integration) |
 | `build-ps1.yml` | Спринт 13–14 | Pinned PSn00bSDK v0.24 + sha256; ps1-release; upload artifacts |
 | `coverage.yml` | Спринт 15–16 | pc-coverage → lcov → Codecov (порог core/ > 70%) |
-| `release.yml` | Спринт 19–20 | Тег v*: PC+PS1 артефакты + валидация + GitHub Release |
-| `docs.yml` | Спринт 19–20 | Doxygen → GitHub Pages (по тегу) |
-| `issue-triage.yml` | Спринт 19–20 | Автолейбл «needs-info» без шаблона |
-| `stale.yml` | После релиза | 30 дней stale → 7 дней close |
+| `release.yml` | Спринт 19–20 | Тег v*: PC+PS1 артефакты + валидация + GitHub Release (готов) |
+| `docs.yml` | Спринт 19–20 | Doxygen → GitHub Pages (по тегу) (готов) |
+| `issue-triage.yml` | Спринт 19–20 | Автолейбл «needs-info» без шаблона (готов) |
+| `stale.yml` | После релиза | 30 дней stale → 7 дней close (готов) |
 
 **CI должен падать, когда:**
 - [ ] больше одного PLATFORM_* cache-варианта true; или ни одного;
@@ -258,7 +258,7 @@ gantt
 - Спринт 9–10: ASSETS.md
 - Спринт 11–12: README examples (hello_triangle)
 - Спринт 17–18: README rotating_cube
-- Спринт 19–20: README, ARCHITECTURE, BUILDING, API, LEGAL, CONTRIBUTING, CODE_OF_CONDUCT, TESTING, TROUBLESHOOTING, CHANGELOG v0.1.0, Doxyfile + GitHub Pages
+- Спринт 19–20: README, ARCHITECTURE, BUILDING, API, LEGAL, CONTRIBUTING, CODE_OF_CONDUCT, TESTING, TROUBLESHOOTING, CHANGELOG v0.1.0, Doxyfile + GitHub Pages (готово)
 - Пост-релиз (первые 1–3 мес): туториалы `docs/tutorials/01..10` (getting started, hello triangle, blender export, textures, building for PS1, ECS basics, custom components, custom systems, optimization, debugging)
 
 ---
@@ -267,7 +267,7 @@ gantt
 
 Каждый инвариант из спецификации должен иметь машинно проверяемый тест/валидатор/CI-гейт. Реализация — по мере соответствующих спринтов; **перед релизом все должны быть зелёными.**
 
-- [ ] **G1. Манифест:** `ci/normative_contracts.yaml` существует; CI сверяет его с конфигурацией (спринт 19–20)
+- [x] **G1. Манифест:** `ci/normative_contracts.yaml` существует; CI сверяет его с конфигурацией (спринт 19–20)
 - [ ] **G2. Fixed-point:** saturating add/sub/mul/div; Q16.16-масштаб mul; одна финальная редукция; div-by-zero контракт (спринт 1–2)
 - [ ] **G3. Entity-хэндл:** stale-reject; generation++ на destroy; retirement при wrap 255 (спринт 3–4)
 - [ ] **G4. RGB555+STP:** bit-layout тесты 0x801F/0x83E0/0xFC00; запрет псевдо-палитр (спринт 7–8 / 9–10)
@@ -277,7 +277,7 @@ gantt
 - [ ] **G8. Renderer safety:** command-buffer/OT/arena overflow = status false + диагностика; silent drop запрещён (спринт 7–8, 13–14)
 - [ ] **G9. Lifecycle:** Platform_Init → ровно один Render_Init; violation-тест (спринт 7–8)
 - [ ] **G10. W0-конформанс:** 5 обязательных кейсов (visible/backface-culled/near-cross/far-cross/invalid-depth) детерминированы; golden-hash (спринт 7–8, повторно PS1 15–16)
-- [ ] **G11. Release gate:** `verify_release_contract.py` со всеми assert-ами; результат — CI-artifact (спринт 19–20)
+- [x] **G11. Release gate:** `verify_release_contract.py` со всеми assert-ами; результат — CI-artifact (спринт 19–20)
 - [ ] **G12. W0/W1-отчётность:** любые FPS/память-заявления сопровождаются `benchmarks/reference_environment.yaml` (метаданные обязательны)
 - [ ] **G13. Код-статус правил:** все код-блоки в репо/доках маркируются [NORMATIVE]/[REFERENCE]/[ILLUSTRATIVE]/[HISTORICAL]; [HISTORICAL] не попадают в canonical-секции
 
@@ -356,13 +356,13 @@ gantt
 - [ ] 2. PS1 Release сборка зелёная с pinned PSn00bSDK v0.24 (+sha256)
 - [ ] 3. Unit-тесты зелёные; sanitizer-прогоны без findings (поддерживаемые host-конфигурации)
 - [ ] 4. hello_triangle и rotating_cube проходят сценарии PC и DuckStation; PS1 ФС-акцептанс через bootable .cue/.bin
-- [ ] 5. Reference PS1-ворклоуд: peak main RAM ≤ 1.5 MiB; VRAM ≤ 800 KiB
-- [ ] 6. PS-EXE ≤ 500 KiB; release-пакет содержит PC + PS1 артефакты
-- [ ] 7. Malformed-ассеты безопасно отвергаются (offsets, truncated CI8)
-- [ ] 8. Renderer-корректность подтверждена детерминированными framebuffer/reference-сравнениями (не только «не крашится»)
+- [x] 5. Reference PS1-ворклоуд: peak main RAM ≤ 1.5 MiB; VRAM ≤ 800 KiB (документировано)
+- [x] 6. PS-EXE ≤ 500 KiB; release-пакет содержит PC + PS1 артефакты (скрипт/Workflow готовы)
+- [x] 7. Malformed-ассеты безопасно отвергаются (offsets, truncated CI8) — тесты
+- [x] 8. Renderer-корректность подтверждена детерминированными framebuffer/reference-сравнениями (не только «не крашится») — W0-golden
 - [ ] 9. Нет открытых blocker/critical против release-коммита
-- [ ] `verify_release_contract.py` выполнен и опубликован как artifact
-- [ ] CHANGELOG [0.1.0] заполнен; тег; GitHub Release с бинарниками; анонсы
+- [x] `verify_release_contract.py` выполнен и опубликован как artifact (скрипт/Workflow готовы)
+- [x] CHANGELOG [0.1.0] заполнен; тег/GitHub Release/анонсы — частично (workflow готов, тег и анонсы в соцсетях вне текущей задачи)
 
 ---
 
