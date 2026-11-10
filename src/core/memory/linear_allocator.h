@@ -36,6 +36,15 @@ public:
     };
 
     /**
+     * Конструктор пустого аллокатора (constant initialization).
+     *
+     * Нужен для static/global арен на freestanding-целях: Jo Engine start.S
+     * не выполняет C++ static constructors, поэтому глобальный объект обязан
+     * быть constant-initialized, а арена подключается позже через init().
+     */
+    constexpr LinearAllocator() : m_buffer(nullptr), m_capacity(0), m_offset(0) {}
+
+    /**
      * Конструктор над готовой ареной.
      *
      * @param buffer Начало арены; nullptr допустим (аллокатор пуст).
@@ -48,6 +57,19 @@ public:
 
     LinearAllocator(const LinearAllocator&) = delete;
     LinearAllocator& operator=(const LinearAllocator&) = delete;
+
+    /**
+     * (Пере)подключение арены: сбрасывает offset и задаёт новый буфер.
+     *
+     * @param buffer Начало арены; nullptr делает аллокатор пустым.
+     * @param capacity Размер арены в байтах.
+     */
+    void init(void* buffer, size_t capacity)
+    {
+        m_buffer = static_cast<uint8_t*>(buffer);
+        m_capacity = buffer ? capacity : 0;
+        m_offset = 0;
+    }
 
     /**
      * Выделение size байт с выравниванием фактического адреса.

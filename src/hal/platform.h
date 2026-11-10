@@ -43,7 +43,8 @@
  * Saturn: Jo Engine core — VDP1/VDP2, SMPC, VBlank, 320×224 NTSC).
  *
  * Saturn (ADR-008): ровно один вызов на процесс; повторный — идемпотентен.
- * Backdrop выставляется через VDP2; 3D/VDP1 в v0.2.0-S21–22 отсутствует.
+ * Backdrop выставляется через VDP2; 3D/VDP1 в v0.2.0-S23–24 отсутствует
+ * (VDP1-draw вернёт false до S27–28).
  *
  * Последовательность (§3.3 + sprint_05_06, неделя 9):
  *   1. SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) — БЕЗ SDL_INIT_TIMER
@@ -77,7 +78,8 @@ void Platform_Shutdown(void);
  * их обработка появляется в Спринтах 7–8+.
  *
  * PS1/Saturn: очереди событий нет — константный true; выход определяется
- * платформенным вводом (PS1 START; Saturn — на усмотрение S23–24).
+ * платформенным вводом (PS1 START; Saturn — START читается через Input_*).
+ * Saturn дополнительно опрашивает 6-button pad ровно один раз за кадр.
  *
  * @return true — обычный кадр; false — получено SDL_EVENT_QUIT
  *         (главный цикл обязан завершиться; Shutdown — задача вызывающего).
@@ -398,8 +400,11 @@ typedef struct FileData
  * (SDL_LoadFile) и освобождается ТОЛЬКО через FileSystem_FreeFile;
  * ручное free()/delete этого буфера запрещено.
  *
- * Saturn (S21–22): заглушка возвращает {nullptr, 0}; read-only ISO9660
- * (8.3, `\NAME.EXT;1`) реализуется в S23–24. Host-пути и `..` запрещены.
+ * Saturn (S23–24): read-only ISO9660; HAL принимает bare 8.3-имена без
+ * `;1` (`CUBE.MSH`), нормализует строчные в upper-case и отвергает
+ * host-пути/`..`/`;`/wildcard'ы. Буфер выделяется из WRAM-H asset heap и
+ * освобождается только через FileSystem_FreeFile; ошибка чтения/валидации
+ * возвращает {nullptr, 0} без утечки persistent-памяти.
  *
  * @param path путь; NULL/пустая строка — отказ без краша.
  *

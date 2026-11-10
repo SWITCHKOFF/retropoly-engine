@@ -41,6 +41,7 @@ set(JO_ENGINE_SOURCES
     "${JO_ENGINE_INCLUDE_DIR}/vdp2_malloc.c"
     "${JO_ENGINE_INCLUDE_DIR}/smpc.c"
     "${JO_ENGINE_INCLUDE_DIR}/dsp.c"
+    "${JO_ENGINE_INCLUDE_DIR}/fs.c"
     "${JO_ENGINE_INCLUDE_DIR}/start.S"
 )
 
@@ -65,7 +66,9 @@ set(JO_ENGINE_DEFINES
     JO_MAP_MAX_LAYER=8
     JO_MAX_SPRITE_ANIM=16
     JO_MAX_FS_BACKGROUND_JOBS=1
-    JO_GLOBAL_MEMORY_SIZE_FOR_MALLOC=393216)
+    JO_GLOBAL_MEMORY_SIZE_FOR_MALLOC=393216
+    JO_COMPILE_WITH_FS_SUPPORT=1
+    JO_COMPILE_WITH_PRINTF_SUPPORT=1)
 
 target_compile_options(jo_engine PRIVATE
     -fplan9-extensions
@@ -81,7 +84,14 @@ target_compile_definitions(jo_engine PRIVATE ${JO_ENGINE_DEFINES})
 # --- HAL library ------------------------------------------------------------
 add_library(retro_engine_hal STATIC
     platform_saturn.cpp
+    filesystem_saturn.cpp
     render_saturn.cpp
+    saturn_command_buffer.cpp
+    saturn_fs.cpp
+    saturn_fs_path.cpp
+    saturn_input.cpp
+    saturn_memory.cpp
+    saturn_render_utils.cpp
     jo_saturn_bridge.c)
 retro_engine_apply_flags(retro_engine_hal)
 target_include_directories(retro_engine_hal PRIVATE
@@ -203,8 +213,24 @@ endif()
 set(RPE_SATURN_DISC_DIR "${CMAKE_CURRENT_BINARY_DIR}/disc")
 set(RPE_SATURN_ISO "${CMAKE_CURRENT_BINARY_DIR}/retro_saturn.iso")
 set(RPE_SATURN_CUE "${CMAKE_CURRENT_BINARY_DIR}/retro_saturn.cue")
+set(RPE_SATURN_ASSET_DIR "${CMAKE_SOURCE_DIR}/assets/build")
+set(RPE_SATURN_ASSET_SOURCES
+    "${RPE_SATURN_ASSET_DIR}/cube.mesh"
+    "${RPE_SATURN_ASSET_DIR}/triangle.mesh"
+    "${RPE_SATURN_ASSET_DIR}/texture.tex"
+    "${RPE_SATURN_ASSET_DIR}/texture_0.tex"
+    "${RPE_SATURN_ASSET_DIR}/texture_1.tex"
+    "${RPE_SATURN_ASSET_DIR}/texture_2.tex"
+    "${RPE_SATURN_ASSET_DIR}/texture_3.tex")
+foreach(_rpe_asset IN LISTS RPE_SATURN_ASSET_SOURCES)
+    if(NOT EXISTS "${_rpe_asset}")
+        message(FATAL_ERROR
+            "saturn_disc: отсутствует ассет '${_rpe_asset}'. "
+            "Ассеты v0.2.0 коммитятся в assets/build (docs/ASSETS.md).")
+    endif()
+endforeach()
 file(MAKE_DIRECTORY "${RPE_SATURN_DISC_DIR}")
-file(WRITE "${RPE_SATURN_DISC_DIR}/ABS.TXT" "RetroPolyEngine Saturn skeleton\n")
+file(WRITE "${RPE_SATURN_DISC_DIR}/ABS.TXT" "RetroPolyEngine Saturn HAL\n")
 file(WRITE "${RPE_SATURN_DISC_DIR}/CPY.TXT" "RetroPolyEngine contributors\n")
 file(WRITE "${RPE_SATURN_DISC_DIR}/BIB.TXT" "docs/SATURN.md\n")
 # Jo Engine Linux CueMaker выпускает MODE1/2048 (ISO9660, 2048-byte
@@ -221,13 +247,22 @@ add_custom_command(
     COMMENT "saturn: retro_saturn.bin (raw SH-2)"
     VERBATIM)
 
+# Имена на диске — bare 8.3 без «;1» (см. saturn_fs_path.h): 8.3-имена,
+# которые HAL передаёт в Jo Engine, обязаны совпадать с CD-каталогом.
 add_custom_command(
     OUTPUT "${RPE_SATURN_ISO}"
     COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_RAW}" "${RPE_SATURN_DISC_DIR}/0.bin"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ASSET_DIR}/cube.mesh" "${RPE_SATURN_DISC_DIR}/CUBE.MSH"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ASSET_DIR}/triangle.mesh" "${RPE_SATURN_DISC_DIR}/TRIANGLE.MSH"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ASSET_DIR}/texture.tex" "${RPE_SATURN_DISC_DIR}/TEXTURE.TEX"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ASSET_DIR}/texture_0.tex" "${RPE_SATURN_DISC_DIR}/TEX0.TEX"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ASSET_DIR}/texture_1.tex" "${RPE_SATURN_DISC_DIR}/TEX1.TEX"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ASSET_DIR}/texture_2.tex" "${RPE_SATURN_DISC_DIR}/TEX2.TEX"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ASSET_DIR}/texture_3.tex" "${RPE_SATURN_DISC_DIR}/TEX3.TEX"
     COMMAND ${RPE_SATURN_MKISO_CMD}
-    DEPENDS "${RPE_SATURN_RAW}" "${RPE_SATURN_IP}"
+    DEPENDS "${RPE_SATURN_RAW}" "${RPE_SATURN_IP}" ${RPE_SATURN_ASSET_SOURCES}
     WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    COMMENT "saturn: retro_saturn.iso (ISO9660 2048) + CUE"
+    COMMENT "saturn: retro_saturn.iso (ISO9660 2048) + assets + CUE"
     VERBATIM)
 
 add_custom_target(saturn_disc ALL

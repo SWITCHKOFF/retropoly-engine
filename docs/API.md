@@ -67,8 +67,10 @@ Pad 0 на PC эмулируется клавиатурой, если физич
 
 Saturn (6-button pad): D-pad → UP/DOWN/LEFT/RIGHT; A→CROSS; B→CIRCLE;
 C→SQUARE; X→TRIANGLE; Y→L1; Z→R1; L→L2; R→R2; START→START. Select на
-6-button pad отсутствует; аналоговых осей и мыши нет. Полная таблица и
-policy расширения enum — [`SATURN.md`](SATURN.md) §6.
+6-button pad отсутствует; аналоговых осей и мыши нет. `Platform_PumpEvents`
+опрашивает пад ровно один раз за кадр; `Input_*` читают защёлку, при
+disconnect/не-RegularGamepad все кнопки отпущены. Полная таблица и policy
+расширения enum — [`SATURN.md`](SATURN.md) §6.
 
 ### 1.4 Аудио
 
@@ -87,8 +89,11 @@ FileData FileSystem_LoadFile(const char* path);
 void FileSystem_FreeFile(FileData* file);
 ```
 
-Буфер принадлежит SDL-аллокатору; освобождать только через
-`FileSystem_FreeFile`.
+PC: буфер принадлежит SDL-аллокатору; освобождать только через
+`FileSystem_FreeFile`. Saturn: буфер выделяется из `AssetHeap` (WRAM-H) и
+возвращается туда же; читаются только bare 8.3-имена без `;1`
+(`CUBE.MSH`), host-пути/`..`/`;` отвергаются. Ошибка → `{nullptr, 0}` без
+утечки persistent-памяти. Детали — [`SATURN.md`](SATURN.md) §8.
 
 ## 2. ECS
 

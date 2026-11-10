@@ -17,6 +17,10 @@
 #ifdef PLATFORM_PC
 /// Файловый дескриптор журнала (NULL — логгер не инициализирован).
 static FILE* s_log_file = NULL;
+#elif defined(PLATFORM_SATURN)
+#include "hal/saturn/jo_saturn_bridge.h"
+/// VDP2-текст инициализируется вместе с Jo Engine core.
+static bool s_log_inited = false;
 #endif
 
 bool Log_Init(void)
@@ -29,6 +33,11 @@ bool Log_Init(void)
     }
     s_log_file = fopen(LOG_FILE_NAME, "w");
     return s_log_file != NULL;
+#elif defined(PLATFORM_SATURN)
+    // Saturn: sink — VDP2-строка 27 (NBG0). Файлов/CD-записи нет; после
+    // Platform_Init доступен всегда (строку выводит C-мост).
+    s_log_inited = true;
+    return true;
 #else
     // PS1: файловой подсистемы в MVP нет — Sink отключён; API сохраняет
     // контракт (false — «недоступен») без краша.
@@ -43,6 +52,8 @@ void Log_Shutdown(void)
         fclose(s_log_file);
         s_log_file = NULL;
     }
+#elif defined(PLATFORM_SATURN)
+    s_log_inited = false;
 #endif
 }
 
@@ -98,9 +109,20 @@ void Log_Message(LogLevel level, const char* domain, const char* format, ...)
             (domain != NULL && domain[0] != '\0') ? domain : "?", buffer);
     // Flush каждого сообщения (диагностика сбоев, детерминизм файла).
     fflush(s_log_file);
+#elif defined(PLATFORM_SATURN)
+    if (!s_log_inited) {
+        return; // No-op вне [Init..Shutdown] — контракт log.h.
+    }
+    // Форматирование — в C-мосте через jo_vsnprintf (без newlib/heap),
+    // вывод — VDP2-строка 27.
+    va_list args;
+    va_start(args, format);
+    rpe_saturn_log_write_va((int)level, (domain != nullptr && domain[0] != '\0') ? domain : "?",
+                            format, &args);
+    va_end(args);
 #else
     (void)level;
     (void)domain;
     (void)format;
-#endif // PLATFORM_PC
+#endif
 }

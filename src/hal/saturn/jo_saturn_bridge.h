@@ -12,6 +12,8 @@
 // Мост НЕ является публичным API движка и не входит в hal/platform.h.
 #pragma once
 
+#include <stdarg.h>
+#include <stdbool.h>
 #include <stdint.h>
 
 #ifdef __cplusplus
@@ -39,8 +41,27 @@ enum
 /** Цвет Saturn RGB555 с установленным MSB (формат Jo Engine jo_color). */
 #define RPE_SATURN_COLOR_RGB555 0x8000u
 
-/** Инициализация Jo Engine core (VDP1/VDP2, SMPC, память, VBlank). */
-void rpe_saturn_core_init(uint16_t backdrop_color);
+/** Сырое состояние порта 1 (активные-низкие биты SMPC). */
+typedef struct RpeSaturnPadState
+{
+    uint16_t data;    /**< jo_inputs[0].data: 0 — кнопка нажата. */
+    uint8_t connected;/**< Периферия на порту 1 присутствует. */
+    uint8_t regular;  /**< Тип периферии — RegularGamepad. */
+} RpeSaturnPadState;
+
+/**
+ * Инициализация Jo Engine core (VDP1/VDP2, SMPC, память, VBlank, FS).
+ *
+ * Проверяет результат, который jo_core_init() не возвращает: разрешение
+ * 320×224, NTSC TVSTAT и наличие 0.BIN на CD. При любом несоответствии
+ * выполняет откат (маска прерываний) и возвращает false.
+ *
+ * @return true при успешной инициализации.
+ */
+bool rpe_saturn_core_init(uint16_t backdrop_color);
+
+/** Остановка HAL-прерываний и VDP2-вывода (полного deinit у Jo Engine нет). */
+void rpe_saturn_core_shutdown(void);
 
 /** Бесконечный главный цикл Jo Engine (VBlank sync + callbacks). */
 void rpe_saturn_core_run(void);
@@ -51,8 +72,37 @@ uint32_t rpe_saturn_ticks(void);
 /** Смена однотонного backdrop VDP2 (формат RGB555 + MSB). */
 void rpe_saturn_set_background_color(uint16_t color);
 
-/** Состояние pad 1 (биты RPE_SATURN_PAD_*; 0 — пад отсутствует). */
-uint32_t rpe_saturn_pad_state(void);
+/** Сырое состояние пада порта 1 (данные + флаги типа). */
+RpeSaturnPadState rpe_saturn_pad_read(void);
+
+/**
+ * Регистрация callback'а главного цикла (вызывается до jo_core_run()).
+ *
+ * @return true при успешной регистрации.
+ */
+bool rpe_saturn_add_frame_callback(void (*callback)(void));
+
+/** @return true, если ISO9660-каталог доступен (0.BIN найден). */
+bool rpe_saturn_fs_available(void);
+
+/** @return true и размер файла; имя — bare 8.3 без «;1». */
+bool rpe_saturn_fs_get_size(const char* name, uint32_t* out_size);
+
+/** Точное чтение файла в @p dst (size байт). */
+bool rpe_saturn_fs_read(const char* name, uint8_t* dst, uint32_t size);
+
+/**
+ * Форматирование и вывод строки лога в VDP2-текст (строка 27, NBG0).
+ *
+ * Форматирование выполняет Jo Engine (`jo_vsnprintf`), а не newlib: это
+ * исключает malloc/sbrk из runtime-пути (ADR-007).
+ *
+ * @param level 0 INFO, 1 WARNING, иначе ERROR.
+ * @param domain Короткая метка подсистемы.
+ * @param format printf-подобный формат (NULL → "(null)").
+ * @param args va_list, подготовленный вызывающим (NULL → пустая строка).
+ */
+void rpe_saturn_log_write_va(int level, const char* domain, const char* format, va_list* args);
 
 #ifdef __cplusplus
 }

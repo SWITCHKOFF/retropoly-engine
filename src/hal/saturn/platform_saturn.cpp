@@ -1,23 +1,23 @@
 // SPDX-License-Identifier: MIT
 // RetroPolyEngine — src/hal/saturn/platform_saturn.cpp
 //
-// HAL Saturn (Sega Saturn, Master SH-2) — skeleton Спринта 21–22.
+// HAL Saturn (Sega Saturn, Master SH-2) — lifecycle/input/time (S23–24)
+// + Slave worker init/shutdown (S25–26).
 // Нормативные источники:
-//   - docs/plans/sprint_21_22.md (недели 41–44);
-//   - docs/adr/ADR-008-saturn-backend.md;
+//   - docs/plans/sprint_23_24.md (недели 45–48);
+//   - docs/adr/ADR-007 (no runtime heap), ADR-008 (Saturn backend);
 //   - docs/SATURN.md.
 //
-// Границы v0.2.0 (S21–22): lifecycle + однотонный VDP2 backdrop. VDP1,
-// 3D, ввод, CD-ROM и SCSP реализуются в S23–32. Jo Engine включается ТОЛЬКО
-// через C-мост jo_saturn_bridge.c — SH-2/Jo Engine не попадают в
-// hal/platform.h и остальные C++ translation units.
-//
-// Память: только static storage; new/delete/malloc/free в runtime запрещены
-// (ADR-007). Бюджет и static_asserts — saturn_memory.h.
+// Jo Engine включается ТОЛЬКО через C-мост jo_saturn_bridge.c — SH-2/Jo
+// Engine не попадают в hal/platform.h и остальные C++ translation units.
+// CD-ROM ФС вынесена в filesystem_saturn.cpp, ввод — saturn_input.cpp,
+// арены — saturn_memory.cpp.
 #include "hal/platform.h"
 
 #include "core/log/log.h"
 #include "hal/saturn/jo_saturn_bridge.h"
+#include "hal/saturn/saturn_hal_internal.h"
+#include "hal/saturn/saturn_input.h"
 #include "hal/saturn/saturn_memory.h"
 
 namespace {
@@ -27,43 +27,26 @@ constexpr uint16_t kDefaultBackdrop = static_cast<uint16_t>(RPE_SATURN_COLOR_RGB
 
 bool s_platform_inited = false;
 
-uint32_t pad_button_bit(PadButton button)
+saturn::RawPadState saturn_pad_source(void)
 {
-    switch (button) {
-        case INPUT_PAD_UP:
-            return RPE_SATURN_PAD_UP;
-        case INPUT_PAD_DOWN:
-            return RPE_SATURN_PAD_DOWN;
-        case INPUT_PAD_LEFT:
-            return RPE_SATURN_PAD_LEFT;
-        case INPUT_PAD_RIGHT:
-            return RPE_SATURN_PAD_RIGHT;
-        case INPUT_PAD_CROSS:
-            return RPE_SATURN_PAD_A;
-        case INPUT_PAD_CIRCLE:
-            return RPE_SATURN_PAD_B;
-        case INPUT_PAD_SQUARE:
-            return RPE_SATURN_PAD_C;
-        case INPUT_PAD_TRIANGLE:
-            return RPE_SATURN_PAD_X;
-        case INPUT_PAD_L1:
-            return RPE_SATURN_PAD_Y;
-        case INPUT_PAD_R1:
-            return RPE_SATURN_PAD_Z;
-        case INPUT_PAD_L2:
-            return RPE_SATURN_PAD_L;
-        case INPUT_PAD_R2:
-            return RPE_SATURN_PAD_R;
-        case INPUT_PAD_START:
-            return RPE_SATURN_PAD_START;
-        case INPUT_PAD_SELECT:  // 6-button Saturn pad не имеет Select.
-        case INPUT_PAD_COUNT:
-        default:
-            return 0u;
-    }
+    const RpeSaturnPadState raw = rpe_saturn_pad_read();
+    saturn::RawPadState state;
+    state.data = raw.data;
+    state.connected = raw.connected;
+    state.regular = raw.regular;
+    return state;
 }
 
 }  // namespace
+
+namespace saturn {
+
+bool platform_ready(void)
+{
+    return s_platform_inited;
+}
+
+}  // namespace saturn
 
 // ---------------------------------------------------------------------------
 // Platform lifecycle
@@ -75,13 +58,35 @@ bool Platform_Init(void)
         return true;
     }
 
-    // Jo Engine core: сброс VDP1/VDP2, 320x224 NTSC, SMPC/пады, VBlank,
-    // jo_malloc-арена. Ошибок возврата нет: при сбое Jo Engine показывает
-    // собственный error screen (JO_DEBUG=0 в release — без текста).
-    rpe_saturn_core_init(kDefaultBackdrop);
+    // Jo Engine core: VDP1/VDP2, 320x224 NTSC, SMPC/пады, VBlank, FS, heap.
+    // Мост проверяет наблюдаемые инварианты (release не возвращает статус).
+    if (!rpe_saturn_core_init(kDefaultBackdrop)) {
+        // VDP2-лог ещё недоступен: core не инициализирован.
+        return false;
+    }
+
+    Log_Init();  // Saturn sink всегда доступен (VDP2 text row 27).
+
+    if (!saturn::memory_init()) {
+        Log_Message(LOG_LEVEL_ERROR, "saturn_hal", "platform init failed: memory arenas");
+        Log_Shutdown();
+        rpe_saturn_core_shutdown();
+        return false;
+    }
+
+    saturn::input_init(&saturn_pad_source);
+
+    if (!saturn::filesystem_init()) {
+        Log_Message(LOG_LEVEL_ERROR, "saturn_hal", "platform init failed: CD-ROM filesystem");
+        saturn::input_shutdown();
+        saturn::memory_shutdown();
+        Log_Shutdown();
+        rpe_saturn_core_shutdown();
+        return false;
+    }
 
     s_platform_inited = true;
-    Log_Message(LOG_LEVEL_INFO, "saturn_hal", "platform init: VDP2 backdrop 320x224x60");
+    Log_Message(LOG_LEVEL_INFO, "saturn_hal", "platform init: 320x224 NTSC, pad + ISO9660 ready");
     return true;
 }
 
@@ -91,39 +96,49 @@ void Platform_Shutdown(void)
         return;
     }
     s_platform_inited = false;
+
+    Log_Message(LOG_LEVEL_INFO, "saturn_hal", "platform shutdown");
+    saturn::filesystem_shutdown();
+    saturn::input_shutdown();
+    saturn::memory_shutdown();
     Log_Shutdown();
+    rpe_saturn_core_shutdown();
 }
 
 bool Platform_PumpEvents(void)
 {
-    // jo_core_run() сам опрашивает SMPC/VBlank; отдельной очереди событий нет.
+    if (!s_platform_inited) {
+        return true;
+    }
+    // Ровно один опрос пада за кадр; HAL-запросы читают защёлку.
+    saturn::input_poll();
     return true;
 }
 
 void Platform_SwapBuffers(void)
 {
     // Владение кадром/переключением VDP1-VDP2 — jo_core_run() (__jo_core_synch).
-    // До S23–24 HAL не имеет собственного main loop и не дублирует sync.
+    // HAL не дублирует sync; VDP1-рендер появится в S27–28.
 }
 
 void Platform_SleepMs(uint32_t ms)
 {
-    if (ms == 0u) {
+    if (ms == 0u || !s_platform_inited) {
         return;
     }
     const uint32_t start = rpe_saturn_ticks();
     while (static_cast<uint32_t>(rpe_saturn_ticks() - start) < ms) {
-        // busy-wait: таймерного IRQ-контракта в skeleton нет.
+        // busy-wait: отдельного таймерного IRQ-контракта нет.
     }
 }
 
 uint32_t Platform_GetTimeMs(void)
 {
-    return rpe_saturn_ticks();
+    return s_platform_inited ? rpe_saturn_ticks() : 0u;
 }
 
 // ---------------------------------------------------------------------------
-// Input (6-button pad; state обновляет Jo Engine в VBlank)
+// Input (6-button pad; защёлка обновляется в Platform_PumpEvents)
 // ---------------------------------------------------------------------------
 
 bool Input_IsKeyDown(KeyCode key)
@@ -134,11 +149,7 @@ bool Input_IsKeyDown(KeyCode key)
 
 bool Input_IsPadButtonDown(uint32_t pad_index, PadButton button)
 {
-    if (pad_index != 0u) {
-        return false;
-    }
-    const uint32_t bit = pad_button_bit(button);
-    return bit != 0u && (rpe_saturn_pad_state() & bit) != 0u;
+    return saturn::input_pad_button_down(pad_index, button);
 }
 
 int16_t Input_GetPadAxis(uint32_t pad_index, uint32_t axis)
@@ -151,7 +162,7 @@ int16_t Input_GetPadAxis(uint32_t pad_index, uint32_t axis)
 bool Input_SetMouseRelativeMode(bool enable)
 {
     (void)enable;
-    return false;  // Saturn mouse — вне scope S21–22.
+    return false;  // Saturn mouse — вне scope v0.2.0.
 }
 
 void Input_GetMouseDelta(int32_t* out_dx, int32_t* out_dy)
@@ -181,25 +192,6 @@ void Audio_PlayBeep(uint32_t frequency, uint32_t duration_ms)
 {
     (void)frequency;
     (void)duration_ms;
-}
-
-// ---------------------------------------------------------------------------
-// FileSystem (ISO9660 read-only — S23–24)
-// ---------------------------------------------------------------------------
-
-FileData FileSystem_LoadFile(const char* path)
-{
-    (void)path;
-    FileData empty = {nullptr, 0u};
-    return empty;
-}
-
-void FileSystem_FreeFile(FileData* file)
-{
-    if (file != nullptr) {
-        file->data = nullptr;
-        file->size = 0u;
-    }
 }
 
 // ---------------------------------------------------------------------------
