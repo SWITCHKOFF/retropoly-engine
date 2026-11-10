@@ -1,12 +1,13 @@
 # Sega Saturn — платформа, toolchain и контракты v0.2.0
 
-> Статус: **S21–22 (недели 41–44) — локальный gate закрыт**.
+> Статус: **S21–22 (недели 41–44) — gate закрыт**.
 > `saturn-release` собирается с чистого checkout + pinned Jo Engine v2026.2;
 > bootable ISO/CUE + IP.BIN + ELF/raw/map проходят структурные проверки.
 > Ручной 60-секундный smoke в Mednafen 1.32.1 с легальным Japanese BIOS
 > (1.01) пройден: VDP2 backdrop виден, краша нет; скриншот —
 > [`../screenshots/saturn_backdrop.png`](../screenshots/saturn_backdrop.png).
-> CI на удалённом runner ещё не прогонялся. 3D/VDP1/VDP2-контент — S27–32.
+> CI `build-saturn.yml` зелёный (run 42794098944). 3D/VDP1/VDP2-контент —
+> S27–32.
 >
 > Нормативные решения: [`adr/ADR-008-saturn-backend.md`](adr/ADR-008-saturn-backend.md).
 > План: [`plans/sprint_21_22.md`](plans/sprint_21_22.md).

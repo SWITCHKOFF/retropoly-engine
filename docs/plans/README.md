@@ -34,12 +34,12 @@
 | [sprint_31_32.md](sprint_31_32.md) | 31–32 | 61–64 | 03.01–30.01.2028 | v0.2.0 | Hello Triangle на Saturn + релиз | 52.5 ч |
 
 > Статус S21–22 (2026-11-10): research/toolchain/preset/HAL skeleton/CI/docs
-> выполнены; `saturn-release` и bootable ISO собираются локально; добавлен
-> fallback `tools/saturn_mkiso.py` для систем без `genisoimage`. PC-debug
-> 177/177 passed, PC-release и `ps1-release` собираются. Ручной
-> 60-секундный smoke в Mednafen 1.32.1 с Japanese BIOS 1.01 пройден
-> (backdrop виден, краша нет; `screenshots/saturn_backdrop.png`).
-> Удалённый CI workflow добавлен, но ещё не прогнан.
+> выполнены; `saturn-release` и bootable ISO собираются; добавлен fallback
+> `tools/saturn_mkiso.py` для систем без `genisoimage`. PC-debug 177/177
+> passed, PC-release и `ps1-release` собираются. Ручной 60-секундный smoke
+> в Mednafen 1.32.1 с Japanese BIOS 1.01 пройден (backdrop виден, краша
+> нет; `screenshots/saturn_backdrop.png`). CI `build-saturn.yml` зелёный
+> (run 42794098944); `build-pc`, `build-ps1`, `tests` — success.
 
 Следующие итерации (N64 v0.3.0, Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 6–8 / 4–6 / 4–6 / 8–12 спринтов. Их детальные файлы создаются после приёмки v0.2.0, когда будут известны фактические темп и ограничения Saturn-toolchain.
 

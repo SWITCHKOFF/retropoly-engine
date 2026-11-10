@@ -3,14 +3,14 @@
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§13).
 > Источник задач: [`RetroEngine_Engineering_Documentation_v1.43.md`](../RetroEngine_Engineering_Documentation_v1.43.md) §4 «Будущие итерации» — Saturn, S21–32.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-10):** S21–22 локально завершён. Research/toolchain/
-> skeleton/CI/docs выполнены; `saturn-release` собирается с чистого checkout
-> + pinned Jo Engine v2026.2; добавлен fallback `tools/saturn_mkiso.py` для
+> **Статус (2026-11-10):** S21–22 завершён. Research/toolchain/skeleton/
+> CI/docs выполнены; `saturn-release` собирается с чистого checkout +
+> pinned Jo Engine v2026.2; добавлен fallback `tools/saturn_mkiso.py` для
 > систем без `genisoimage`. PC-debug: 177/177 passed; PC-release и
 > `ps1-release` собираются. Ручной 60-секундный smoke в Mednafen 1.32.1 с
 > Japanese BIOS 1.01 пройден: VDP2 backdrop виден, краша нет; скриншот —
-> `screenshots/saturn_backdrop.png`. GitHub Actions workflow добавлен, но
-> удалённый runner ещё не прогонялся.
+> `screenshots/saturn_backdrop.png`. GitHub Actions `build-saturn.yml`
+> зелёный (run 42794098944); `build-pc`, `build-ps1`, `tests` — success.
 
 ## Карточка спринта
 
@@ -65,8 +65,8 @@
   — **выполнено 2026-11-10:** Mednafen 1.32.1 + Japanese BIOS 1.01; backdrop виден, `timeout 60` без краша, скриншот `screenshots/saturn_backdrop.png`.
 - [x] [B] Проверить, что `pc-debug`, `pc-release`, `pc-debug-render`, `ps1-release` не регрессировали (PC: 177/177 passed; `ps1-release` собран с PSn00bSDK v0.24: PS-EXE 110 592 Б, ISO 533 904 Б)
 - [x] [B] Документация: `docs/SATURN.md`, `docs/BUILDING.md` (toolchain/preset/эмулятор/fallback ISO), `docs/LEGAL.md` (Jo Engine/MIT и toolchain), `VERSION.txt`, `CHANGELOG.md` [Unreleased]
-- [ ] [B] Гейт выхода: чистый checkout собирает `saturn-release`; CI зелёный; skeleton загружается в эмуляторе; ADR-008 принят
-  — **локально — да:** чистый checkout/preset/ADR-008, сборка + структурные проверки, smoke в Mednafen; остаётся только прогон `build-saturn.yml` на GitHub runner.
+- [x] [B] Гейт выхода: чистый checkout собирает `saturn-release`; CI зелёный; skeleton загружается в эмуляторе; ADR-008 принят
+  — **выполнено:** чистый checkout/preset/ADR-008, сборка + структурные проверки, smoke в Mednafen; `build-saturn.yml` зелёный на GitHub runner (run 42794098944); PC/PS1 CI — success.
 
 ## Критерии приёмки спринта 21–22
 
@@ -74,8 +74,8 @@
   (локально проверено: полный `build/saturn-release` с `JO_ENGINE_ROOT`; добавлен fallback `tools/saturn_mkiso.py` для систем без `genisoimage`)
 - [x] Saturn-бинарник загружается в pinned-эмуляторе, backdrop виден, 60 с без краша
   — **выполнено:** Mednafen 1.32.1 + Japanese BIOS 1.01, `timeout 60` без краша; скриншот `screenshots/saturn_backdrop.png`; чек-лист `docs/SATURN.md` §9.
-- [ ] CI `build-saturn.yml` зелёный; PC/PS1 сборки и тесты не затронуты
-  — workflow добавлен; локально PC-debug 177/177 passed, PC-release/pc-debug-render собираются, `ps1-release` собран с PSn00bSDK v0.24; удалённый CI ещё не запускался.
+- [x] CI `build-saturn.yml` зелёный; PC/PS1 сборки и тесты не затронуты
+  — `build-saturn` success (run 42794098944); `build-pc`, `build-ps1`, `tests` — success; локально PC-debug 177/177, PC-release/pc-debug-render собираются.
 - [x] ADR-008 фиксирует toolchain, эмулятор, разрешение, бюджет памяти и высокоуровневую политику triangle→quad
 - [x] `docs/SATURN.md` содержит проверенные первоисточники и явно отделяет reference-факты от нормативных контрактов
 

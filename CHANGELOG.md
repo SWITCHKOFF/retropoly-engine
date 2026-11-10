@@ -41,8 +41,8 @@
   `ps1-release` (PSn00bSDK v0.24: PS-EXE 110 592 Б, ISO 533 904 Б)
   собираются. Ручной 60-секундный smoke в Mednafen 1.32.1 с легальным
   Japanese BIOS 1.01 пройден: VDP2 backdrop 320×224 виден, краша нет;
-  скриншот `screenshots/saturn_backdrop.png`. Удалённый CI
-  `build-saturn.yml` ещё не прогонялся.
+  скриншот `screenshots/saturn_backdrop.png`. CI `build-saturn.yml`
+  зелёный (run 42794098944); `build-pc`, `build-ps1`, `tests` — success.
 
 ## [0.1.0] — 2026-11-09
 
