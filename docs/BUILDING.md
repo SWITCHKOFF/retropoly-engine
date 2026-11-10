@@ -122,7 +122,10 @@ git submodule update --init --recursive
 | `pc-bench` | PC | OFF | OFF | google/benchmark |
 | `pc-coverage` | PC | ON | OFF | lcov покрытие |
 | `ps1-release` | PS1 | OFF | OFF | Кросс-сборка PS-EXE + CD-образ |
-| `saturn-release` | Saturn | OFF | OFF | SH-2 ELF + bootable ISO/CUE (Jo Engine) |
+| `saturn-release` | Saturn | OFF | OFF | SH-2 ELF + bootable ISO/CUE (Jo Engine), dual-CPU |
+| `saturn-single` | Saturn | OFF | OFF | S25–26 single-CPU fallback (`RPE_SATURN_DUAL_CPU=OFF`) |
+| `saturn-hang` | Saturn | OFF | OFF | S25–26 fault injection: Slave зависает |
+| `saturn-flood` | Saturn | OFF | OFF | S25–26 fault injection: переполнение очереди |
 
 ## Сборка PC
 
@@ -196,21 +199,69 @@ cmake --build --preset saturn-release
 - `build/saturn-release/src/hal/saturn/IP.BIN`
 - `build/saturn-release/src/hal/saturn/retro_saturn.map`
 
+В `disc/` автоматически копируются CD-ассеты под bare 8.3-именами:
+`CUBE.MSH`, `TRIANGLE.MSH`, `TEXTURE.TEX`, `TEX0.TEX`…`TEX3.TEX`. HAL
+принимает только такие имена без `;1` (`src/hal/saturn/saturn_fs_path.h`).
+
 CI: `.github/workflows/build-saturn.yml` — pinned commit, sha256
-компилятора, build, структурная валидация ISO/ELF, artifact
-`retro-saturn-disc`. Эмулятор в CI не запускается (BIOS не вендорится).
+компилятора, build, структурная валидация ISO/ELF + наличие и байтовое
+совпадение `.mesh`/`.tex`, artifact `retro-saturn-disc`. Эмулятор в CI не
+запускается (BIOS не вендорится).
+
+Saturn HAL host-тесты (без BIOS/эмулятора):
+
+```sh
+cmake --preset pc-debug
+cmake --build build/pc-debug --target saturn_hal_tests
+ctest --test-dir build/pc-debug -R 'Saturn|AssetHeap' --output-on-failure
+```
+
+Цель компилирует `src/hal/saturn/*` host-компилятором с `PLATFORM_SATURN=1`
+и fake C-мостом (`tests/saturn/fake_saturn_bridge.cpp`); SH-2/Jo Engine не
+нужны.
 
 ### Запуск Saturn-образа в Mednafen 1.32.1
 
 ```sh
-mednafen -ss.bios_na_eu /path/to/mpr-17933.bin \
+mednafen -ss.bios_jp /path/to/sega_101.bin \
+  -ss.region_autodetect 0 -ss.region_default jp \
   build/saturn-release/src/hal/saturn/retro_saturn.cue
 ```
 
 BIOS (`mpr-17933.bin` NA/EU или `sega_101.bin` JP) пользователь
 предоставляет локально; в репозиторий/CI он не попадает. Smoke-тест:
-backdrop 320×224, 60 секунд без краша. Полный чек-лист и настройки —
-[`SATURN.md`](SATURN.md) §9.
+тёмно-синий clear 320×224 (`0x9000`), строка 27 с логом
+`[INFO][asset] CD mesh=1 tex=1 heap=65560`, 5 минут S23–24 и 10 минут
+S25–26 без краша. 6-button pad (D-pad, A/B/C, X/Y/Z, L/R, Start) мапится
+в `INPUT_PAD_*`; SMPC-порт настраивается `ss.input.port1=gamepad`,
+mapping/latch/disconnect покрыты host-тестами. Полный чек-лист и
+настройки — [`SATURN.md`](SATURN.md) §9 и §11.
+
+### Варианты Saturn-сборки (S25–26)
+
+Канонический `saturn-release` — dual-CPU. Опции:
+
+| Опция | Значения | Назначение |
+|---|---|---|
+| `RPE_SATURN_DUAL_CPU` | `ON`/`OFF` | `OFF` — single-CPU fallback (нет `slave.c`/`JO_COMPILE_WITH_DUAL_CPU_SUPPORT`) |
+| `RPE_SATURN_FAULT_MODE` | `none`/`hang`/`flood` | fault injection для ручной приёмки |
+
+```sh
+# single-CPU fallback
+cmake --preset saturn-single
+cmake --build --preset saturn-single
+
+# Slave зависает на следующем job
+cmake --preset saturn-hang
+cmake --build --preset saturn-hang
+
+# переполнение очереди (boot-проба)
+cmake --preset saturn-flood
+cmake --build --preset saturn-flood
+```
+
+Метрики S25–26, порог и ручной чек-лист — [`SATURN.md`](SATURN.md) §11,
+нормативное решение — [`adr/ADR-009-master-slave.md`](adr/ADR-009-master-slave.md).
 
 ## Частые проблемы
 

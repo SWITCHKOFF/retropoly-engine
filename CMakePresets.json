@@ -79,6 +79,30 @@
         "PLATFORM_SATURN": "ON",
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "saturn-single",
+      "inherits": "saturn-release",
+      "binaryDir": "${sourceDir}/build/saturn-single",
+      "cacheVariables": {
+        "RPE_SATURN_DUAL_CPU": "OFF"
+      }
+    },
+    {
+      "name": "saturn-hang",
+      "inherits": "saturn-release",
+      "binaryDir": "${sourceDir}/build/saturn-hang",
+      "cacheVariables": {
+        "RPE_SATURN_FAULT_MODE": "hang"
+      }
+    },
+    {
+      "name": "saturn-flood",
+      "inherits": "saturn-release",
+      "binaryDir": "${sourceDir}/build/saturn-flood",
+      "cacheVariables": {
+        "RPE_SATURN_FAULT_MODE": "flood"
+      }
     }
   ],
   "buildPresets": [
@@ -89,7 +113,10 @@
     { "name": "pc-bench", "configurePreset": "pc-bench" },
     { "name": "pc-coverage", "configurePreset": "pc-coverage" },
     { "name": "ps1-release", "configurePreset": "ps1-release" },
-    { "name": "saturn-release", "configurePreset": "saturn-release" }
+    { "name": "saturn-release", "configurePreset": "saturn-release" },
+    { "name": "saturn-single", "configurePreset": "saturn-single" },
+    { "name": "saturn-hang", "configurePreset": "saturn-hang" },
+    { "name": "saturn-flood", "configurePreset": "saturn-flood" }
   ],
   "testPresets": [
     { "name": "pc-debug", "configurePreset": "pc-debug", "output": { "outputOnFailure": true } },

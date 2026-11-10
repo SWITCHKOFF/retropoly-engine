@@ -206,5 +206,18 @@ assets/source/texture.png ──asset_converter──▶ assets/build/texture.te
 - Потолок `.tex` 256×256 — **engine policy** asset-pipeline, а не
   hardware maximum VDP1 (см. `docs/SATURN.md` §2). Отдельный Saturn-формат
   вводится только через новый ADR; v1 не ломается.
-- Имена файлов на CD — ISO9660 8.3 upper-case (`CUBE.MSH`, `TEX0.TEX;1`);
-  host-пути запрещены. Детали — `docs/SATURN.md` §8.
+- Имена файлов на CD — ISO9660 8.3 upper-case. HAL получает **bare-имена
+  без `;1`** (`CUBE.MSH`, `TEX0.TEX`); строчные нормализуются в upper-case,
+  host-пути/`..`/`;`/wildcard'ы отвергаются. Детали — `docs/SATURN.md` §8.
+- Карта образа v0.2.0: `assets/build/cube.mesh → CUBE.MSH`,
+  `triangle.mesh → TRIANGLE.MSH`, `texture.tex → TEXTURE.TEX`,
+  `texture_{0..3}.tex → TEX{0..3}.TEX`; копирование выполняет
+  `src/hal/saturn/CMakeLists.txt`, CI сверяет байты.
+- Загрузка: размер → `AssetHeap` (Work RAM-L, 932 KiB) → точное чтение
+  секторами 2048 Б → валидация `.mesh`/`.tex` во временной арене. Ошибка
+  чтения/валидации освобождает буфер (0 байт persistent-памяти). Boot
+  self-test читает `CUBE.MSH` + `TEX0.TEX`, логирует размер/FNV-1a.
+  С S25–26 `CUBE.MSH` остаётся в отдельной persistent-арене 64 KiB и служит
+  входом параллельного workload; `TEX0.TEX` валидируется во временной арене
+  и освобождается. Asset heap уменьшен до 932 KiB, чтобы выделить 28 KiB
+  shared-региона Master/Slave (см. `docs/SATURN.md` §2.1.1/§11).

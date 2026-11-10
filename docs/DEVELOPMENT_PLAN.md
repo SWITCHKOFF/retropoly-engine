@@ -422,12 +422,20 @@ gantt
 | [plans/sprint_29_30.md](plans/sprint_29_30.md) | 29–30 | 57–60 | 06.12.2027–02.01.2028 | VDP2: фоны, композитинг, синхронизация | 55.8 ч |
 | [plans/sprint_31_32.md](plans/sprint_31_32.md) | 31–32 | 61–64 | 03.01–30.01.2028 | Hello Triangle на Saturn + релиз v0.2.0 | 52.5 ч |
 
-> Статус S21–22 (2026-11-09): research/toolchain/preset/HAL skeleton/CI/docs
-> выполнены; ADR-008 — [`adr/ADR-008-saturn-backend.md`](adr/ADR-008-saturn-backend.md).
-> `saturn-release` и bootable ISO собираются локально с pinned Jo Engine
-> v2026.2. Ручной 60-секундный smoke в Mednafen заблокирован отсутствием
-> легального BIOS; workflow `build-saturn.yml` ещё не прогнан на удалённом
-> runner.
+> Статус S21–26 (2026-11-10): S21–22 (toolchain/preset/HAL skeleton/CI/docs)
+> закрыт, ADR-008 — [`adr/ADR-008-saturn-backend.md`](adr/ADR-008-saturn-backend.md).
+> S23–24 — HAL Master SH-2: идемпотентный lifecycle/rollback, 6-button pad,
+> read-only ISO9660 FS (asset heap 932 KiB + frame/command/parallel арены),
+> VDP2 clear/log и CD-asset boot self-test. S25–26 — Master + Slave SH-2:
+> `scu_sync`/`slave_worker`, SPSC-очередь 8, bounded wait, single-CPU
+> fallback, fault injection, clip-space workload 256 треугольников;
+> ADR-009 — [`adr/ADR-009-master-slave.md`](adr/ADR-009-master-slave.md).
+> host-тесты `saturn_hal_tests` (63) в `tests.yml`; `build-saturn.yml`
+> проверяет `.mesh`/`.tex` в ISO и собирает `saturn-single/hang/flood`.
+> 5-минутный smoke S23–24 и 10-минутный stress S25–26 в Mednafen 1.32.1 с
+> легальным Japanese BIOS 1.01 пройдены; скриншоты
+> `screenshots/saturn_clear_s23_24.png`, `screenshots/saturn_dual_cpu_s25_26.png`.
+> VDP1/3D — S27–28.
 
 Σ E ≈ 335 ч. При 10–15 ч/нед 24 недели дают 240–360 ч: план сходится только у верхней границы темпа; 95%-сценарий (≈ 425 ч) требует recovery-недель или scope reduction.
 

@@ -35,6 +35,20 @@ extern RpeSaturnPadState pad;
 extern int pad_read_calls;
 extern uint32_t ticks;
 
+// --- S25–26: fake Master+Slave ---------------------------------------------
+extern bool slave_available;
+extern bool slave_post_result;
+extern bool slave_execute_posted;
+extern int slave_post_calls;
+extern uint16_t frt_ticks;
+extern uint16_t frt_step;
+extern int cpu_relax_calls;
+extern int cache_purge_calls;
+extern int cache_through_calls;
+
+/** Выполнить накопленные callback'и (когда slave_execute_posted == false). */
+void run_posted_callbacks(void);
+
 extern int log_calls;
 extern int last_log_level;
 extern std::string last_log_domain;

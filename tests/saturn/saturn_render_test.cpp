@@ -11,6 +11,7 @@
 #include "hal/saturn/saturn_input.h"
 #include "hal/saturn/saturn_memory.h"
 #include "hal/saturn/saturn_render_utils.h"
+#include "hal/saturn/slave_worker.h"
 #include "render/renderer.h"
 #include "tests/saturn/fake_saturn_bridge.h"
 
@@ -23,6 +24,7 @@ protected:
     void SetUp() override
     {
         fake_saturn::reset();
+        saturn::slave_worker_test_reset();
         saturn::fs_shutdown();
         saturn::input_shutdown();
         saturn::memory_shutdown();

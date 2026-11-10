@@ -1,0 +1,157 @@
+# SPDX-License-Identifier: MIT
+# RetroPolyEngine — docs/benchmarks/saturn_reference_environment.yaml
+#
+# Снапшот окружения и результатов S25–26 (Master + Slave SH-2).
+# НАЗНАЧЕНИЕ: числа Saturn-замеров сравнимы только внутри этого снапшота;
+# при смене эмулятора/настроек/железа — новый снапшот, а не «поправка».
+#
+# Нормативные документы:
+#   - docs/plans/sprint_25_26.md (недели 49–52);
+#   - docs/adr/ADR-009-master-slave.md (методика и порог);
+#   - docs/SATURN.md §11 (метрики, ручной чек-лист).
+#
+# Поля: emulator/build/workload/results/host/notes.
+
+schema: saturn-reference-v1
+date: 2026-11-10
+sprint: S25–26
+
+scope_note: >-
+  Эмулятор запускается вручную; BIOS не вендорится. Числа — Mednafen,
+  не real-hardware performance.
+
+emulator:
+  name: Mednafen
+  version: 1.32.1
+  build: >-
+    source tarball mednafen-1.32.1.tar.xz, собран локально GCC 15.2.0;
+    video driver Software SDL; fullscreen 1920x988 (Destination 1208x960)
+  bios: >-
+    Sega Saturn BIOS (J) 1.01, /home/switchkoff/Загрузки/
+    Sega Saturn BIOS (J) (1.01).bin (524288 bytes); BIOS не входит в
+    репозиторий/CI/артефакты
+  settings:
+    ss.bios_jp: "<user-provided sega_101.bin>"
+    ss.bios_sanity: 1
+    ss.region_autodetect: 0
+    ss.region_default: jp
+    ss.correct_aspect: 1
+    ss.h_overscan: 1
+    ss.h_blend: 0
+    ss.cart: none
+    ss.input.port1: gamepad
+    sound: disabled (-sound 0)
+  command: >-
+    mednafen -video.fs 1 -ss.bios_jp "<bios>" -ss.region_autodetect 0
+    -ss.region_default jp -sound 0 build/saturn-release/src/hal/saturn/retro_saturn.cue
+
+build:
+  preset: saturn-release
+  platform: PLATFORM_SATURN
+  dual_cpu: true
+  fault_mode: none
+  toolchain: >-
+    Jo Engine v2026.2 (commit 5e99944238030821a48e17a40abefd77e81953c2),
+    bundled sh-none-elf-gcc 8.2.0; JO_COMPILE_WITH_DUAL_CPU_SUPPORT=1
+  git_revision: >-
+    c7c12f9 (develop) + локальные изменения S23–26; дерево на 2026-11-10
+  map: >-
+    __jo_work_end = 0x060F23F8 < 0x060FBC00 (master stack); запас ≈38 KiB
+  elf_raw_bytes: 115400
+  iso_bytes: 514048
+
+workload:
+  name: clip-space triangle prep (future VDP1 command list)
+  source_mesh: CUBE.MSH (CD, ISO9660)
+  triangles_total: 256
+  triangles_master: 128
+  triangles_slave: 128
+  math: fixed 16.16, 32x32->64 (dmulu.l), no division
+  output_record: "PreparedTriangle (8 bytes: FNV hash, depth, flags)"
+  split: deterministic by triangle index
+  frame_timeout_ms: 20
+  benchmark_iterations: 3
+  benchmark_metric: >-
+    boot: [INFO][par] 1=<single µs> 2=<dual µs> g=<speedup %> h=<hash match>
+  frame_metric: >-
+    [INFO][par] f=<frames>c=<completed jobs>w=<wait µs>h=<hash24>
+    (без пробелов, чтобы hash24 помещался в 40 колонок VDP2)
+
+results:
+  benchmark:
+    single_cpu_us: 23838
+    dual_cpu_us: 16113
+    speedup_pct: 32
+    threshold_pct: 15
+    hashes_match: true
+    slave_used: true
+    iterations: 3
+  frame:
+    observed_frames: 1500
+    observed_completed_jobs: 1503
+    wait_us: 4007
+    hash24: af890f
+    approx_fps: 50-60
+  cpu_utilization:
+    interpretation: >-
+      Master busy ≈ dual_us − wait_us ≈ 12.1 ms; Slave busy ≈ dual_us ≈
+      16.1 ms; Master ждёт Slave ≈4.0 мс. Оба CPU задействованы; wait/Frame
+      ≈24%. Это оценка по benchmark/wait, а не счётчик инструкций.
+  determinism:
+    single_vs_dual_hash: match
+    repeat_runs_hash24: af890f (совпал между прогонами)
+  stress_600s:
+    status: PASS
+    command: "timeout 640 mednafen ... retro_saturn.cue"
+    exit_code: 124
+    deadlock_or_hang: false
+    frame_time_stable: true
+    observed_frames_mid: 12300
+    observed_completed_jobs_mid: 12303
+    wait_us_mid: 4035
+    hash24_mid: af890f
+    mid_run_screenshot: screenshots/saturn_stress_s25_26.png
+    note: >-
+      Процесс дожил до SIGTERM (timeout) после 640 с; VDP2-строка
+      обновлялась, hash не менялся. Скриншот середины прогона
+      (screenshots/saturn_stress_s25_26.png) — f=12300c=12303w=4035h=af890f.
+      End-screen кадр перекрыт системным окном; факт stress подтверждён
+      exit=124 и полным временем жизни процесса. Дополнительно —
+      screenshots/saturn_dual_cpu_s25_26.png (benchmark),
+      screenshots/saturn_dual_metrics_s25_26.png (f=1500c=1503w=4007h=af890f).
+  fault_injection:
+    single_cpu:
+      build: saturn-single (RPE_SATURN_DUAL_CPU=OFF)
+      observed: "[WARNING][par] 1=23888 2=n/a h=1"
+      master_continued: true
+    hang:
+      build: saturn-hang (RPE_SATURN_FAULT_MODE=hang)
+      observed: "[ERROR][scu] slave failed: wait timeout"
+      master_continued: true
+    flood:
+      build: saturn-flood (RPE_SATURN_FAULT_MODE=flood)
+      observed: "flood overflows=1"
+      worker_state_after: READY
+    host_tests:
+      target: saturn_hal_tests
+      cases: 63
+      result: PASS
+
+host:
+  os: >-
+    Freedesktop SDK 25.08 (Flatpak runtime), Linux 7.0.0-42 x86_64
+  cpu: >-
+    Intel Core i5-11300H (11th Gen, Tiger Lake-H35, 4C/8T @ 3.10–4.40 GHz)
+  cmake: 4.4.4
+  ninja: 1.13.2
+  gcc_host: 15.2.0
+
+notes: |-
+  Методика (ADR-009): один и тот же MVP, один и тот же вход; single-CPU
+  прогоняет обе половины на Master, dual — вторую половину на Slave;
+  время — FRT (1 tick ≈ 1.19 µs), 3 прогона, среднее. Порог ≥15% выигрыша.
+  S25–26 использует Jo Engine slave.c/FRT wake-up и cache-through shared
+  память; jo_core_wait_for_slave() не вызывается (нет таймаута). Числа
+  действительны только для этого Mednafen/BIOS/host снапшота; real
+  hardware может отличаться. BIOS не публикуется; скриншоты — в
+  screenshots/.

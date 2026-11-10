@@ -89,6 +89,8 @@ sha256_manifest = ci/joengine-v2026.2.sha256
 note        = pinned по immutable tag/commit; обновление Jo Engine/компилятора =
               отдельная задача с ADR. Полный checkout обязателен: Compiler/LINUX,
               Compiler/COMMON, Compiler/WINDOWS/sh-elf/include, jo_engine.
+              S25–26 dual-CPU использует jo_engine/slave.c + FRT wake-up
+              (JO_COMPILE_WITH_DUAL_CPU_SUPPORT=1); отдельный SDK не нужен.
 
 [joengine-toolchain-linux]
 prefix      = Compiler/LINUX/bin/sh-none-elf-gcc-8.2.0
@@ -108,5 +110,7 @@ license     = GPL-2.0-or-later
 path        = env-install (ручная приёмка; в репозиторий/CI не вендорится)
 bios        = НЕ вендорится и НЕ публикуется; ss.bios_na_eu / ss.bios_jp задаёт
               пользователь локально (docs/SATURN.md)
-note        = pinned для ручного smoke-теста S21–22 (60 с, backdrop); CI
-              собирает образ, но не запускает эмулятор.
+note        = pinned для ручного smoke-теста S23–26 (5 мин S23–24:
+              VDP2 clear + CD self-test .mesh/.tex; 10 мин S25–26: dual-CPU
+              workload, fallback, determinism). CI собирает образ, но не
+              запускает эмулятор.

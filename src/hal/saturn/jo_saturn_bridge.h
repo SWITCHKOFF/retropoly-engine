@@ -82,6 +82,45 @@ RpeSaturnPadState rpe_saturn_pad_read(void);
  */
 bool rpe_saturn_add_frame_callback(void (*callback)(void));
 
+// ---------------------------------------------------------------------------
+// Master + Slave SH-2 (S25–26)
+// ---------------------------------------------------------------------------
+
+/**
+ * @return true, если Saturn собран с dual-CPU и Slave реально стартовал.
+ *
+ * Jo Engine запускает Slave внутри jo_core_init(); без
+ * JO_COMPILE_WITH_DUAL_CPU_SUPPORT функция всегда возвращает false.
+ */
+bool rpe_saturn_slave_available(void);
+
+/**
+ * Постановка callback'а в очередь Jo Engine, исполняемую Slave SH-2.
+ *
+ * Callback вызывается один раз на Slave; если Slave не стартовал,
+ * возвращается false и callback НЕ выполняется на Master (в отличие от
+ * jo_core_exec_on_slave()).
+ *
+ * @param callback Функция без аргументов (C-linkage).
+ * @return true, если job поставлен в очередь.
+ */
+bool rpe_saturn_slave_post(void (*callback)(void));
+
+/** Cache-through alias адреса для обмена данными между CPU (SH-2). */
+void* rpe_saturn_cache_through(const void* pointer);
+
+/** Сброс/invalidate кэша текущего SH-2 (на host — no-op). */
+void rpe_saturn_cache_purge(void);
+
+/** Показания Free Running Timer текущего CPU (1 tick = 32 такта). */
+uint16_t rpe_saturn_frt_ticks(void);
+
+/** Перевод ticks FRT в микросекунды для target 320×224 NTSC. */
+uint32_t rpe_saturn_frt_ticks_to_us(uint16_t ticks);
+
+/** Пауза busy-wait без обращения к внешней шине (деление SH-2). */
+void rpe_saturn_cpu_relax(void);
+
 /** @return true, если ISO9660-каталог доступен (0.BIN найден). */
 bool rpe_saturn_fs_available(void);
 

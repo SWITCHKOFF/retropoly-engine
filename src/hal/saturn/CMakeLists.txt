@@ -20,6 +20,27 @@ if(NOT DEFINED JO_ENGINE_ROOT OR NOT DEFINED JO_ENGINE_INCLUDE_DIR)
         "Сборка — только через пресет saturn-release (JO_ENGINE_ROOT).")
 endif()
 
+# --- S25–26: Master + Slave SH-2 -------------------------------------------
+option(RPE_SATURN_DUAL_CPU
+    "Собрать Saturn с Slave SH-2 (JO_COMPILE_WITH_DUAL_CPU_SUPPORT)" ON)
+set(RPE_SATURN_FAULT_MODE "none" CACHE STRING
+    "Fault injection для ручной приёмки S25–26: none|hang|flood")
+set_property(CACHE RPE_SATURN_FAULT_MODE PROPERTY STRINGS none hang flood)
+if(NOT RPE_SATURN_FAULT_MODE MATCHES "^(none|hang|flood)$")
+    message(FATAL_ERROR
+        "RPE_SATURN_FAULT_MODE='${RPE_SATURN_FAULT_MODE}': ожидается none|hang|flood.")
+endif()
+if(RPE_SATURN_FAULT_MODE STREQUAL "hang")
+    set(RPE_SATURN_FAULT_HANG 1)
+    set(RPE_SATURN_FAULT_FLOOD 0)
+elseif(RPE_SATURN_FAULT_MODE STREQUAL "flood")
+    set(RPE_SATURN_FAULT_HANG 0)
+    set(RPE_SATURN_FAULT_FLOOD 1)
+else()
+    set(RPE_SATURN_FAULT_HANG 0)
+    set(RPE_SATURN_FAULT_FLOOD 0)
+endif()
+
 # --- Jo Engine: минимальный профиль (повторяет JO_MINIMAL=1 makefile) ------
 set(JO_ENGINE_SOURCES
     "${JO_ENGINE_INCLUDE_DIR}/font.c"
@@ -44,6 +65,10 @@ set(JO_ENGINE_SOURCES
     "${JO_ENGINE_INCLUDE_DIR}/fs.c"
     "${JO_ENGINE_INCLUDE_DIR}/start.S"
 )
+
+if(RPE_SATURN_DUAL_CPU)
+    list(APPEND JO_ENGINE_SOURCES "${JO_ENGINE_INCLUDE_DIR}/slave.c")
+endif()
 
 foreach(_jo_src IN LISTS JO_ENGINE_SOURCES)
     if(NOT EXISTS "${_jo_src}")
@@ -70,6 +95,10 @@ set(JO_ENGINE_DEFINES
     JO_COMPILE_WITH_FS_SUPPORT=1
     JO_COMPILE_WITH_PRINTF_SUPPORT=1)
 
+if(RPE_SATURN_DUAL_CPU)
+    list(APPEND JO_ENGINE_DEFINES JO_COMPILE_WITH_DUAL_CPU_SUPPORT=1)
+endif()
+
 target_compile_options(jo_engine PRIVATE
     -fplan9-extensions
     -fno-common
@@ -91,20 +120,30 @@ add_library(retro_engine_hal STATIC
     saturn_fs_path.cpp
     saturn_input.cpp
     saturn_memory.cpp
+    saturn_parallel_workload.cpp
     saturn_render_utils.cpp
+    scu_sync.cpp
+    slave_worker.cpp
     jo_saturn_bridge.c)
 retro_engine_apply_flags(retro_engine_hal)
 target_include_directories(retro_engine_hal PRIVATE
     "${CMAKE_SOURCE_DIR}/src"
     "${JO_ENGINE_INCLUDE_DIR}")
-target_compile_definitions(retro_engine_hal PRIVATE PLATFORM_SATURN=1 ${JO_ENGINE_DEFINES})
+target_compile_definitions(retro_engine_hal PRIVATE
+    PLATFORM_SATURN=1
+    RPE_SATURN_FAULT_HANG=${RPE_SATURN_FAULT_HANG}
+    RPE_SATURN_FAULT_FLOOD=${RPE_SATURN_FAULT_FLOOD}
+    ${JO_ENGINE_DEFINES})
 target_link_libraries(retro_engine_hal PRIVATE retro_engine_log jo_engine)
 
 # --- Bootable ELF -----------------------------------------------------------
 add_executable(retro_saturn main_saturn.cpp)
 retro_engine_apply_flags(retro_saturn)
 target_include_directories(retro_saturn PRIVATE "${CMAKE_SOURCE_DIR}/src")
-target_compile_definitions(retro_saturn PRIVATE PLATFORM_SATURN=1)
+target_compile_definitions(retro_saturn PRIVATE
+    PLATFORM_SATURN=1
+    RPE_SATURN_FAULT_HANG=${RPE_SATURN_FAULT_HANG}
+    RPE_SATURN_FAULT_FLOOD=${RPE_SATURN_FAULT_FLOOD})
 
 set(RPE_SATURN_ELF "${CMAKE_CURRENT_BINARY_DIR}/retro_saturn.elf")
 set(RPE_SATURN_RAW "${CMAKE_CURRENT_BINARY_DIR}/retro_saturn.bin")

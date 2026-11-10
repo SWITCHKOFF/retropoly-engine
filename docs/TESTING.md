@@ -75,9 +75,12 @@ python3 scripts/verify_release_contract.py
 
 ## CI
 
-- `tests.yml` — pc-debug + pc-debug-render (xvfb);
+- `tests.yml` — pc-debug + pc-debug-render (xvfb) + `saturn_hal_tests`
+  (host, `PLATFORM_SATURN=1`, fake C-мост, без BIOS/SH-2);
 - `build-pc.yml` — pc-release на ubuntu/windows/macos;
 - `build-ps1.yml` — ps1-release на ubuntu;
+- `build-saturn.yml` — saturn-release + structural checks ISO/ELF + наличие
+  и байтовое совпадение `.mesh`/`.tex` в образе;
 - `release.yml` — по тегу `v*` (см. [`plans/sprint_19_20.md`](plans/sprint_19_20.md)).
 
 ## Ручные QA-чек-листы
@@ -96,3 +99,29 @@ python3 scripts/verify_release_contract.py
 - [ ] FPS/VPS ≥ 30 в течение 60 с;
 - [ ] RAM ≈ 815 KiB / 1.5 MiB, VRAM ≤ 800 KiB;
 - [ ] PS-EXE ≤ 512 000 байт.
+
+### Saturn (Mednafen 1.32.1, S23–26)
+
+- [x] `retro_saturn.cue` стартует с легальным Japanese BIOS 1.01;
+- [x] тёмно-синий clear 320×224 (`0x9000`), строка 27:
+      `[INFO][asset] CD mesh=1 tex=1 heap=65560` (932 KiB heap; CUBE.MSH
+      остаётся в persistent-арене для workload);
+- [x] 6-button pad: D-pad, A/B/C, X/Y/Z, L/R, Start мапятся в `INPUT_PAD_*`;
+- [x] 5 минут без краша/зависания/сброса (`timeout 300` → exit 124);
+- [x] скриншот [`../screenshots/saturn_clear_s23_24.png`](../screenshots/saturn_clear_s23_24.png);
+- [x] `retro_saturn.map`: `__jo_work_end < 0x060FBC00`;
+- [x] S25–26 dual: benchmark `1=23838 2=16113 g=32 h=1`, кадры
+      `f=1500c=1503w=4007h=af890f`
+      ([benchmark](../screenshots/saturn_dual_cpu_s25_26.png),
+      [metrics](../screenshots/saturn_dual_metrics_s25_26.png));
+- [x] S25–26 single (`-DRPE_SATURN_DUAL_CPU=OFF`): `1=... 2=n/a h=1`,
+      Master продолжает fallback
+      ([скриншот](../screenshots/saturn_single_cpu_s25_26.png));
+- [x] S25–26 hang (`-DRPE_SATURN_FAULT_MODE=hang`): `slave failed: wait
+      timeout`, кадры продолжаются
+      ([скриншот](../screenshots/saturn_fault_hang_s25_26.png));
+- [x] S25–26 flood (`-DRPE_SATURN_FAULT_MODE=flood`): `flood overflows=1`;
+- [x] 10 минут dual-CPU stress: exit 124, без deadlock/hang; середина —
+      `f=12300c=12303w=4035h=af890f`, hash стабилен
+      ([скриншот](../screenshots/saturn_stress_s25_26.png));
+- [x] host-тесты `saturn_hal_tests` — 63/63 в PC-debug.

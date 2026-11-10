@@ -50,6 +50,10 @@ backend selection** через CMake:
   объявляет весь наружный API; реализации — в `.cpp` бэкенда. Saturn не
   протаскивает SH-2/Jo Engine в публичный заголовок: контакт с SDK
   изолирован в `src/hal/saturn/jo_saturn_bridge.c`.
+- Saturn S25–26: Master + Slave SH-2 взаимодействуют через внутренние
+  `scu_sync`/`slave_worker` (SPSC-очередь, cache-through shared Work RAM-L).
+  Slave выполняет только compute-job'ы и не трогает VDP/VRAM/периферию;
+  отказ Slave → single-CPU fallback (ADR-009).
 
 Это исключает виртуальные вызовы в кадре и даёт компилятору полную
 видимость для inline/оптимизаций.

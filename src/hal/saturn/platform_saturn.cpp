@@ -19,6 +19,7 @@
 #include "hal/saturn/saturn_hal_internal.h"
 #include "hal/saturn/saturn_input.h"
 #include "hal/saturn/saturn_memory.h"
+#include "hal/saturn/slave_worker.h"
 
 namespace {
 
@@ -85,6 +86,10 @@ bool Platform_Init(void)
         return false;
     }
 
+    // S25–26: Slave worker — опционален. Сбой handshake НЕ валит платформу:
+    // Master обязан продолжить в single-CPU fallback (ADR-009).
+    saturn::slave_worker_init();
+
     s_platform_inited = true;
     Log_Message(LOG_LEVEL_INFO, "saturn_hal", "platform init: 320x224 NTSC, pad + ISO9660 ready");
     return true;
@@ -98,6 +103,7 @@ void Platform_Shutdown(void)
     s_platform_inited = false;
 
     Log_Message(LOG_LEVEL_INFO, "saturn_hal", "platform shutdown");
+    saturn::slave_worker_shutdown();
     saturn::filesystem_shutdown();
     saturn::input_shutdown();
     saturn::memory_shutdown();

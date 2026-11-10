@@ -73,7 +73,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         saturn/saturn_input_test.cpp
         saturn/saturn_log_test.cpp
         saturn/saturn_memory_test.cpp
+        saturn/saturn_parallel_workload_test.cpp
         saturn/saturn_render_test.cpp
+        saturn/saturn_scu_sync_test.cpp
+        saturn/saturn_slave_worker_test.cpp
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/platform_saturn.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/filesystem_saturn.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/render_saturn.cpp"
@@ -82,7 +85,10 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_fs_path.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_input.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_memory.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_parallel_workload.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_render_utils.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/scu_sync.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/slave_worker.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/log/log.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/math/fixed.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/math/math.cpp"

@@ -1,10 +1,13 @@
 # ============================================================================
-# Saturn CI — Спринт 21–22 (docs/plans/sprint_21_22.md), ADR-008.
+# Saturn CI — Спринты 21–26 (docs/plans/sprint_23_24.md, sprint_25_26.md),
+# ADR-008/ADR-009.
 #
 # Собирает pinned toolchain Jo Engine v2026.2 (GCC 8.2.0 sh-none-elf) +
-# bootable ISO/CUE через канонический пресет saturn-release. Эмулятор в CI
-# НЕ запускается: BIOS не вендорится и не публикуется; smoke-тест 60 с —
-# ручная приёмка (docs/SATURN.md, docs/BUILDING.md).
+# bootable ISO/CUE через канонический пресет saturn-release и проверяет
+# наличие .mesh/.tex в ISO. Дополнительно собираются S25–26 variants:
+# saturn-single (fallback), saturn-hang, saturn-flood (fault injection).
+# Эмулятор в CI НЕ запускается: BIOS не вендорится и не публикуется;
+# smoke/stress — ручная приёмка (docs/SATURN.md §9, §11).
 # ============================================================================
 name: build-saturn
 
@@ -69,6 +72,33 @@ jobs:
           isoinfo -i retro_saturn.iso -x '/0.BIN;1' > "$RUNNER_TEMP/iso0.bin"
           cmp "$RUNNER_TEMP/iso0.bin" retro_saturn.bin
           test "$(stat -c %s retro_saturn.bin)" -le 1048576
+          # S23–24: CD-ассеты обязаны лежать в ISO под bare 8.3-именами
+          # (saturn_fs_path.h); сверяем байты CUBE.MSH и TEX0.TEX с assets/build.
+          for asset in CUBE.MSH TRIANGLE.MSH TEXTURE.TEX TEX0.TEX TEX1.TEX TEX2.TEX TEX3.TEX; do
+            isoinfo -i retro_saturn.iso -f | grep -q "/${asset};1"
+          done
+          isoinfo -i retro_saturn.iso -x '/CUBE.MSH;1' > "$RUNNER_TEMP/iso_cube.msh"
+          isoinfo -i retro_saturn.iso -x '/TEX0.TEX;1' > "$RUNNER_TEMP/iso_tex0.tex"
+          cmp "$RUNNER_TEMP/iso_cube.msh" "$GITHUB_WORKSPACE/assets/build/cube.mesh"
+          cmp "$RUNNER_TEMP/iso_tex0.tex" "$GITHUB_WORKSPACE/assets/build/texture_0.tex"
+
+      - name: "S25–26 variants: single-CPU + hang/flood fault builds"
+        run: |
+          set -euo pipefail
+          for preset in saturn-single saturn-hang saturn-flood; do
+            cmake --preset "$preset"
+            cmake --build --preset "$preset"
+            cd "build/$preset/src/hal/saturn"
+            test -s retro_saturn.elf
+            test -s retro_saturn.bin
+            test -s retro_saturn.iso
+            test -s retro_saturn.cue
+            test -s retro_saturn.map
+            file retro_saturn.elf | grep -q 'Renesas SH'
+            readelf -h retro_saturn.elf | grep -q '0x6004000'
+            grep -q 'ASSERT ((__jo_work_end <= 0x60fbc00)' retro_saturn.map
+            cd "$GITHUB_WORKSPACE"
+          done
 
       - name: Upload Saturn disc image
         uses: actions/upload-artifact@v4

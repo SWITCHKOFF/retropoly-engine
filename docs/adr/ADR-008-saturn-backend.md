@@ -79,12 +79,15 @@ profile и не меняет общий контракт без нового ADR
 
 ### 5. Память: статические арены, ledger, без heap
 
-Бюджет (reference-факты + engine ledger, `src/hal/saturn/saturn_memory.h`):
+Бюджет (reference-факты + engine ledger, `src/hal/saturn/saturn_memory.h`).
+**Уточнение 2026-11-10 (ADR-009):** H = `0x06000000` (high-speed CPU bus),
+L = `0x00200000` (low-speed shared bus) — в S23–24 таблица была подписана
+наоборот; кодовые константы/документация исправлены в S25–26.
 
 | Ресурс | Ёмкость | Использование v0.2.0 |
 |---|---|---|
-| WRAM-L | 1 MiB (`0x06000000`) | код/данные/стек Master; program limit `0x060FBC00` |
-| WRAM-H | 1 MiB (`0x00200000`) | asset arena (mesh/CI8-текстуры/палитры) |
+| Work RAM-H | 1 MiB (`0x06000000`) | код/данные/стек Master; program limit `0x060FBC00` |
+| Work RAM-L | 1 MiB (`0x00200000`) | asset arena (mesh/CI8-текстуры/палитры) |
 | Sound RAM | 512 KiB | SCSP-драйвер (post-MVP; не занимаем) |
 | VDP1 VRAM | 512 KiB | команды/CLUT/текстуры (S27–28) |
 | VDP1 frame buffers | 2×256 KiB | A/B page flip |

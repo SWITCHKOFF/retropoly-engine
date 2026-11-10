@@ -6,6 +6,72 @@
 
 ### Added
 
+- Спринт 25–26 — Параллелизм Master + Slave SH-2 (недели 49–52):
+  (1) `src/hal/saturn/scu_sync.*` — acquire/release доступ к shared-памяти,
+  cache-through alias, purge кэша, FRT-профилирование и bounded wait без
+  бесконечного busy-wait; `src/hal/saturn/slave_worker.*` — SPSC-очередь на
+  8 job'ов, handshake PING (200 мс), dispatch/wait (20 мс), STOP/restart,
+  метрики (submitted/completed, overflows, timeouts, fallback, wait/slave
+  busy), явный `FAILED` и single-CPU fallback. Slave не пишет в
+  VDP1/VDP2/VRAM; `jo_core_wait_for_slave()` не используется (нет таймаута).
+  (2) Dual-CPU build: Jo Engine `slave.c` + `JO_COMPILE_WITH_DUAL_CPU_SUPPORT`;
+  новый shared-регион 28 KiB в Work RAM-L (asset heap уменьшен до 932 KiB,
+  ledger 932+48+16+28 = 1024 KiB, static_assert); терминология Work RAM-H/L
+  исправлена (H=`0x06000000`, L=`0x00200000`, ADR-008 errata).
+  (3) Параллельный workload: clip-space подготовка 256 треугольников
+  (128/CPU) по `CUBE.MSH` с CD, fixed 16.16, `dmulu.l` без делений,
+  8-байтовый `PreparedTriangle`, детерминированный split; single/dual
+  FNV-hash совпадает. Boot benchmark: **23838 µs → 16113 µs (+32%)**,
+  hash match, кадровый wait ≈4007 µs, ~50–60 FPS в Mednafen 1.32.1.
+  (4) Fault injection: `RPE_SATURN_DUAL_CPU=OFF` (single fallback),
+  `RPE_SATURN_FAULT_MODE=hang` (timeout/fallback), `flood` (queue overflow,
+  worker READY); пресеты `saturn-single`/`saturn-hang`/`saturn-flood`;
+  host-тесты `saturn_hal_tests` расширены до 63 кейсов (SCU sync, worker,
+  workload determinism/fallback).
+  (5) Docs/CI: ADR-009 (partitioning, SPSC-протокол, порог ≥15%),
+  `docs/SATURN.md` §11 (карта shared-памяти, метрики, ручной чек-лист),
+  `docs/benchmarks/saturn_reference_environment.yaml`,
+  `docs/BUILDING.md`/`docs/TESTING.md`/`docs/ASSETS.md`/`README.md`,
+  `build-saturn.yml` собирает single/hang/flood варианты. 10-минутный
+  stress (exit 124) без deadlock; hash `af890f` стабилен, середина
+  прогона `f=12300c=12303w=4035h=af890f`; скриншоты
+  `screenshots/saturn_stress_s25_26.png`,
+  `screenshots/saturn_dual_cpu_s25_26.png`,
+  `screenshots/saturn_dual_metrics_s25_26.png`,
+  `screenshots/saturn_single_cpu_s25_26.png`,
+  `screenshots/saturn_fault_hang_s25_26.png`. PC-debug 176/177 (1 skip),
+  PC-release/PS1 не регрессировали.
+
+- Спринт 23–24 — HAL Saturn на Master SH-2 (недели 45–48):
+  (1) `Platform_Init/Shutdown` идемпотентны; C-мост проверяет после
+  `jo_core_init` разрешение 320×224, NTSC `VDP2_TVSTAT` и наличие `0.BIN`,
+  при сбое маскирует SCU-прерывания; `Platform_PumpEvents` опрашивает
+  6-button pad ровно один раз за кадр, active-low raw → `INPUT_PAD_*`
+  (D-pad, A/B/C, X/Y/Z, L/R, Start), disconnect/non-regular → все кнопки
+  отпущены;
+  (2) read-only ISO9660 FS: bare 8.3-имена без `;1`, отказ host-путей/`..`/
+  wildcard'ов, проверка размера, точное чтение секторами 2048 Б через
+  `__jo_fs_read_sectors` (без однобайтового overflow `jo_fs_read_file`),
+  first-fit `AssetHeap` 960 KiB с coalescing/double-free/foreign/OOM
+  diagnostics, frame scratch 48 KiB (`StackAllocator`) и command arena
+  16 KiB (`LinearAllocator`) в WRAM-H, регистрация в MemoryProfiler;
+  (3) render skeleton: VDP2 backdrop/clear golden `(0,0,32)` → `0x9000`,
+  FNV-1a 32 `0xC4AE5DC5`, double-init/platform guard, VDP1 draw/texture/
+  readback честно возвращают `false` + диагностику; command buffer overflow
+  — явный `false`, не silent drop;
+  (4) логгер Saturn → VDP2-строка 27 (`jo_vsnprintf` в C-мосте, без newlib
+  `vsnprintf`/malloc/sbrk в runtime); boot self-test читает
+  `CUBE.MSH`/`TEX0.TEX` с CD, валидирует
+  загрузчиками ядра и освобождает временную арену;
+  (5) `saturn_disc` копирует `CUBE.MSH`, `TRIANGLE.MSH`, `TEXTURE.TEX`,
+  `TEX0..3.TEX` и включает их в ISO; `build-saturn.yml` проверяет наличие и
+  байтовое совпадение; host-тесты `saturn_hal_tests` (40 кейсов, fake
+  C-мост, без BIOS/SH-2) в `tests.yml`;
+  (6) docs: `docs/SATURN.md`, `docs/BUILDING.md`, `docs/ASSETS.md`,
+  `docs/API.md`, `docs/DEVELOPMENT_PLAN.md`, план S23–24. Проверено:
+  `saturn-release` (ELF/raw/ISO/CUE), 5-минутный smoke в Mednafen 1.32.1
+  (Japanese BIOS 1.01) без краша, PC-debug 217/217, PC-release и
+  `ps1-release` собираются.
 - Пост-MVP v0.2.0 (Sega Saturn): детальные планы спринтов 21–32
   (`docs/plans/sprint_21_22.md` … `sprint_31_32.md`) — toolchain/SDK,
   HAL Master SH-2, параллелизм Master+Slave, VDP1, VDP2, hello_triangle

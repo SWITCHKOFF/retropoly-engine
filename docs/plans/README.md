@@ -33,13 +33,18 @@
 | [sprint_29_30.md](sprint_29_30.md) | 29–30 | 57–60 | 06.12.2027–02.01.2028 | v0.2.0 | VDP2: фоны, композитинг, синхронизация | 55.8 ч |
 | [sprint_31_32.md](sprint_31_32.md) | 31–32 | 61–64 | 03.01–30.01.2028 | v0.2.0 | Hello Triangle на Saturn + релиз | 52.5 ч |
 
-> Статус S21–22 (2026-11-10): research/toolchain/preset/HAL skeleton/CI/docs
-> выполнены; `saturn-release` и bootable ISO собираются; добавлен fallback
-> `tools/saturn_mkiso.py` для систем без `genisoimage`. PC-debug 177/177
-> passed, PC-release и `ps1-release` собираются. Ручной 60-секундный smoke
-> в Mednafen 1.32.1 с Japanese BIOS 1.01 пройден (backdrop виден, краша
-> нет; `screenshots/saturn_backdrop.png`). CI `build-saturn.yml` зелёный
-> (run 42794098944); `build-pc`, `build-ps1`, `tests` — success.
+> Статус S21–26 (2026-11-10): S21–22 (toolchain/preset/skeleton/CI) и
+> S23–24 (HAL Master SH-2: lifecycle/rollback, 6-button pad, ISO9660 FS с
+> asset heap 932 KiB, VDP2 clear/log, boot self-test `.mesh`/`.tex` с CD)
+> закрыты. S25–26 — Master + Slave SH-2: `scu_sync`/`slave_worker`,
+> fixed-size SPSC-очередь (8), handshake/stop/restart, bounded wait,
+> single-CPU fallback, fault injection (`single/hang/flood`), clip-space
+> workload 256 треугольников (128/CPU). Измерено в Mednafen 1.32.1:
+> single 23838 µs → dual 16113 µs (**32%**), hash single/dual совпал;
+> 10-минутный stress без deadlock; host-тесты `saturn_hal_tests` — 63/63.
+> PC-debug 176/177 (1 skip) + Saturn 63/63 (ctest 240/240, 1 skip),
+> PC-release и `ps1-release` собираются.
+> ADR-009, `docs/SATURN.md` §11, benchmark YAML. VDP1/3D — S27–28.
 
 Следующие итерации (N64 v0.3.0, Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 6–8 / 4–6 / 4–6 / 8–12 спринтов. Их детальные файлы создаются после приёмки v0.2.0, когда будут известны фактические темп и ограничения Saturn-toolchain.
 

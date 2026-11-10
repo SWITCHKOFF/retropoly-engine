@@ -6,6 +6,7 @@
 #include "hal/saturn/jo_saturn_bridge.h"
 
 #include <jo/jo.h>
+#include "internal/core.h"
 #include "internal/fs.h"
 
 static bool s_core_inited = false;
@@ -136,6 +137,67 @@ bool rpe_saturn_fs_read(const char* name, uint8_t* dst, uint32_t size)
 
     __jo_fs_close(handle);
     return (offset == size);
+}
+
+// ---------------------------------------------------------------------------
+// Master + Slave SH-2 (S25–26)
+// ---------------------------------------------------------------------------
+
+bool rpe_saturn_slave_available(void)
+{
+#ifdef JO_COMPILE_WITH_DUAL_CPU_SUPPORT
+    return (s_core_inited && __jo_core_is_slave_running());
+#else
+    return (false);
+#endif
+}
+
+bool rpe_saturn_slave_post(void (*callback)(void))
+{
+#ifdef JO_COMPILE_WITH_DUAL_CPU_SUPPORT
+    if (callback == 0 || !rpe_saturn_slave_available()) return (false);
+    jo_core_exec_on_slave((jo_slave_callback)callback);
+    return (true);
+#else
+    (void)callback;
+    return (false);
+#endif
+}
+
+void* rpe_saturn_cache_through(const void* pointer)
+{
+    if (pointer == JO_NULL) return (JO_NULL);
+    return ((void*)JO_CACHE_THROUGH(pointer));
+}
+
+void rpe_saturn_cache_purge(void)
+{
+    unsigned char ccr = JO_SH2_CCR;
+
+    // Последовательность Jo Engine: выключить кэш, purge, восстановить CCR.
+    JO_SH2_CCR = (unsigned char)(ccr & ~JO_SH2_CCR_CACHE_ENABLE);
+    JO_SH2_CCR = (unsigned char)((ccr & ~JO_SH2_CCR_CACHE_ENABLE) | JO_SH2_CCR_CACHE_PURGE);
+    JO_SH2_CCR = ccr;
+}
+
+uint16_t rpe_saturn_frt_ticks(void)
+{
+    return ((uint16_t)jo_time_get_frc());
+}
+
+uint32_t rpe_saturn_frt_ticks_to_us(uint16_t ticks)
+{
+    // Та же константа, что в slave.c Jo Engine: FRT = clock / 32.
+#if (JO_TV_WIDTH == 352) || (JO_TV_WIDTH == 704)
+    return (((uint32_t)ticks * 1000u) / 895u);
+#else
+    return (((uint32_t)ticks * 1000u) / 839u);
+#endif
+}
+
+void rpe_saturn_cpu_relax(void)
+{
+    __jo_core_pause();
 }
 
 void rpe_saturn_log_write_va(int level, const char* domain, const char* format, va_list* args)

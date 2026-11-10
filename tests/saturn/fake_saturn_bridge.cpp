@@ -20,6 +20,23 @@ RpeSaturnPadState pad = {0xFFFFu, 0u, 0u};
 int pad_read_calls = 0;
 uint32_t ticks = 0u;
 
+bool slave_available = false;
+bool slave_post_result = true;
+bool slave_execute_posted = true;
+int slave_post_calls = 0;
+uint16_t frt_ticks = 0u;
+uint16_t frt_step = 1u;
+int cpu_relax_calls = 0;
+int cache_purge_calls = 0;
+int cache_through_calls = 0;
+
+std::vector<void (*)(void)> posted_callbacks;
+
+int log_calls = 0;
+int last_log_level = -1;
+std::string last_log_domain;
+std::string last_log_message;
+
 void (*frame_callback)(void) = nullptr;
 
 void reset(void)
@@ -35,6 +52,16 @@ void reset(void)
     pad.regular = 0u;
     pad_read_calls = 0;
     ticks = 0u;
+    slave_available = false;
+    slave_post_result = true;
+    slave_execute_posted = true;
+    slave_post_calls = 0;
+    frt_ticks = 0u;
+    frt_step = 1u;
+    cpu_relax_calls = 0;
+    cache_purge_calls = 0;
+    cache_through_calls = 0;
+    posted_callbacks.clear();
     log_calls = 0;
     last_log_level = -1;
     last_log_domain.clear();
@@ -60,6 +87,17 @@ void add_file(const char* name, const void* data, uint32_t data_size, uint32_t r
     files[name] = file;
 }
 
+void run_posted_callbacks(void)
+{
+    // Один проход: callback может добавить новый (drain → handshake).
+    std::vector<void (*)(void)> pending;
+    pending.swap(posted_callbacks);
+    for (void (*callback)(void) : pending) {
+        if (callback != nullptr) {
+            callback();
+        }
+    }
+}
 
 }  // namespace fake_saturn
 
@@ -101,6 +139,54 @@ bool rpe_saturn_add_frame_callback(void (*callback)(void))
 {
     fake_saturn::frame_callback = callback;
     return true;
+}
+
+bool rpe_saturn_slave_available(void)
+{
+    return fake_saturn::slave_available;
+}
+
+bool rpe_saturn_slave_post(void (*callback)(void))
+{
+    ++fake_saturn::slave_post_calls;
+    if (!fake_saturn::slave_available || !fake_saturn::slave_post_result || callback == nullptr) {
+        return false;
+    }
+    if (fake_saturn::slave_execute_posted) {
+        callback();
+    } else {
+        fake_saturn::posted_callbacks.push_back(callback);
+    }
+    return true;
+}
+
+void* rpe_saturn_cache_through(const void* pointer)
+{
+    ++fake_saturn::cache_through_calls;
+    return const_cast<void*>(pointer);
+}
+
+void rpe_saturn_cache_purge(void)
+{
+    ++fake_saturn::cache_purge_calls;
+}
+
+uint16_t rpe_saturn_frt_ticks(void)
+{
+    const uint16_t now = fake_saturn::frt_ticks;
+    fake_saturn::frt_ticks = static_cast<uint16_t>(fake_saturn::frt_ticks + fake_saturn::frt_step);
+    return now;
+}
+
+uint32_t rpe_saturn_frt_ticks_to_us(uint16_t ticks)
+{
+    return (static_cast<uint32_t>(ticks) * 1000u) / 839u;
+}
+
+void rpe_saturn_cpu_relax(void)
+{
+    ++fake_saturn::cpu_relax_calls;
+    fake_saturn::frt_ticks = static_cast<uint16_t>(fake_saturn::frt_ticks + fake_saturn::frt_step);
 }
 
 bool rpe_saturn_fs_available(void)
