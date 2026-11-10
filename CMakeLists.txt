@@ -3,14 +3,15 @@
 #
 # Нормативные источники:
 #   - docs/plans/sprint_00.md §3.5 (Система сборки, каркас)
+#   - docs/plans/sprint_21_22.md (Saturn skeleton, ADR-008)
 #   - docs/RetroEngine_Engineering_Documentation_v1.43.md: BUILD PRECEDENCE —
 #     «CMakePresets.json is the only canonical build entry point»
 #
 # Правила:
-#   - ровно один бэкенд (PLATFORM_PC XOR PLATFORM_PS1);
+#   - ровно один бэкенд (PLATFORM_PC XOR PLATFORM_PS1 XOR PLATFORM_SATURN);
 #   - hello_triangle / rotating_cube ссылаются только на retro_engine
-#     (никогда напрямую на SDL3/OpenGL/PSn00bSDK);
-#   - asset_converter — host-only, не собирается компилятором PS1;
+#     (никогда напрямую на SDL3/OpenGL/PSn00bSDK/Jo Engine);
+#   - asset_converter — host-only, не собирается кросс-компиляторами;
 #   - все сборки через канонические пресеты CMakePresets.json.
 # ============================================================================
 
@@ -18,13 +19,14 @@ cmake_minimum_required(VERSION 3.25)
 
 project(retro_engine
     VERSION 0.1.0
-    DESCRIPTION "RetroPolyEngine — deterministic retro engine (PC: SDL3 + OpenGL 3.3; PS1: PSn00bSDK v0.24)"
+    DESCRIPTION "RetroPolyEngine — deterministic retro engine (PC: SDL3 + OpenGL 3.3; PS1: PSn00bSDK v0.24; Saturn: Jo Engine v2026.2)"
     LANGUAGES C CXX ASM
 )
 
 # --- Опции сборки ------------------------------------------------------------
-option(PLATFORM_PC   "Собирать целевой бэкенд PC (SDL3 + OpenGL 3.3)"        OFF)
-option(PLATFORM_PS1  "Собирать целевой бэкенд PS1 (PSn00bSDK v0.24, pinned)" OFF)
+option(PLATFORM_PC     "Собирать целевой бэкенд PC (SDL3 + OpenGL 3.3)"             OFF)
+option(PLATFORM_PS1    "Собирать целевой бэкенд PS1 (PSn00bSDK v0.24, pinned)"      OFF)
+option(PLATFORM_SATURN "Собирать целевой бэкенд Saturn (Jo Engine v2026.2, pinned)" OFF)
 option(BUILD_TESTS                       "Собирать юнит-тесты (GoogleTest)"               ON)
 option(BUILD_EXAMPLES                    "Собирать примеры hello_triangle/rotating_cube"  OFF)
 option(BUILD_RENDER_INTEGRATION_TESTS    "Рендер-интеграционные тесты (W0-golden, §3.5)"  OFF)
@@ -33,18 +35,36 @@ option(ENABLE_ASAN    "AddressSanitizer для целей движка (толь
 option(ENABLE_COVERAGE "Покрытие кода тестами (только PC, пресет pc-coverage)" OFF)
 
 # --- Guard: ровно один бэкенд -------------------------------------------------
-if(PLATFORM_PC AND PLATFORM_PS1)
+set(RPE_PLATFORM_COUNT 0)
+foreach(_rpe_platform PLATFORM_PC PLATFORM_PS1 PLATFORM_SATURN)
+    if(${_rpe_platform})
+        math(EXPR RPE_PLATFORM_COUNT "${RPE_PLATFORM_COUNT} + 1")
+    endif()
+endforeach()
+if(NOT RPE_PLATFORM_COUNT EQUAL 1)
     message(FATAL_ERROR
-        "Конфликт конфигурации: PLATFORM_PC и PLATFORM_PS1 взаимоисключающие (ровно один HAL на сборку).")
-endif()
-if(NOT PLATFORM_PC AND NOT PLATFORM_PS1)
-    message(FATAL_ERROR
-        "Не выбран бэкенд: включите PLATFORM_PC=ON или PLATFORM_PS1=ON (см. CMakePresets.json).")
+        "Не выбран ровно один бэкенд (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN): "
+        "включённых платформ — ${RPE_PLATFORM_COUNT}. См. CMakePresets.json.")
 endif()
 
 # --- Канонические флаги компиляции (cmake/CompilerFlags.cmake) ----------------
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerFlags)
+
+# --- Saturn: target-заголовки newlib из pinned Jo Engine SDK ------------------
+# Кросс-компилятор не должен видеть host /usr/include. Заголовки newlib
+# лежат в bundled-компиляторе Jo Engine (Compiler/WINDOWS/sh-elf/include) и
+# include-fixed GCC 8.2.0; подключаются как SYSTEM (не триггерят -Werror).
+if(PLATFORM_SATURN)
+    if(NOT DEFINED JO_ENGINE_NEWLIB_INCLUDE OR NOT DEFINED JO_ENGINE_GCC_INCLUDE_FIXED)
+        message(FATAL_ERROR
+            "Saturn toolchain не задал JO_ENGINE_NEWLIB_INCLUDE/JO_ENGINE_GCC_INCLUDE_FIXED. "
+            "Сборка — только через пресет saturn-release (cmake/saturn-toolchain.cmake).")
+    endif()
+    include_directories(SYSTEM
+        "${JO_ENGINE_NEWLIB_INCLUDE}"
+        "${JO_ENGINE_GCC_INCLUDE_FIXED}")
+endif()
 
 # --- Вендоренные зависимости (§3.6) -------------------------------------------
 # SDL3 подключается ДО ядра: HAL (src/hal/pc) линкует target SDL3::SDL3.

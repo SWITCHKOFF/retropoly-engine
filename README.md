@@ -4,7 +4,8 @@
 fixed-point математике (Q16.16, без плавающей запятой в игровой логике),
 HAL-архитектура с нулевым runtime-аллокатором в горячих путях. Целевые
 платформы MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) и Sony PlayStation 1
-(PSn00bSDK v0.24, pinned).
+(PSn00bSDK v0.24, pinned). v0.2.0 (в работе) — Sega Saturn: pinned Jo
+Engine v2026.2, bootable skeleton 320×224; 3D/VDP1 — следующие спринты.
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
@@ -31,8 +32,9 @@ ctest --preset pc-debug --output-on-failure
   детерминированная тригонометрия — без float в игровой логике.
 - **ECS**: 7 компонентных пулов с фиксированными ёмкостями, dense-итерация,
   generation-хэндлы с защитой от stale-use.
-- **HAL**: единый C-API (`Platform/Render/Input/Audio/FileSystem`) с двумя
-  бэкендами — PC (SDL3 + OpenGL 3.3) и PS1 (PSn00bSDK, GTE+GPU+OT).
+- **HAL**: единый C-API (`Platform/Render/Input/Audio/FileSystem`) с тремя
+  compile-time бэкендами — PC (SDL3 + OpenGL 3.3), PS1 (PSn00bSDK,
+  GTE+GPU+OT) и Saturn skeleton (Jo Engine, VDP2 backdrop).
 - **Рендерер**: 320×240 reference framebuffer, affine-текстурирование,
   1/16-пиксельное квантование, Painter's algorithm, CI8/RGB555+STP.
 - **Ассеты**: `.mesh` v1 (glTF→движок) и `.tex` v1 (PNG→CI8+палитра),
@@ -46,7 +48,9 @@ ctest --preset pc-debug --output-on-failure
 |---|---|
 | [docs/RetroEngine_Engineering_Documentation_v1.43.md](docs/RetroEngine_Engineering_Documentation_v1.43.md) | Каноническая инженерная спецификация MVP (нормативная) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Слои движка, пайплайн рендера, ассет-пайплайн, платформенные контракты |
-| [docs/BUILDING.md](docs/BUILDING.md) | Установка тулчейна, канонические пресеты, запуск PC/PS1, troubleshooting |
+| [docs/BUILDING.md](docs/BUILDING.md) | Установка тулчейна, канонические пресеты, запуск PC/PS1/Saturn, troubleshooting |
+| [docs/SATURN.md](docs/SATURN.md) | Saturn: первоисточники, toolchain, разрешение, память, ввод, эмулятор |
+| [docs/adr/ADR-008-saturn-backend.md](docs/adr/ADR-008-saturn-backend.md) | Нормативное решение по Saturn backend |
 | [docs/API.md](docs/API.md) | Вводный обзор API: ECS, Renderer, Input, FileSystem, Math |
 | [docs/ASSETS.md](docs/ASSETS.md) | Байтовые форматы `.mesh`/`.tex` v1, CLI конвертера, загрузчики |
 | [docs/TESTING.md](docs/TESTING.md) | Пирамида тестов, запуск unit/integration/visual, QA-чек-листы |
@@ -60,9 +64,9 @@ ctest --preset pc-debug --output-on-failure
 
 ## Скриншоты
 
-| hello_triangle PC | rotating_cube PC | hello_triangle PS1 (эмулятор) |
-|---|---|---|
-| ![ht-pc](screenshots/hello_triangle_pc.png) | ![rc-pc](screenshots/rotating_cube_pc.png) | ![ht-ps1](screenshots/hello_triangle_ps1.png) |
+| hello_triangle PC | rotating_cube PC | hello_triangle PS1 (эмулятор) | Saturn skeleton (Mednafen) |
+|---|---|---|---|
+| ![ht-pc](screenshots/hello_triangle_pc.png) | ![rc-pc](screenshots/rotating_cube_pc.png) | ![ht-ps1](screenshots/hello_triangle_ps1.png) | ![saturn](screenshots/saturn_backdrop.png) |
 
 ## Канонические пресеты
 

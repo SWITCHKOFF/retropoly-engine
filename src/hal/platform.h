@@ -9,14 +9,20 @@
 // Разделы API:
 //   - Platform_*  — окно, GL-контекст, события, тайминги (SDL3 на PC);
 //   - Render_*    — интерфейс рендерера (реализация — Спринты 7–8,
-//     PC-backend: src/hal/pc/render_opengl.cpp; PS1-backend: Спринты 13–14);
+//     PC-backend: src/hal/pc/render_opengl.cpp; PS1-backend: Спринты 13–14;
+//     Saturn skeleton: backdrop-only, VDP1 — S27–28);
 //   - Input_*     — клавиатура + геймпады строго через SDL_Gamepad API
 //     (SDL_GameController в SDL3 не существует — не использовать);
+//     Saturn — 6-button pad через SMPC (раскладка в docs/SATURN.md);
 //   - Audio_*     — заглушка (короткий beep; полный PCM — post-MVP);
-//   - FileSystem_* — загрузка файла целиком / освобождение буфера.
+//   - FileSystem_* — загрузка файла целиком / освобождение буфера
+//     (Saturn: read-only ISO9660, реализация S23–24).
 //
-// Контракт заголовка: не включает SDL/glad/PSn00bSDK — бекенды подключают
-// свои зависимости только в .cpp; заголовок компилируется в обоих бекендах.
+// Контракт заголовка: не включает SDL/glad/PSn00bSDK/Jo Engine — бекенды
+// подключают свои зависимости только в .cpp; заголовок компилируется во
+// всех бекендах без SH-2/MIPS/хост-специфичных типов. Выбор backend —
+// compile-time CMake (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN, ADR-001/
+// ADR-008); платформенных #ifdef в этом заголовке нет by design.
 // Функции — свободные (без namespace): имена сохранены дословно из §3
 // (норматив). Порядок значений enum'ов — контракт ABI: вставки только
 // перед *_COUNT.
@@ -33,7 +39,11 @@
 // ---------------------------------------------------------------------------
 
 /**
- * Инициализация платформы (PC: SDL3 + GL-контекст).
+ * Инициализация платформы (PC: SDL3 + GL-контекст; PS1: GPU/GTE/CD/pad;
+ * Saturn: Jo Engine core — VDP1/VDP2, SMPC, VBlank, 320×224 NTSC).
+ *
+ * Saturn (ADR-008): ровно один вызов на процесс; повторный — идемпотентен.
+ * Backdrop выставляется через VDP2; 3D/VDP1 в v0.2.0-S21–22 отсутствует.
  *
  * Последовательность (§3.3 + sprint_05_06, неделя 9):
  *   1. SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) — БЕЗ SDL_INIT_TIMER
@@ -66,6 +76,9 @@ void Platform_Shutdown(void);
  * Остальные события (SDL_EVENT_WINDOW_* и т.п.) сознательно игнорируются —
  * их обработка появляется в Спринтах 7–8+.
  *
+ * PS1/Saturn: очереди событий нет — константный true; выход определяется
+ * платформенным вводом (PS1 START; Saturn — на усмотрение S23–24).
+ *
  * @return true — обычный кадр; false — получено SDL_EVENT_QUIT
  *         (главный цикл обязан завершиться; Shutdown — задача вызывающего).
  */
@@ -73,7 +86,8 @@ bool Platform_PumpEvents(void);
 
 /**
  * Показ кадра на экран: SDL_GL_SwapWindow. Безопасный no-op, если
- * окно/GL-контекст не созданы.
+ * окно/GL-контекст не созданы. PS1: DrawSync → VSync → flip. Saturn
+ * skeleton: no-op — кадром владеет jo_core_run() (VDP1/VDP2 sync).
  */
 void Platform_SwapBuffers(void);
 
@@ -85,6 +99,9 @@ void Platform_SleepMs(uint32_t ms);
  * uint32_t-срез uint64-счётчика SDL3: обёртка через ~49,7 дней — приемлемо
  * для сессионного игрового цикла (delta time считается беззнаковой
  * разностью, корректна и через обёртку).
+ *
+ * PS1/Saturn: виртуальное время платформенного VBlank-счётчика
+ * (без системных часов; wrap-safe беззнаковая разность).
  *
  * @return миллисекунды (monotonic, без коррекций системных часов).
  */
@@ -247,6 +264,12 @@ typedef enum
     INPUT_PAD_COUNT
 } PadButton;
 
+// Saturn 6-button pad → INPUT_PAD_* (engine policy, docs/SATURN.md):
+//   D-pad → UP/DOWN/LEFT/RIGHT; A→CROSS; B→CIRCLE; C→SQUARE; X→TRIANGLE;
+//   Y→L1; Z→R1; L→L2; R→R2; START→START. Select на 6-button pad отсутствует.
+// Enum НЕ расширяется Saturn-кнопками в S21–22: расширение — только перед
+// INPUT_PAD_COUNT и только с ADR/обновлением всех бэкендов.
+
 /**
  * Ось геймпада. Порядок зеркалит SDL_GAMEPAD_AXIS_* (контракт).
  * Стики: диапазон −128..127; триггеры L2/R2: 0..127.
@@ -374,6 +397,9 @@ typedef struct FileData
  * Контракт владения: память буфера выделяется SDL-аллокатором
  * (SDL_LoadFile) и освобождается ТОЛЬКО через FileSystem_FreeFile;
  * ручное free()/delete этого буфера запрещено.
+ *
+ * Saturn (S21–22): заглушка возвращает {nullptr, 0}; read-only ISO9660
+ * (8.3, `\NAME.EXT;1`) реализуется в S23–24. Host-пути и `..` запрещены.
  *
  * @param path путь; NULL/пустая строка — отказ без краша.
  *

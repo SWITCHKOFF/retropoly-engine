@@ -2,7 +2,7 @@
 
 > **Источник:** `RetroEngine_Engineering_Documentation_v1.43.md` (каноническая инженерная спецификация MVP, дата 2026-09-07).
 > **Статус:** операционный план работ. Детальные чек-боксы спринтов разложены на атомарные действия в `plans/sprint_NN.md` (указатель — §2.5); этот файл содержит своды, вехи, PERT-оценки, сквозные треки и нормативные приложения.
-> **Скоуп:** MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) + Sony PlayStation 1 (PSn00bSDK v0.24, target `mipsel-none-elf`).
+> **Скоуп:** MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) + Sony PlayStation 1 (PSn00bSDK v0.24, target `mipsel-none-elf`); §13 — пост-MVP roadmap (v0.2.0+), включая детальные планы Saturn S21–32.
 > **Сроки:** 20 спринтов × 2 недели = 40 недель (~10 месяцев) при 10–15 ч/нед. Recovery/buffer-недели учитываются отдельно и не входят в 40 недель. Ориентир календаря: старт Спринта 0 — 02.11.2026, релиз — 15.08.2027 (см. §2.3).
 
 ---
@@ -174,6 +174,8 @@ gantt
 | [sprint_15_16.md](plans/sprint_15_16.md) | 15–16 | 29–32 | M6 | hello_triangle на PS1: CD-ассеты, бюджеты RAM/VRAM/EXE |
 | [sprint_17_18.md](plans/sprint_17_18.md) | 17–18 | 33–36 | M7 | rotating_cube: W1-сцена, коллизии, Gouraud, overlay |
 | [sprint_19_20.md](plans/sprint_19_20.md) | 19–20 | 37–40 | M8 | Документация, release gate, GitHub Release, анонс |
+
+Пост-MVP v0.2.0 (Sega Saturn): детальные планы S21–32 — §13.1.
 
 ---
 
@@ -400,12 +402,36 @@ gantt
 
 ## 13. Post-MVP roadmap (после v0.1.0 — справочно)
 
-- **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn.
+- **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn. Детальные планы S21–32 — §13.1.
 - **v0.3.0 — N64 (6–8 спринтов):** микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, libdragon.
 - **v0.4.0 — Jaguar (4–6 спринтов):** blitter-программирование (Tom), Jerry-DSP; 68000 host.
 - **v0.5.0 — 3DO (4–6 спринтов):** CEL/MADAM-композитинг; отдельная юридическая проверка SDK перед любым vendoring/перераспределением.
 - **v0.6.0–v0.8.0 — Аудио и ФС:** XA/PCM/ADPCM (SPU/SCSP/AI), расширенный ISO9660/CDFS, memory card save.
 - Перед любой Tier-2/3 реализацией: повторная сверка hardware-спецификаций против первоисточников (данные будущих платформ — reference material).
+
+### 13.1. v0.2.0 — Sega Saturn: детальные планы спринтов
+
+Источник разбиения — §4 «Будущие итерации» инженерной документации (Saturn: S21–32). Даты ориентировочные, recovery-недели в них не входят.
+
+| Файл | Спринты | Недели | Даты | Тема | PERT E |
+|---|---|---|---|---|---|
+| [plans/sprint_21_22.md](plans/sprint_21_22.md) | 21–22 | 41–44 | 16.08–12.09.2027 | Изучение Saturn, toolchain, skeleton, CI | 51.7 ч |
+| [plans/sprint_23_24.md](plans/sprint_23_24.md) | 23–24 | 45–48 | 13.09–10.10.2027 | HAL Saturn на Master SH-2 | 55.8 ч |
+| [plans/sprint_25_26.md](plans/sprint_25_26.md) | 25–26 | 49–52 | 11.10–07.11.2027 | Параллелизм Master + Slave SH-2 | 57.5 ч |
+| [plans/sprint_27_28.md](plans/sprint_27_28.md) | 27–28 | 53–56 | 08.11–05.12.2027 | VDP1: полигоны, текстуры, triangle→quad | 61.7 ч |
+| [plans/sprint_29_30.md](plans/sprint_29_30.md) | 29–30 | 57–60 | 06.12.2027–02.01.2028 | VDP2: фоны, композитинг, синхронизация | 55.8 ч |
+| [plans/sprint_31_32.md](plans/sprint_31_32.md) | 31–32 | 61–64 | 03.01–30.01.2028 | Hello Triangle на Saturn + релиз v0.2.0 | 52.5 ч |
+
+> Статус S21–22 (2026-11-09): research/toolchain/preset/HAL skeleton/CI/docs
+> выполнены; ADR-008 — [`adr/ADR-008-saturn-backend.md`](adr/ADR-008-saturn-backend.md).
+> `saturn-release` и bootable ISO собираются локально с pinned Jo Engine
+> v2026.2. Ручной 60-секундный smoke в Mednafen заблокирован отсутствием
+> легального BIOS; workflow `build-saturn.yml` ещё не прогнан на удалённом
+> runner.
+
+Σ E ≈ 335 ч. При 10–15 ч/нед 24 недели дают 240–360 ч: план сходится только у верхней границы темпа; 95%-сценарий (≈ 425 ч) требует recovery-недель или scope reduction.
+
+Гейт v0.2.0: Saturn-бинарник собирается pinned toolchain, hello_triangle работает в pinned-эмуляторе, Master + Slave SH-2 задействованы, VDP1 + VDP2 синхронизированы. Перед стартом S21–22 обязательна повторная сверка reference-фактов Saturn по первоисточникам (§2.2 инженерной документации).
 
 ---
 

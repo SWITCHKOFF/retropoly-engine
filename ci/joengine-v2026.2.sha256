@@ -1,0 +1,13 @@
+02e24e5ebc1bed33b47138f51491812156c4fc66fd10b85ccd37485de48d75f1  Compiler/LINUX/bin/sh-none-elf-gcc-8.2.0
+63856f30ea7fc230f3eda28a71549c460166feecfa87701ce0df9beef1ffe6a9  Compiler/LINUX/bin/sh-none-elf-objcopy
+e08a882c4a1288c4abbe52c0de93eb2bd9140c7e96f906a374068b45a310d2b1  Compiler/LINUX/libexec/gcc/sh-none-elf/8.2.0/cc1
+46e0a8bf38934d29555cc03c116f249472d3f52758a369c85c150b5856e7f0a8  Compiler/LINUX/libexec/gcc/sh-none-elf/8.2.0/cc1plus
+ddfcafb26119245d35234794f3b6b2e37bc65cf69d8c1f0b0191971531f75aa9  Compiler/LINUX/libexec/gcc/sh-none-elf/8.2.0/collect2
+1da6d1e918e65a48074034e8589e752466419c9c4ffe8552270fd9f34923fffe  Compiler/LINUX/sh-none-elf/bin/as
+d0f8272fee9cff977134d2acb3d687e7fc07dceb06777c3380079eb896d44f33  Compiler/LINUX/sh-none-elf/bin/ld
+f293eab76518498684193581c5f2b316d84ba0738d4b272532554b99e642c362  Compiler/LINUX/lib/gcc/sh-none-elf/8.2.0/libgcc.a
+0cbb98244723415a139df1a36fe2f199ac871919b3fb607775bc822375516313  Compiler/LINUX/sh-none-elf/lib/libc.a
+d995e2a5c8c627dd5dce56e55d50e7c999a0e4450b6c8a47c88ec87cac9abebd  Compiler/LINUX/sh-none-elf/lib/libnosys.a
+75936bcce8df53f67b5f35bde5eb0cefc64481d760562815785749b3e18f9155  Compiler/COMMON/jo.linker
+490b2a86c91a32fb98e1c246f966507fb9890d180de8b6372bbabd90f04334b6  Compiler/COMMON/IP.BIN
+7c3ed2e38c699028534bbd275cbaf24104ab06da96df1258c14123d79c133f66  Compiler/COMMON/ip.S

@@ -65,6 +65,11 @@ void Input_GetMouseDelta(int32_t* out_dx, int32_t* out_dy);
 
 Pad 0 на PC эмулируется клавиатурой, если физический геймпад не подключён.
 
+Saturn (6-button pad): D-pad → UP/DOWN/LEFT/RIGHT; A→CROSS; B→CIRCLE;
+C→SQUARE; X→TRIANGLE; Y→L1; Z→R1; L→L2; R→R2; START→START. Select на
+6-button pad отсутствует; аналоговых осей и мыши нет. Полная таблица и
+policy расширения enum — [`SATURN.md`](SATURN.md) §6.
+
 ### 1.4 Аудио
 
 ```c

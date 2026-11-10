@@ -198,3 +198,13 @@ assets/source/texture.png ──asset_converter──▶ assets/build/texture.te
 3. **Прозрачность выключена** (STP = 0 в палитре); слот 0 зарезервирован
    под «transparent black» (см. §3.2).
 4. **`index_count` = число записей MeshIndex** (см. §2.1).
+
+## 7. Saturn v0.2.0
+
+- Форматы `.mesh` v1 / `.tex` v1 не меняются; Saturn-бэкенд конвертирует
+  CI8+RGB555 в VDP1 8bpp CLUT на этапе загрузки (S27–28).
+- Потолок `.tex` 256×256 — **engine policy** asset-pipeline, а не
+  hardware maximum VDP1 (см. `docs/SATURN.md` §2). Отдельный Saturn-формат
+  вводится только через новый ADR; v1 не ломается.
+- Имена файлов на CD — ISO9660 8.3 upper-case (`CUBE.MSH`, `TEX0.TEX;1`);
+  host-пути запрещены. Детали — `docs/SATURN.md` §8.

@@ -4,6 +4,46 @@
 
 ## [Unreleased]
 
+### Added
+
+- Пост-MVP v0.2.0 (Sega Saturn): детальные планы спринтов 21–32
+  (`docs/plans/sprint_21_22.md` … `sprint_31_32.md`) — toolchain/SDK,
+  HAL Master SH-2, параллелизм Master+Slave, VDP1, VDP2, hello_triangle
+  и релиз v0.2.0; обновлён указатель `docs/plans/README.md` и §13.1
+  `docs/DEVELOPMENT_PLAN.md`.
+- Спринт 21–22 — Saturn research/toolchain/skeleton (недели 41–44):
+  (1) перепроверены reference-факты Saturn по первоисточникам Sega/Hitachi
+  (`docs/SATURN.md`): 2×SH-2 (26.8741 MHz в 320-режиме / 28.6364 MHz в
+  352-режиме — уточнение к «28.6 MHz»), 2 MiB WRAM (1+1), 512 KiB sound
+  RAM, VDP1 512 KiB VRAM + 2×256 KiB FB, VDP2 512 KiB VRAM + 4 KiB CRAM,
+  320×224/320×240, отсутствие Z-буфера, quad-oriented VDP1; отмечено, что
+  «256×256 max texture» — engine policy, а не hardware maximum;
+  (2) ADR-008 (`docs/adr/ADR-008-saturn-backend.md`): compile-time HAL,
+  pinned Jo Engine v2026.2 (`5e99944`) + bundled sh-none-elf-gcc 8.2.0,
+  Mednafen 1.32.1 (BIOS не вендорится), native 320×224 + crop из reference
+  320×240, бюджет памяти, triangle→quad policy, границы v0.2.0;
+  (3) build: `PLATFORM_SATURN`, preset `saturn-release`,
+  `cmake/saturn-toolchain.cmake`, `src/hal/saturn/` (platform/input/render/FS
+  stubs + C-мост к Jo Engine), bootable `retro_saturn.iso`/`.cue` +
+  `IP.BIN`/ELF/raw/map; PC/PS1 цели не изменены; добавлен fallback
+  `tools/saturn_mkiso.py` (pycdlib) для создания ISO в системах без
+  `genisoimage`;
+  (4) CI: `.github/workflows/build-saturn.yml` — pinned commit + sha256
+  bundled toolchain (`ci/joengine-v2026.2.sha256`), configure/build,
+  structural checks, artifact `retro-saturn-disc`; эмулятор не запускается
+  без BIOS;
+  (5) docs: `docs/SATURN.md`, `docs/adr/`, `docs/BUILDING.md` (Saturn +
+  fallback ISO), `docs/LEGAL.md`/`LEGAL.md` (Jo Engine/GCC/newlib/Mednafen),
+  `docs/API.md` (раскладка 6-button pad), `docs/ARCHITECTURE.md`,
+  `VERSION.txt` (пины Jo Engine/Mednafen). Локальная сборка
+  `saturn-release` проходит структурные проверки (ELF entry `0x06004000`,
+  IP.BIN, ISO/CUE, 0.BIN ≈ raw); PC-debug: 177/177 passed, PC-release и
+  `ps1-release` (PSn00bSDK v0.24: PS-EXE 110 592 Б, ISO 533 904 Б)
+  собираются. Ручной 60-секундный smoke в Mednafen 1.32.1 с легальным
+  Japanese BIOS 1.01 пройден: VDP2 backdrop 320×224 виден, краша нет;
+  скриншот `screenshots/saturn_backdrop.png`. Удалённый CI
+  `build-saturn.yml` ещё не прогонялся.
+
 ## [0.1.0] — 2026-11-09
 
 ### Added

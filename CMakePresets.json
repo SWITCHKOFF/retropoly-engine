@@ -69,6 +69,16 @@
         "PLATFORM_PS1": "ON",
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "saturn-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/saturn-release",
+      "toolchainFile": "${sourceDir}/cmake/saturn-toolchain.cmake",
+      "cacheVariables": {
+        "PLATFORM_SATURN": "ON",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
     }
   ],
   "buildPresets": [
@@ -78,7 +88,8 @@
     { "name": "pc-asan", "configurePreset": "pc-asan" },
     { "name": "pc-bench", "configurePreset": "pc-bench" },
     { "name": "pc-coverage", "configurePreset": "pc-coverage" },
-    { "name": "ps1-release", "configurePreset": "ps1-release" }
+    { "name": "ps1-release", "configurePreset": "ps1-release" },
+    { "name": "saturn-release", "configurePreset": "saturn-release" }
   ],
   "testPresets": [
     { "name": "pc-debug", "configurePreset": "pc-debug", "output": { "outputOnFailure": true } },

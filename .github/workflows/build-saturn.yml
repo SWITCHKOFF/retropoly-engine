@@ -1,0 +1,84 @@
+# ============================================================================
+# Saturn CI — Спринт 21–22 (docs/plans/sprint_21_22.md), ADR-008.
+#
+# Собирает pinned toolchain Jo Engine v2026.2 (GCC 8.2.0 sh-none-elf) +
+# bootable ISO/CUE через канонический пресет saturn-release. Эмулятор в CI
+# НЕ запускается: BIOS не вендорится и не публикуется; smoke-тест 60 с —
+# ручная приёмка (docs/SATURN.md, docs/BUILDING.md).
+# ============================================================================
+name: build-saturn
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-saturn:
+    name: Saturn (ubuntu-latest, saturn-release, Jo Engine v2026.2)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout (без submodules: Saturn не тянет SDL3/PSn00bSDK)"
+        uses: actions/checkout@v4
+
+      - name: Тулчейн-хост (ninja + mkisofs/genisoimage)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build genisoimage
+
+      - name: Jo Engine v2026.2 (pinned commit + sha256 bundled compiler)
+        run: |
+          set -euo pipefail
+          git config --global advice.detachedHead false
+          git clone --depth 1 --branch v2026.2 --filter=blob:none --sparse \
+            https://github.com/johannes-fetz/joengine.git "$RUNNER_TEMP/joengine"
+          cd "$RUNNER_TEMP/joengine"
+          git sparse-checkout set \
+            Compiler/COMMON \
+            Compiler/LINUX \
+            Compiler/WINDOWS/sh-elf/include \
+            jo_engine
+          test "$(git rev-parse HEAD)" = "5e99944238030821a48e17a40abefd77e81953c2"
+          sha256sum -c "$GITHUB_WORKSPACE/ci/joengine-v2026.2.sha256"
+          echo "JO_ENGINE_ROOT=$RUNNER_TEMP/joengine" >> "$GITHUB_ENV"
+
+      - name: "Configure (canon: cmake --preset saturn-release)"
+        run: cmake --preset saturn-release
+
+      - name: "Build (canon: cmake --build --preset saturn-release)"
+        run: cmake --build --preset saturn-release
+
+      - name: Проверка артефактов (SH-2 ELF + ISO/CUE + IP.BIN)
+        run: |
+          set -euo pipefail
+          cd build/saturn-release/src/hal/saturn
+          test -s retro_saturn.elf
+          test -s retro_saturn.bin
+          test -s retro_saturn.iso
+          test -s retro_saturn.cue
+          test -s IP.BIN
+          test -s retro_saturn.map
+          file retro_saturn.elf | grep -q 'Renesas SH'
+          readelf -h retro_saturn.elf | grep -q '0x6004000'
+          head -c 16 IP.BIN | grep -aq 'SEGA SEGASATURN'
+          grep -Fx 'FILE "retro_saturn.iso" BINARY' retro_saturn.cue
+          grep -Fx '  TRACK 01 MODE1/2048' retro_saturn.cue
+          isoinfo -i retro_saturn.iso -f | grep -q '/0.BIN;1'
+          isoinfo -i retro_saturn.iso -x '/0.BIN;1' > "$RUNNER_TEMP/iso0.bin"
+          cmp "$RUNNER_TEMP/iso0.bin" retro_saturn.bin
+          test "$(stat -c %s retro_saturn.bin)" -le 1048576
+
+      - name: Upload Saturn disc image
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-saturn-disc
+          path: |
+            build/saturn-release/src/hal/saturn/retro_saturn.iso
+            build/saturn-release/src/hal/saturn/retro_saturn.cue
+            build/saturn-release/src/hal/saturn/retro_saturn.elf
+            build/saturn-release/src/hal/saturn/retro_saturn.bin
+            build/saturn-release/src/hal/saturn/IP.BIN
+            build/saturn-release/src/hal/saturn/retro_saturn.map
+          if-no-files-found: error

@@ -21,6 +21,7 @@
 │  src/hal/         Hardware Abstraction Layer  │
 │    pc/            SDL3 + OpenGL 3.3           │
 │    ps1/           PSn00bSDK + GTE + GPU + OT  │
+│    saturn/        Jo Engine + VDP (v0.2.0)    │
 ├─────────────────────────────────────────────┤
 │  src/core/        математика, память, ECS, log│
 └─────────────────────────────────────────────┘
@@ -41,11 +42,14 @@
 Вместо runtime virtual dispatch в горячих путях используется **compile-time
 backend selection** через CMake:
 
-- Ровно один из `PLATFORM_PC` / `PLATFORM_PS1` включён (guard в корневом
-  `CMakeLists.txt`).
-- `src/CMakeLists.txt` подключает либо `src/hal/pc/`, либо `src/hal/ps1/`.
+- Ровно один из `PLATFORM_PC` / `PLATFORM_PS1` / `PLATFORM_SATURN` включён
+  (guard в корневом `CMakeLists.txt`).
+- `src/CMakeLists.txt` подключает `src/hal/pc/`, `src/hal/ps1/` или
+  `src/hal/saturn/` (v0.2.0; ADR-008).
 - Единый публичный заголовок [`src/hal/platform.h`](../src/hal/platform.h)
-  объявляет весь наружный API; реализации — в `.cpp` бэкенда.
+  объявляет весь наружный API; реализации — в `.cpp` бэкенда. Saturn не
+  протаскивает SH-2/Jo Engine в публичный заголовок: контакт с SDK
+  изолирован в `src/hal/saturn/jo_saturn_bridge.c`.
 
 Это исключает виртуальные вызовы в кадре и даёт компилятору полную
 видимость для inline/оптимизаций.
@@ -103,7 +107,8 @@ TRANSFORM → CLIP → CULL → SORT → PACK → SUBMIT
 
 ### 4.2 Контракты рендера
 
-- Reference resolution: 320×240 (PC и PS1).
+- Reference resolution: 320×240 (PC и PS1). Saturn v0.2.0 отображает
+  центральные 224 строки (native 320×224, policy crop; ADR-008 §4).
 - Цвет: RGB555+STP для текстур, Gouraud-интерполяция вершинного цвета.
 - Depth: `depth_key_from_camera_z` без modulo-aliasing; `DEPTH_REJECT`
   за пределами `[depth_min..depth_max]`.

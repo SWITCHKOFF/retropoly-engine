@@ -21,6 +21,8 @@ target_include_directories(retro_engine_log PUBLIC "${CMAKE_SOURCE_DIR}/src")
 # без создания platform-ifdef'ов в заголовках ядра.
 if(PLATFORM_PC)
     target_compile_definitions(retro_engine_log PRIVATE PLATFORM_PC=1)
+elseif(PLATFORM_SATURN)
+    target_compile_definitions(retro_engine_log PRIVATE PLATFORM_SATURN=1)
 endif()
 retro_engine_apply_flags(retro_engine_log)
 
@@ -28,6 +30,8 @@ if(PLATFORM_PC)
     add_subdirectory(hal/pc)
 elseif(PLATFORM_PS1)
     add_subdirectory(hal/ps1)
+elseif(PLATFORM_SATURN)
+    add_subdirectory(hal/saturn)
 endif()
 
 include(EmbedShaders) # cmake/EmbedShaders.cmake (шейдеры → generated/headers).
@@ -53,6 +57,8 @@ target_sources(retro_engine PRIVATE
 # Спринт 15–16 перенесёт на PS1-бэкенд; log.cpp — тот же подход).
 if(PLATFORM_PC)
     target_compile_definitions(retro_engine PRIVATE PLATFORM_PC=1)
+elseif(PLATFORM_SATURN)
+    target_compile_definitions(retro_engine PRIVATE PLATFORM_SATURN=1)
 endif()
 
 # Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).

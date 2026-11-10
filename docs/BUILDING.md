@@ -75,6 +75,29 @@ set PSN00BSDK_LIBS=%PSN00BSDK_ROOT%\lib\libpsn00b
 set PATH=%PSN00BSDK_ROOT%\bin;%PATH%
 ```
 
+### Sega Saturn
+
+- Jo Engine v2026.2 (pinned commit `5e99944`) — full checkout, не sparse
+  без `Compiler/` и `jo_engine/`.
+- Bundled `sh-none-elf-gcc` 8.2.0 идёт внутри Jo Engine
+  (`Compiler/LINUX`); отдельный Saturn toolchain не нужен.
+- `mkisofs`/`genisoimage` (пакет `genisoimage`) — для bootable ISO.
+- Версии/SHA-256: [`../VERSION.txt`](../VERSION.txt) и
+  [`../ci/joengine-v2026.2.sha256`](../ci/joengine-v2026.2.sha256).
+- Подробности платформы/эмулятора: [`SATURN.md`](SATURN.md).
+
+```bash
+git clone --depth 1 --branch v2026.2 \
+  https://github.com/johannes-fetz/joengine.git "$HOME/joengine"
+export JO_ENGINE_ROOT="$HOME/joengine"
+```
+
+```powershell
+# Windows (experimental; bundled sh-elf-gcc.exe)
+git clone --depth 1 --branch v2026.2 https://github.com/johannes-fetz/joengine.git C:\joengine
+set JO_ENGINE_ROOT=C:\joengine
+```
+
 ## Клонирование
 
 ```sh
@@ -99,6 +122,7 @@ git submodule update --init --recursive
 | `pc-bench` | PC | OFF | OFF | google/benchmark |
 | `pc-coverage` | PC | ON | OFF | lcov покрытие |
 | `ps1-release` | PS1 | OFF | OFF | Кросс-сборка PS-EXE + CD-образ |
+| `saturn-release` | Saturn | OFF | OFF | SH-2 ELF + bootable ISO/CUE (Jo Engine) |
 
 ## Сборка PC
 
@@ -155,6 +179,39 @@ sh scripts/check_binary_size.sh
 
 Лимит: 512 000 байт.
 
+## Сборка Saturn
+
+```sh
+export JO_ENGINE_ROOT="$HOME/joengine"   # Jo Engine v2026.2
+cmake --preset saturn-release
+cmake --build --preset saturn-release
+```
+
+Артефакты:
+
+- `build/saturn-release/src/hal/saturn/retro_saturn.elf` (SH-2 ELF)
+- `build/saturn-release/src/hal/saturn/retro_saturn.bin` (raw)
+- `build/saturn-release/src/hal/saturn/retro_saturn.iso` (ISO9660)
+- `build/saturn-release/src/hal/saturn/retro_saturn.cue` (`MODE1/2048`)
+- `build/saturn-release/src/hal/saturn/IP.BIN`
+- `build/saturn-release/src/hal/saturn/retro_saturn.map`
+
+CI: `.github/workflows/build-saturn.yml` — pinned commit, sha256
+компилятора, build, структурная валидация ISO/ELF, artifact
+`retro-saturn-disc`. Эмулятор в CI не запускается (BIOS не вендорится).
+
+### Запуск Saturn-образа в Mednafen 1.32.1
+
+```sh
+mednafen -ss.bios_na_eu /path/to/mpr-17933.bin \
+  build/saturn-release/src/hal/saturn/retro_saturn.cue
+```
+
+BIOS (`mpr-17933.bin` NA/EU или `sega_101.bin` JP) пользователь
+предоставляет локально; в репозиторий/CI он не попадает. Smoke-тест:
+backdrop 320×224, 60 секунд без краша. Полный чек-лист и настройки —
+[`SATURN.md`](SATURN.md) §9.
+
 ## Частые проблемы
 
 ### `SDL3 not found` / submodule пуст
@@ -180,6 +237,36 @@ CMake Error: Could not find toolchain file: .../sdk.cmake
 ```
 
 Решение: проверить `PSN00BSDK_LIBS` и `PATH`; см. раздел PS1 выше.
+
+### `Saturn build → JO_ENGINE_ROOT`
+
+Сообщение:
+
+```
+JO_ENGINE_ROOT не задан ...
+```
+
+Решение: скачать Jo Engine v2026.2 (полный checkout) и экспортировать
+`JO_ENGINE_ROOT`; см. раздел Saturn выше. `JO_ENGINE_ROOT` должен
+содержать `Compiler/LINUX`, `Compiler/COMMON`, `jo_engine`.
+
+### `saturn-release → mkisofs not found`
+
+Предпочтительно: установить `genisoimage` (Linux) или `mkisofs`
+(macOS/Windows). Без него bootable ISO — обязательный артефакт gate не
+закрывается.
+
+Fallback (изолированные окружения, например Flatpak): сборка может
+использовать `tools/saturn_mkiso.py`, если в PATH доступен Python 3 с
+пакетом `pycdlib`:
+
+```sh
+python3 -m venv /tmp/saturn-iso-tools
+source /tmp/saturn-iso-tools/bin/activate
+python3 -m pip install pycdlib
+cmake --preset saturn-release
+cmake --build --preset saturn-release
+```
 
 ### Visual Studio: ошибки линковки SDL3-static
 
