@@ -11,9 +11,6 @@ namespace saturn {
 namespace {
 
 constexpr int32_t kCornerTL = 0;
-constexpr int32_t kCornerTR = 1;
-constexpr int32_t kCornerBR = 2;
-constexpr int32_t kCornerBL = 3;
 
 struct CornerUV
 {
