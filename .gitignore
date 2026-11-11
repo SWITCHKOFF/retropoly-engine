@@ -19,3 +19,14 @@ testsprite_tests/
 tests/visual/reference/*.dump.px
 testsprite_tests/tmp/
 testsprite_tests/tmp/config.json
+
+# Секреты OpenCode/MCP: штатно лежат вне репозитория
+# (~/.config/opencode/secrets/), это страховка от случайного коммита
+# локальных копий.
+/.env
+/.env.*
+!/.env.example
+/.opencode/secrets/
+
+# Локальные BIOS/ROM для ручного эмуляторного gate (не вендорятся, не публикуются).
+/bios/

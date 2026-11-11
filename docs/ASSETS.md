@@ -221,3 +221,16 @@ assets/source/texture.png ──asset_converter──▶ assets/build/texture.te
   входом параллельного workload; `TEX0.TEX` валидируется во временной арене
   и освобождается. Asset heap уменьшен до 932 KiB, чтобы выделить 28 KiB
   shared-региона Master/Slave (см. `docs/SATURN.md` §2.1.1/§11).
+- **S27–28 (VDP1):** после валидации `.tex` вызывается
+  `Render_CreateTexture` → backend `vdp1_texture`: CI8 копируется
+  `jo_dma_copy` в VDP1 VRAM (451 832 B first-fit, 32-байтовое выравнивание)
+  по абсолютному адресу `VDP1_TEXTURE_BASE+offset`, палитра — в CRAM
+  (палитры 1..6; 7 — VDP2 background). Ошибка VRAM/CLUT/upload откатывает
+  оба ресурса; после неудачи persistent-память VDP1 — 0 байт. Width
+  обязана быть кратна 8, height ≤ 256 (256 клампится до 255 — VDP1 pattern
+  height 8 бит). UV треугольника обязаны быть в углах прямоугольника
+  текстуры, иначе — flat-Gouraud с диагностикой (ADR-010).
+- **S29–30 (VDP2):** `TEX1.TEX` (256×256 CI8) дополнительно тайлится 4× по X
+  в NBG1 bitmap 1024×256 (256 KiB VDP2 VRAM), палитра — CRAM 7;
+  `.tex` v1 не меняется. Ошибка размеров/инициализации — явный `false`;
+  фон можно отключить, тогда VDP1 clear снова непрозрачный.

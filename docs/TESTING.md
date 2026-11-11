@@ -124,4 +124,6 @@ python3 scripts/verify_release_contract.py
 - [x] 10 минут dual-CPU stress: exit 124, без deadlock/hang; середина —
       `f=12300c=12303w=4035h=af890f`, hash стабилен
       ([скриншот](../screenshots/saturn_stress_s25_26.png));
-- [x] host-тесты `saturn_hal_tests` — 63/63 в PC-debug.
+- [x] host-тесты `saturn_hal_tests` — **112/112** в PC-debug
+      (S27–28: VRAM/CLUT/triangle→quad/command list/overlay/fb-hash;
+      S29–30: VDP2 init/upload/scroll/диагностика).

@@ -8,8 +8,12 @@
 #include <jo/jo.h>
 #include "internal/core.h"
 #include "internal/fs.h"
+#include "internal/vdp1_command_pipeline.h"
+
+#include <string.h>
 
 static bool s_core_inited = false;
+static uint32_t s_vdp1_added_commands = 0u;
 
 static void core_disable_interrupts(void)
 {
@@ -80,6 +84,12 @@ bool rpe_saturn_add_frame_callback(void (*callback)(void))
 {
     if (callback == 0) return (false);
     return (jo_core_add_callback((jo_event_callback)callback) >= 0);
+}
+
+bool rpe_saturn_add_vblank_callback(void (*callback)(void))
+{
+    if (callback == 0) return (false);
+    return (jo_core_add_vblank_callback((jo_event_callback)callback) >= 0);
 }
 
 bool rpe_saturn_fs_available(void)
@@ -199,6 +209,217 @@ void rpe_saturn_cpu_relax(void)
 {
     __jo_core_pause();
 }
+
+// ---------------------------------------------------------------------------
+// VDP1: полигоны, текстуры, CLUT, Gouraud (S27–28)
+// ---------------------------------------------------------------------------
+
+// Карта RPE в VDP1 VRAM (должна совпадать с vdp1_vram.h; C-мост не видит C++).
+#define RPE_VDP1_GOURAUD_BASE 0x7E4F8u
+#define RPE_VDP1_GOURAUD_SLOTS 64u
+#define RPE_VDP1_TEXTURE_END 0x7E4F8u
+#define RPE_VDP1_FB_LINE_BYTES 1024u  // 512 пикселей × 2 байта
+#define RPE_VDP1_FB_PLANE_BYTES 0x40000u
+
+typedef char rpe_vdp1_command_size_check[(sizeof(RpeVdp1Command) == 32u) ? 1 : -1];
+typedef char jo_vdp1_command_size_check[(sizeof(jo_vdp1_command) == 32u) ? 1 : -1];
+
+bool rpe_saturn_vdp1_init(void)
+{
+    if (!s_core_inited) return (false);
+    s_vdp1_added_commands = 0u;
+    return (true);
+}
+
+void rpe_saturn_vdp1_shutdown(void)
+{
+    s_vdp1_added_commands = 0u;
+}
+
+void rpe_saturn_vdp1_begin_frame(void)
+{
+    s_vdp1_added_commands = 0u;
+}
+
+void rpe_saturn_vdp1_set_erase_color(uint16_t color)
+{
+    if (!s_core_inited) return;
+    JO_VDP1_EWDR = color;
+}
+
+bool rpe_saturn_vdp1_upload_ci8(uint32_t vram_offset, const uint8_t* pixels, uint16_t width,
+                                uint16_t height, uint16_t stride)
+{
+    if (!s_core_inited || pixels == JO_NULL) return (false);
+    if (width == 0u || height == 0u || stride != width) return (false);
+    const uint32_t bytes = (uint32_t)stride * (uint32_t)height;
+    if (vram_offset > RPE_VDP1_TEXTURE_END || bytes > RPE_VDP1_TEXTURE_END - vram_offset)
+        return (false);
+    if ((bytes & 1u) != 0u) return (false);
+
+    // DMA-копия в VDP1 VRAM (как jo_sprite_add_8bits_image): SCU DMA не
+    // зависит от кэша SH-2 и гарантирует видимость данных для VDP1. Для
+    // мелких/невыровненных буферов Jo Engine сам откатывается на memcpy.
+    jo_dma_copy((const void*)pixels, (void*)(JO_VDP1_VRAM + vram_offset), bytes);
+    return (true);
+}
+
+void rpe_saturn_vdp1_set_palette(uint8_t palette_id, const uint16_t* colors)
+{
+    if (!s_core_inited || colors == JO_NULL) return;
+    if (palette_id < 1u || palette_id > 7u) return;
+
+    volatile uint16_t* cram = (volatile uint16_t*)JO_VDP2_CRAM;
+    const uint32_t base = (uint32_t)palette_id * 256u;
+    uint32_t i;
+    for (i = 0u; i < 256u; ++i)
+    {
+        // VDP1 CLUT: RGB555 + MSB (как jo_color Jo Engine); STP MVP выключен.
+        cram[base + i] = (uint16_t)(colors[i] | 0x8000u);
+    }
+}
+
+void rpe_saturn_vdp1_write_gouraud(uint16_t table_index, const uint16_t colors[4])
+{
+    if (!s_core_inited || colors == JO_NULL) return;
+    if (table_index >= RPE_VDP1_GOURAUD_SLOTS) return;
+
+    volatile uint16_t* dst =
+        (volatile uint16_t*)(JO_VDP1_VRAM + RPE_VDP1_GOURAUD_BASE + (uint32_t)table_index * 8u);
+    uint32_t i;
+    for (i = 0u; i < 4u; ++i)
+        dst[i] = (uint16_t)(colors[i] | 0x8000u);
+}
+
+bool rpe_saturn_vdp1_add_command(uint16_t sort_key, const RpeVdp1Command* command)
+{
+    if (!s_core_inited || command == JO_NULL) return (false);
+
+    jo_vdp1_command* cmd = __jo_vdp1_add_command(jo_int2fixed((int)sort_key));
+    if (cmd == JO_NULL) return (false);
+
+    memcpy(cmd, command, sizeof(RpeVdp1Command));
+    // link строит pipeline при отправке кадра; 0 — безопасное значение.
+    cmd->link = 0;
+    ++s_vdp1_added_commands;
+    return (true);
+}
+
+bool rpe_saturn_vdp1_fb_hash(uint8_t buffer, uint32_t* out_hash)
+{
+    if (out_hash == JO_NULL || buffer > 1u) return (false);
+
+    // Вызывать только когда VDP1 не рисует (golden/QA): чтение идёт
+    // напрямую из VDP1 framebuffer без синхронизации с VDP1.
+
+    const volatile uint16_t* fb =
+        (const volatile uint16_t*)(JO_VDP1_FB + (uint32_t)buffer * RPE_VDP1_FB_PLANE_BYTES);
+    uint32_t hash = 2166136261u;
+    uint32_t x;
+    uint32_t y;
+    for (y = 0u; y < 224u; ++y)
+    {
+        const volatile uint16_t* line =
+            (const volatile uint16_t*)((const volatile uint8_t*)fb + y * RPE_VDP1_FB_LINE_BYTES);
+        for (x = 0u; x < 320u; ++x)
+        {
+            const uint16_t word = line[x];
+            hash ^= (uint32_t)(word & 0xFFu);
+            hash *= 16777619u;
+            hash ^= (uint32_t)((word >> 8) & 0xFFu);
+            hash *= 16777619u;
+        }
+    }
+    *out_hash = hash;
+    return (true);
+}
+
+uint8_t rpe_saturn_vdp1_displayed_buffer(void)
+{
+    // FBCR bit 0 (FBS): текущий framebuffer в auto-change режиме.
+    return (uint8_t)(JO_VDP1_FBCR & 1u);
+}
+
+uint32_t rpe_saturn_vdp1_added_commands(void)
+{
+    return (s_vdp1_added_commands);
+}
+
+
+// ---------------------------------------------------------------------------
+// VDP2: NBG1 8-bit bitmap background (S29–30)
+// ---------------------------------------------------------------------------
+
+static bool s_vdp2_background = false;
+
+bool rpe_saturn_vdp2_init(uint8_t palette_id)
+{
+    if (!s_core_inited) return (false);
+    if (palette_id < 1u || palette_id > 7u) return (false);
+    if (!jo_vdp2_set_nbg1_8bits_bitmap((int)palette_id)) return (false);
+    // VDP2 text (NBG0) выше VDP1, чтобы диагностическая строка читалась;
+    // VDP1 выше NBG1; остальные слои — ниже.
+    jo_core_set_screens_order(JO_NBG0_SCREEN, JO_SPRITE_SCREEN, JO_NBG1_SCREEN,
+                              JO_RBG0_SCREEN, JO_NBG2_SCREEN, JO_NBG3_SCREEN);
+    s_vdp2_background = true;
+    return (true);
+}
+
+void rpe_saturn_vdp2_shutdown(void)
+{
+    if (!s_core_inited) return;
+    jo_set_displayed_screens(JO_NBG0_SCREEN | JO_SPRITE_SCREEN);
+    s_vdp2_background = false;
+}
+
+void rpe_saturn_vdp2_set_palette(uint8_t palette_id, const uint16_t* colors)
+{
+    if (!s_core_inited || colors == JO_NULL) return;
+    if (palette_id < 1u || palette_id > 7u) return;
+
+    volatile uint16_t* cram = (volatile uint16_t*)JO_VDP2_CRAM;
+    const uint32_t base = (uint32_t)palette_id * 256u;
+    uint32_t i;
+    for (i = 0u; i < 256u; ++i)
+        cram[base + i] = (uint16_t)(colors[i] | 0x8000u);
+}
+
+bool rpe_saturn_vdp2_upload_background(const uint8_t* pixels, uint16_t width, uint16_t height)
+{
+    if (!s_vdp2_background || pixels == JO_NULL) return (false);
+    if (width == 0u || height == 0u || (width & 7u) != 0u || (height & 7u) != 0u)
+        return (false);
+
+    const int bitmap_width = jo_vdp2_get_nbg1_8bits_bitmap_width();
+    const int bitmap_height = jo_vdp2_get_nbg1_8bits_bitmap_height();
+    if (bitmap_width <= 0 || bitmap_height <= 0) return (false);
+
+    jo_img_8bits img;
+    img.width = width;
+    img.height = height;
+    img.data = (unsigned char*)pixels;
+
+    int y;
+    for (y = 0; y < bitmap_height; y += height)
+    {
+        int x;
+        for (x = 0; x < bitmap_width; x += width)
+            jo_vdp2_draw_bitmap_nbg1_8bits_image(&img, x, y);
+    }
+    return (true);
+}
+
+void rpe_saturn_vdp2_set_scroll(int16_t x, int16_t y)
+{
+    if (!s_vdp2_background) return;
+    jo_vdp2_move_nbg1((int)x, (int)y);
+}
+
+bool rpe_saturn_vdp2_available(void)
+{
+    return (s_vdp2_background);
+}
+
 
 void rpe_saturn_log_write_va(int level, const char* domain, const char* format, va_list* args)
 {

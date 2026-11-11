@@ -1,13 +1,11 @@
 // SPDX-License-Identifier: MIT
 // RetroPolyEngine — src/hal/saturn/render_saturn.cpp
 //
-// Render-backend Saturn (S23–24): VDP2 backdrop + каркас командного буфера.
-// Публичные Render_* остаются в ядре (src/render/renderer.cpp), как на PS1;
-// HAL реализует только внутренний hal/render_backend.h.
+// Render-backend Saturn: HAL-lifecycle + VDP2 backdrop/clear; VDP1-полигоны,
+// текстуры/CLUT и Gouraud — vdp1_backend.cpp (Спринт 27–28).
 //
-// VDP1 (полигоны, CLUT/8bpp, triangle→quad) — S27–28. До этого backend
-// честно возвращает false на draw/texture/readback (silent drop запрещён),
-// а BeginFrame/Clear меняют однотонный backdrop VDP2. Golden-цвет очистки:
+// Публичные Render_* остаются в ядре (src/render/renderer.cpp); HAL реализует
+// только внутренний hal/render_backend.h. Golden-цвет очистки:
 // (0,0,32) → RGB555 0x9000; FNV-1a хэш кадра — saturn_render_utils.h.
 #include "hal/render_backend.h"
 
@@ -16,6 +14,8 @@
 #include "hal/saturn/saturn_command_buffer.h"
 #include "hal/saturn/saturn_hal_internal.h"
 #include "hal/saturn/saturn_render_utils.h"
+#include "hal/saturn/vdp1_backend.h"
+#include "hal/saturn/vdp2_backend.h"
 
 namespace {
 
@@ -46,14 +46,20 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     }
 
     saturn::command_buffer().reset();
+    if (!saturn::vdp1_backend_init()) {
+        Log_Message(LOG_LEVEL_ERROR, "saturn_hal", "VDP1 backend init failed");
+        return false;
+    }
     s_draw_calls = 0u;
     s_inited = true;
     rpe_saturn_set_background_color(saturn::CLEAR_GOLDEN_WORD);
+    rpe_saturn_vdp1_set_erase_color(saturn::CLEAR_GOLDEN_WORD);
     return true;
 }
 
 void hal_render_backend_shutdown(void)
 {
+    saturn::vdp1_backend_shutdown();
     saturn::command_buffer().reset();
     s_inited = false;
     s_draw_calls = 0u;
@@ -61,9 +67,7 @@ void hal_render_backend_shutdown(void)
 
 void hal_render_backend_set_camera(const Mat4* view, const Mat4* proj)
 {
-    (void)view;
-    (void)proj;
-    // VDP1-проекция — S27–28; skeleton не хранит камеру.
+    saturn::vdp1_backend_set_camera(view, proj);
 }
 
 void hal_render_backend_begin_frame(uint8_t r, uint8_t g, uint8_t b)
@@ -75,7 +79,12 @@ void hal_render_backend_begin_frame(uint8_t r, uint8_t g, uint8_t b)
     }
     s_draw_calls = 0u;
     saturn::command_buffer().reset();
-    hal_render_backend_clear(r, g, b);
+    const uint16_t color = saturn::rgb888_to_saturn(r, g, b);
+    // При активном VDP2-фоне VDP1 framebuffer стирается в transparent,
+    // иначе он непрозрачно закрывает NBG1.
+    const uint16_t erase = saturn::vdp2_backend_available() ? 0u : color;
+    saturn::vdp1_backend_begin_frame(erase);
+    rpe_saturn_set_background_color(color);
 }
 
 void hal_render_backend_clear(uint8_t r, uint8_t g, uint8_t b)
@@ -83,54 +92,59 @@ void hal_render_backend_clear(uint8_t r, uint8_t g, uint8_t b)
     if (!s_inited) {
         return;
     }
-    rpe_saturn_set_background_color(saturn::rgb888_to_saturn(r, g, b));
+    const uint16_t color = saturn::rgb888_to_saturn(r, g, b);
+    rpe_saturn_set_background_color(color);
+    rpe_saturn_vdp1_set_erase_color(saturn::vdp2_backend_available() ? 0u : color);
 }
 
 bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_t h,
                                        const uint8_t* pixels, const uint16_t* palette)
 {
-    (void)handle;
-    (void)w;
-    (void)h;
-    (void)pixels;
-    (void)palette;
-    Log_Message(LOG_LEVEL_WARNING, "saturn_hal", "VDP1 texture: S27–28");
-    return false;  // явный отказ, не silent drop
+    if (!s_inited) {
+        return false;
+    }
+    return saturn::vdp1_backend_create_texture(handle, w, h, pixels, palette);
 }
 
 void hal_render_backend_destroy_texture(TextureHandle handle)
 {
-    (void)handle;
+    saturn::vdp1_backend_destroy_texture(handle);
 }
 
 bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], const float* mvp,
                                       TextureHandle texture)
 {
-    (void)vertices;
-    (void)mvp;
-    (void)texture;
-    Log_Message(LOG_LEVEL_WARNING, "saturn_hal", "VDP1 triangle: S27–28");
-    return false;  // явный отказ, не silent drop
+    if (!s_inited) {
+        return false;
+    }
+    return saturn::vdp1_backend_draw_triangle(vertices, mvp, texture);
 }
 
 bool hal_render_backend_draw_overlay(const HalRenderBackendOverlayVertex* vertices, uint32_t count)
 {
-    (void)vertices;
-    (void)count;
-    Log_Message(LOG_LEVEL_WARNING, "saturn_hal", "VDP2 overlay: S27–28");
-    return false;  // явный отказ, не silent drop
+    if (!s_inited) {
+        return false;
+    }
+    return saturn::vdp1_backend_draw_overlay(vertices, count);
 }
 
 void hal_render_backend_end_frame(void)
 {
-    // VDP1/VDP2 sync/flip выполняет jo_core_run().
+    if (!s_inited) {
+        return;
+    }
+    saturn::vdp1_backend_end_frame();
+    s_draw_calls = saturn::vdp1_backend_stats().commands_last;
 }
 
 bool hal_render_backend_read_pixels(uint8_t* out_rgba, uint32_t buffer_bytes)
 {
     (void)out_rgba;
     (void)buffer_bytes;
-    return false;  // readback VDP1 — S27–28 (golden S23–24 — screenshot)
+    // RGBA8-снимок 320×240 (307 KiB static) на Saturn не держим: golden
+    // VDP1 — rpe_saturn_vdp1_fb_hash() (FNV по 320×224 RGB555) и ручной
+    // скриншот эмулятора (docs/SATURN.md §12). Явный отказ, не silent drop.
+    return false;
 }
 
 uint32_t hal_render_backend_draw_call_count(void)

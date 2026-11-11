@@ -1,25 +1,31 @@
 # Sega Saturn — платформа, toolchain и контракты v0.2.0
 
-> Статус: **S25–26 (недели 49–52) — gate закрыт**; S23–24 — закрыт.
-> `saturn-release` собирается с pinned Jo Engine v2026.2; bootable ISO/CUE +
-> IP.BIN + ELF/raw/map проходят структурные проверки. Работают lifecycle
-> VDP1/VDP2 (320×224 NTSC), 6-button pad, read-only ISO9660 FS с арены
-> Work RAM-L, VDP2-лог и детерминированный clear. CD-ассеты (`CUBE.MSH`,
-> `TEX0.TEX`…) читаются с образа и валидируются загрузчиками ядра.
-> **S25–26:** оба SH-2 реально используются через Slave worker (SPSC-очередь,
-> bounded wait, fallback); параллельный clip-space workload даёт **32%**
-> выигрыша (23838 → 16113 µs), hash single/dual совпадает. 5-минутный smoke
-> S23–24 и 10-минутный stress S25–26 в Mednafen 1.32.1 с легальным Japanese
-> BIOS (1.01) пройдены; скриншоты —
+> Статус: **S27–28 (недели 53–56) — реализация завершена; эмуляторный gate
+> ожидает pinned Mednafen** (BIOS не вендорится). S25–26 и S23–24 — gate
+> закрыт. `saturn-release` собирается с pinned Jo Engine v2026.2; bootable
+> ISO/CUE + IP.BIN + ELF/raw/map проходят структурные проверки. Работают
+> lifecycle VDP1/VDP2 (320×224 NTSC), 6-button pad, read-only ISO9660 FS с
+> арены Work RAM-L, VDP2-лог и детерминированный clear. CD-ассеты
+> (`CUBE.MSH`, `TEX0.TEX`…) читаются с образа и валидируются загрузчиками
+> ядра. **S25–26:** оба SH-2 реально используются через Slave worker
+> (SPSC-очередь, bounded wait, fallback); параллельный clip-space workload
+> даёт **32%** выигрыша (23838 → 16113 µs), hash single/dual совпадает.
+> **S27–28:** VDP1-полигоны (flat/Gouraud и textured 8bpp CI8), CLUT 1..7,
+> triangle→quad, Painter's порядок без Z-буфера, VRAM-аллокатор 451 832 B,
+> FNV-hash VDP1 framebuffer; ADR-010. 5-минутный smoke S23–24 и 10-минутный
+> stress S25–26 в Mednafen 1.32.1 с легальным Japanese BIOS (1.01) пройдены;
+> скриншоты —
 > [`../screenshots/saturn_clear_s23_24.png`](../screenshots/saturn_clear_s23_24.png),
 > [`../screenshots/saturn_dual_cpu_s25_26.png`](../screenshots/saturn_dual_cpu_s25_26.png).
-> VDP1-полигоны/3D — S27–32.
+> VDP2-контент/hello_triangle — S29–32.
 >
 > Нормативные решения: [`adr/ADR-008-saturn-backend.md`](adr/ADR-008-saturn-backend.md),
-> [`adr/ADR-009-master-slave.md`](adr/ADR-009-master-slave.md).
+> [`adr/ADR-009-master-slave.md`](adr/ADR-009-master-slave.md),
+> [`adr/ADR-010-vdp1-polygons.md`](adr/ADR-010-vdp1-polygons.md).
 > Планы: [`plans/sprint_21_22.md`](plans/sprint_21_22.md),
 > [`plans/sprint_23_24.md`](plans/sprint_23_24.md),
-> [`plans/sprint_25_26.md`](plans/sprint_25_26.md).
+> [`plans/sprint_25_26.md`](plans/sprint_25_26.md),
+> [`plans/sprint_27_28.md`](plans/sprint_27_28.md).
 > Benchmark-снапшот: [`benchmarks/saturn_reference_environment.yaml`](benchmarks/saturn_reference_environment.yaml).
 > Сборка: [`BUILDING.md`](BUILDING.md) § Saturn.
 
@@ -54,7 +60,15 @@
   handshake 200 мс, bounded wait 20 мс, явный `FAILED` и single-CPU fallback;
   `c`/`w`/`slave_jobs` — в VDP2-метриках. Параллельный workload — clip-space
   подготовка 256 треугольников (128/CPU), fixed 16.16, hash single==dual.
-- Host-тесты `saturn_hal_tests` (63 кейса) — без SH-2/эмулятора; CI
+- **S27–28:** VDP1-путь `vdp1_backend.*`: view-space → экран 320×224 (fixed),
+  flat/Gouraud polygon и textured distorted sprite 8bpp CI8 + CLUT 1..7,
+  triangle→quad с UV-углами, first-fit VRAM-аллокатор 451 832 B,
+  команды через pinned Jo Engine pipeline (radix sort far→near, VBlank/DMA),
+  Painter's порядок без Z-буфера. Два набора Gouraud-таблиц по чётности
+  кадра; переполнение command list/VRAM/CLUT — явный `false` + диагностика.
+  `rpe_saturn_vdp1_fb_hash()` — FNV-1a по 320×224 словам VDP1 FB. Демо
+  рисует текстурированный Gouraud-куб `CUBE.MSH` + `TEX0.TEX` с CD.
+- Host-тесты `saturn_hal_tests` (**106 кейсов**) — без SH-2/эмулятора; CI
   `tests.yml` запускает их в PC-debug. Эмулятор в Saturn-CI **не
   запускается** (BIOS не вендорится); smoke/stress — ручные. Сборки
   `saturn-single` (`RPE_SATURN_DUAL_CPU=OFF`) и fault-варианты `hang`/`flood`
@@ -200,10 +214,10 @@ cmake --build --preset saturn-release
 | Work RAM-H: slave worker control | ~0.2 KiB static BSS | SPSC queue + metrics, cache-through |
 | Work RAM-L: asset heap | 932 KiB | first-fit heap (mesh/CI8/палитры); coalescing |
 | Work RAM-L: frame scratch | 48 KiB | `StackAllocator` временных данных кадра |
-| Work RAM-L: command arena | 16 KiB | `LinearAllocator` — каркас VDP1-команд (S27–28) |
+| Work RAM-L: command arena | 16 KiB | `LinearAllocator` + `vdp1_command_list` (S27–28) |
 | Work RAM-L: parallel shared | 28 KiB reserved | S25–26: 3×128 `PreparedTriangle` (8 B) + batch ≈3.1 KiB; запас на S27–28 |
 | Sound RAM | 512 KiB | SCSP (post-MVP, не занимаем) |
-| VDP1 VRAM | 512 KiB | команды/CLUT/текстуры (S27–28) |
+| VDP1 VRAM | 512 KiB | команды/CLUT-адреса/текстуры (S27–28): texture area 451 832 B + Gouraud 512 B |
 | VDP1 FB | 2×256 KiB | page flip A/B |
 | VDP2 VRAM | 512 KiB | фоны/NBG (S29–30) |
 | VDP2 CRAM | 4 KiB | RGB555-палитры |
@@ -248,12 +262,17 @@ Work RAM-L ровно 1 MiB (932 + 48 + 16 + 28). Linker ASSERT + map — час
 
 - `.mesh` v1 (triangle list) и `.tex` v1 (CI8 + RGB555+STP) остаются
   общими; Saturn-специфичный формат не вводится.
-- `.tex` CI8/256 → VDP1 8bpp CLUT; палитра 256×RGB555 помещается в CRAM.
-- VDP1 рисует квады: пара треугольников с общей стороной и материалом
-  объединяется в quad; без пары — вырожденный quad (`v3 = v2`/`v0`) с
-  сохранением winding/UV. Детали — S27–28, policy — ADR-008 §6.
-- Потолок `.tex` v1 256×256 — engine policy (не hardware max); при
-  необходимости большего — новый формат/ADR, v1 не ломать.
+- `.tex` CI8/256 → VDP1 8bpp CLUT; палитра 256×RGB555 помещается в CRAM
+  (RPE — палитры 1..7; 0..255 слова CRAM — VDP2-текст Jo Engine).
+- VDP1 рисует квады. Политика S27–28 (ADR-010): UV трёх вершин обязаны
+  быть в пределах 2 текселей от трёх разных углов прямоугольника текстуры;
+  source rect квантуется по X до 8 текселей, по Y до 1. Четвёртая вершина
+  дублирует следующий назначенный угол (TL→TR→BR→BL). UV не в углах →
+  flat-Gouraud с диагностикой, а не искажённая текстура.
+- `.tex` 256×256: VDP1 pattern height max 255, поэтому загружаются строки
+  0..254 (потеря последней строки, `height_clamped`); splitting на два
+  pattern'а — future work. Потолок 256×256 — engine policy, не hardware max.
+- Детали — [`adr/ADR-010-vdp1-polygons.md`](adr/ADR-010-vdp1-polygons.md).
 
 ## 8. FileSystem и образ
 
@@ -454,28 +473,188 @@ stop/restart/flood (63 кейса).
 - [x] flood fault: overflow зафиксирован, worker READY;
 - [x] PC/PS1 тесты и сборки не регрессировали.
 
-## 12. Известные ограничения S23–26
+## 12. VDP1: полигоны и текстуры (S27–28)
 
-- Нет запуска эмулятора в CI и нет BIOS в репозитории.
-- Нет 3D/VDP1/VDP2-контента: только VDP2 backdrop/clear; VDP1-draw и
-  readback возвращают `false` до S27–28.
+> Нормативное решение: [`adr/ADR-010-vdp1-polygons.md`](adr/ADR-010-vdp1-polygons.md).
+> План: [`plans/sprint_27_28.md`](plans/sprint_27_28.md).
+
+### 12.1. Карта VDP1 VRAM
+
+| Диапазон | Размер | Владелец |
+|---|---:|---|
+| `0x00000..0x0001F` | 32 B | jump table |
+| `0x00020..0x07FFF` | 32 736 B | command table A (Jo Engine) |
+| `0x08000..0x0FFFF` | 32 768 B | command table B (Jo Engine) |
+| `0x10000..0x7E4F7` | 451 832 B | RPE texture area |
+| `0x7E4F8..0x7E6F7` | 512 B | RPE Gouraud, 2×32 |
+| `0x7E700..0x7FF7F` | 6 016 B | Jo Engine 3D clip (не используется) |
+| `0x7FF00..0x7FFFF` | 256 B | Jo Engine light Gouraud |
+
+Framebuffer A/B — отдельные 2×256 KiB по `0x25C80000`. `vdp1_vram.h`
+проверяет карту `static_assert`-ами; texture allocator — first-fit,
+32-байтовое выравнивание, coalescing, явные ошибки.
+
+### 12.2. Конвейер кадра
+
+1. Ядро: view·model → near/far clip → backface cull → Painter's sort.
+2. `Render_DrawTriangle`: backend проецирует view-space через `proj`
+   (fixed 16.16) в 320×224 (crop 8 строк), делает triangle→quad.
+3. `emit_quad`: flat polygon (`CMDCTRL=0x0004`) или textured distorted
+   sprite (`0x0002`), Gouraud-таблица, 256-цветный CLUT.
+4. `Render_EndFrame`: команды в порядке подачи передаются в
+   `__jo_vdp1_add_command` с ключом `count−1−index`; pinned pipeline
+   сортирует far→near, линкует, копирует в VRAM и ждёт VBlank.
+5. VDP1 автоматически очищает framebuffer цветом `EWDR` (== `Render_Clear`).
+
+### 12.3. Текстуры, CLUT, Gouraud
+
+- CI8 8bpp, width кратна 8 (8..256), height 1..255.
+- CLUT — CRAM-палитры **1..6** (7 зарезервирована под VDP2 NBG1
+  background с S29–30); максимум 6 уникальных палитр, седьмая — явный
+  `CLUT_OUT_OF_MEMORY`.
+- `CMDCOLR = palette·256`, `CMDBSIZE = (width/8)<<8 | height`.
+- Texture upload — `jo_dma_copy` (SCU DMA, cache-safe) по абсолютному
+  адресу `VDP1_TEXTURE_BASE + vram_offset`; ошибка откатывает VRAM и CLUT
+  (0 persistent-байт).
+- Gouraud-таблица — **аддитивные offsets**, не абсолютные RGB555:
+  нейтраль 16 в каждом канале (`0x4210`). Flat: база — цвет первой
+  вершины; textured: база — белый, таблица работает как per-vertex тинт.
+  Два набора по 32 таблицы, чётность кадра; дедупликация по 4 offsets;
+  исчерпание → flat + счётчик.
+- 256-высокая текстура: строки 0..254, `height_clamped` + WARNING.
+
+### 12.4. Метрики и golden
+
+VDP2-строка demo (S27–28): `[INFO][dbg] S27-28 f=<frames> c=<commands> o=<overdraw‰>`.
+S29–30: `[INFO][dbg] S29-30 f=<frames> c=<commands> o=<overdraw‰> s=<vblank commits>`.
+
+Golden — детерминированный скриншот pinned Mednafen 1.32.1 (crop сцены
+побайтно совпал на 60/300 с). `rpe_saturn_vdp1_fb_hash(A/B)` — FNV-1a
+32 по 320×224 словам VDP1 framebuffer; API читает VRAM без синхронизации,
+поэтому вызывать только когда VDP1 не рисует (host-тест/QA), не каждый
+кадр demo. `o` — суммарная площадь VDP1 quad'ов кадра в ‰ экрана
+(320×224), fillrate-baseline S27–28: `c=6`, `o=40`.
+
+### 12.5. Ручной чек-лист S27–28
+
+- [x] `saturn-release` стартует в Mednafen 1.32.1 (Japanese BIOS 1.01);
+- [x] виден текстурированный Gouraud-куб `CUBE.MSH` + `TEX0.TEX`;
+- [x] цвет текстуры и градиент Gouraud корректны, без «поплывшей» UV;
+- [x] golden-скриншот стабилен между прогонами (crop 320×200, sha256);
+- [x] сцена не меняется на 60/300 с (статичная, deterministic);
+- [x] порядок граней без Z-буфера стабилен (Painter's);
+- [x] QA-строка `S27-28` читается (VDP2 log; VDP1-overlay перенесён в S31–32 из-за 20 FPS);
+- [x] 5-минутный прогон без краша/зависания/сброса (exit 124);
+- [x] скриншот сохранён в `screenshots/saturn_vdp1_s27_28.png`;
+- [x] PC/PS1 сборки и тесты не регрессировали.
+
+### 12.6. Ограничения S27–28
+
+- Нет perspective-correct UV (аффинная интерполяция, как PS1).
+- UV вне углов прямоугольника → flat-Gouraud, а не текстура.
+- Максимум 6 уникальных CLUT (7 — VDP2 background); 256-высокая текстура теряет последнюю строку.
+- Нет Z-буфера; равная глубина — submission ASC.
+- Нет VDP1 RGBA readback (нет 307 KiB static); golden — `fb_hash`
+  (host/QA) + детерминированный эмуляторный скриншот.
+- Нет запуска эмулятора в CI; BIOS не вендорится.
+- VDP1-overlay (`Render_OverlayText`) реализован, но в demo не
+  включён: ~156 команд на строку → ~20 FPS; перенесён в S31–32.
+- VDP2-фон/hello_triangle/3D-контент — S29–32.
+
+## 13. VDP2: NBG1 bitmap background (S29–30)
+
+> План: [`plans/sprint_29_30.md`](plans/sprint_29_30.md). Модуль:
+> [`../src/hal/saturn/vdp2_backend.h`](../src/hal/saturn/vdp2_backend.h).
+
+### 13.1. Карта VDP2 VRAM
+
+| Область | Размер | Владелец |
+|---|---:|---|
+| NBG1 bitmap A0/A1 | 256 KiB | RPE background 1024×256, 8bpp |
+| B1 (printf cell/map) | ~88 KiB | VDP2 log (NBG0) |
+| прочее | остаток 512 KiB | Jo Engine/VDP2 |
+
+Bitmap адресуется от `JO_VDP2_VRAM_A0` (`0x25E00000`), палитра — CRAM
+блок 7 (`7×256..7×256+255`). VDP1 CLUT использует блоки 1..6; блок 7
+зарезервирован за фоном.
+
+### 13.2. Инициализация и кадр
+
+1. `vdp2_backend_init()` → `jo_vdp2_set_nbg1_8bits_bitmap(7)` (1024×256)
+   и порядок слоёв `NBG0 → VDP1 → NBG1 → RBG0 → NBG2 → NBG3`.
+2. Загрузка `TEX1.TEX` (256×256 CI8+CLUT) → `vdp2_backend_upload_background()`:
+   палитра в CRAM 7, тайлинг 4× по X через
+   `jo_vdp2_draw_bitmap_nbg1_8bits_image()`.
+3. `vdp2_backend_set_scroll(fixed x, fixed y)` только копит pending;
+   `vdp2_backend_commit_vblank()` применяет `jo_vdp2_move_nbg1(px,px)` из
+   VBlank-callback (детерминизм и отсутствие tearing).
+4. `Render_Clear` при активном фоне ставит VDP1 `EWDR=0` (transparent):
+   VDP2 NBG1 виден сквозь прозрачные пиксели, VDP1-куб — поверх.
+
+### 13.3. Бюджет и baseline
+
+| Метрика | Значение |
+|---|---|
+| NBG1 bitmap | 256 KiB VDP2 VRAM (50%) |
+| Палитра 7 | 512 B CRAM |
+| VDP1 visible commands | 6 (backface-culled cube) |
+| VDP1 overdraw | 40‰ экрана (~2.9k px) |
+| Scroll commits | ≈2/кадр (VBlank 60 Гц, game ~28–30 FPS) |
+| Asset heap (transient) | 65 KiB (TEX1 до upload) |
+
+Baseline: [`benchmarks/saturn_vdp2_s29_30.yaml`](benchmarks/saturn_vdp2_s29_30.yaml).
+Политика: один NBG1-слой в v0.2.0, command list ≤ 511, overdraw demo
+≤ 1000‰; переполнение VRAM/палитры — явный `false`/ERROR, silent drop
+запрещён.
+
+### 13.4. Ручной чек-лист S29–30
+
+- [x] `saturn-release` стартует в Mednafen 1.32.1 (Japanese BIOS 1.01);
+- [x] фон NBG1 виден за кубом, VDP1 поверх VDP2;
+- [x] палитра/scroll не повреждены, scroll применяется в VBlank;
+- [x] куб и фон статичны при отсутствии ввода (golden);
+- [x] скриншоты `screenshots/saturn_vdp2_s29_30.png`,
+      `screenshots/saturn_vdp2_scroll_s29_30.png`;
+- [x] 10-минутный stress без tearing/hang (exit 124, f=17760 ≈29.6 FPS);
+- [x] PC/PS1 сборки и host-тесты не регрессировали.
+
+### 13.5. Ограничения S29–30
+
+- Один NBG1-слой; параллакс/второй слой — post-v0.2.0.
+- 8bpp bitmap 1024×256; source `.tex` тайлится, не масштабируется.
+- Палитра фона фиксирована блоком 7; VDP1 CLUT 1..6.
+- VDP2 log (NBG0) остаётся поверх VDP1; VDP1-overlay в demo не включён.
+- Эмуляторный visual gate ручной; BIOS не вендорится.
+
+## 14. Известные ограничения S23–30
+
+- Нет запуска эмулятора в CI и нет BIOS в репозитории; S27–28 visual gate —
+  ручной (pinned Mednafen 1.32.1).
 - Нет PAL, 640×480, 3D pad, SCSP PCM, CD streaming/записи, мыши.
 - VDP2-лог показывает последнюю строку (одна строка 27); история — только
   через эмуляторный debugger/скриншоты.
-- Command arena 16 KiB — каркас; реальные VDP1-пакеты появятся в S27–28.
+- VDP1: нет perspective-correct UV, Z-буфера, произвольных per-vertex UV;
+  UV вне углов → flat; максимум 6 CLUT; 256-высокая текстура теряет
+  последнюю строку. Детали — §12.6 и ADR-010.
+- Command arena 16 KiB переиспользуется VDP1-списком (511 команд);
+  переполнение — явный `false`/ERROR, не silent drop.
 - Parallel workload S25–26 — clip-space prep без perspective divide/screen
   mapping; VDP1 command list и backface — S27–28. Slave в v0.2.0 не пишет
   VRAM (по ADR-009).
 - Shared-регион S25–26 — 28 KiB reserved; текущие 3×128×8 B + batch
   ≈3.1 KiB. Увеличение workload требует пересчёта Work RAM-L ledger и
   benchmark-порога.
-- `Render_TestReadbackPixels/Hash` на Saturn не работают: golden S23–24 —
-  детерминированный цвет/хэш + ручной скриншот, полный readback — S27–28.
+- `Render_TestReadbackPixels/Hash` на Saturn не работают (нет 307 KiB
+  static RGBA); golden S23–30 — детерминированный цвет/`fb_hash` + ручной
+  скриншот.
+- VDP2: один NBG1 8bpp bitmap 1024×256 (256 KiB), палитра 7, без
+  параллакса/второго слоя; scroll — целые пиксели из fixed 16.16.
+- VDP1-overlay `Render_OverlayText` не включён в demo (156 команд → 20 FPS).
 - 2048-ISO/CUE — capability pinned toolchain; raw 2352/CCD не выпускается.
 
-## 13. Источники
+## 15. Источники
 
-### 13.1. Первоисточники Sega / Hitachi
+### 15.1. Первоисточники Sega / Hitachi
 
 - Sega, **VDP1 User's Manual**, Doc. ST-013-R3-061694:
   <https://antime.kapsi.fi/sega/files/ST-013-R3-061694.pdf>
@@ -507,7 +686,7 @@ stop/restart/flood (63 кейса).
 - Hitachi, **SH-1/SH-2 Programming Manual**:
   <https://antime.kapsi.fi/sega/files/h12p0.pdf>
 
-### 13.2. Toolchain / эмулятор
+### 15.2. Toolchain / эмулятор
 
 - Jo Engine v2026.2: <https://github.com/johannes-fetz/joengine/releases/tag/v2026.2>
   (commit `5e99944238030821a48e17a40abefd77e81953c2`, MIT).
@@ -517,7 +696,7 @@ stop/restart/flood (63 кейса).
   настройки Saturn — `src/ss/ss.cpp` (`ss.bios_na_eu`, `ss.bios_jp`,
   `ss.bios_sanity`, `ss.correct_aspect`, `ss.h_overscan`, `ss.h_blend`).
 
-### 13.3. Secondary
+### 15.3. Secondary
 
 - Rodrigo Copetti, *Sega Saturn Architecture*:
   <https://www.copetti.org/writings/consoles/sega-saturn/>

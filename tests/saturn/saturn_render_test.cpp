@@ -6,18 +6,48 @@
 // golden (0x9000 / FNV 0xC4AE5DC5) и явный отказ VDP1-draw (S27–28).
 #include "hal/platform.h"
 #include "hal/render_backend.h"
+#include "hal/saturn/jo_saturn_bridge.h"
 #include "hal/saturn/saturn_fs.h"
 #include "hal/saturn/saturn_hal_internal.h"
 #include "hal/saturn/saturn_input.h"
 #include "hal/saturn/saturn_memory.h"
 #include "hal/saturn/saturn_render_utils.h"
 #include "hal/saturn/slave_worker.h"
+#include "hal/saturn/vdp1_backend.h"
+#include "hal/saturn/vdp1_texture.h"
 #include "render/renderer.h"
 #include "tests/saturn/fake_saturn_bridge.h"
 
 #include <gtest/gtest.h>
 
+#include <string.h>
+
 namespace {
+
+using namespace saturn;
+
+Mat4 make_identity_view()
+{
+    Mat4 view;
+    mat4_identity(&view);
+    return view;
+}
+
+Mat4 make_perspective()
+{
+    Mat4 proj;
+    const fixed_t fov = fixed_div(fixed_mul(FIXED_PI, fixed_from_int(70)), fixed_from_int(180));
+    mat4_perspective(&proj, fov, fixed_div(fixed_from_int(320), fixed_from_int(224)),
+                     fixed_from_int(1), fixed_from_int(100));
+    return proj;
+}
+
+void set_test_camera()
+{
+    const Mat4 view = make_identity_view();
+    const Mat4 proj = make_perspective();
+    Render_SetCamera(&view, &proj);
+}
 
 class SaturnRenderTest : public ::testing::Test {
 protected:
@@ -123,7 +153,7 @@ TEST_F(SaturnRenderTest, GoldenClearWordAndHashAreStable)
     EXPECT_EQ(render_diagnostics().last_code, (uint32_t)RENDER_DIAG_OK);
 }
 
-TEST_F(SaturnRenderTest, Vdp1DrawIsExplicitlyRejected)
+TEST_F(SaturnRenderTest, Vdp1DrawRequiresCameraAndValidTexture)
 {
     ASSERT_TRUE(Platform_Init());
     ASSERT_TRUE(Render_Init(320u, 224u));
@@ -131,8 +161,205 @@ TEST_F(SaturnRenderTest, Vdp1DrawIsExplicitlyRejected)
     HalRenderBackendVertex vertices[3] = {};
     float mvp[16] = {};
     EXPECT_FALSE(hal_render_backend_draw_triangle(vertices, mvp, RENDER_TEXTURE_INVALID));
-    EXPECT_FALSE(hal_render_backend_create_texture(1u, 64u, 64u, nullptr, nullptr));
-    EXPECT_FALSE(hal_render_backend_draw_overlay(nullptr, 0u));
+    EXPECT_TRUE(hal_render_backend_create_texture(1u, 64u, 64u, nullptr, nullptr) == false);
+    EXPECT_TRUE(hal_render_backend_draw_overlay(nullptr, 0u) == false);
+
+    set_test_camera();
+    Render_BeginFrame();
+    vertices[0].x = -1.0f;
+    vertices[0].y = -1.0f;
+    vertices[0].z = -5.0f;
+    vertices[1].x = 1.0f;
+    vertices[1].y = -1.0f;
+    vertices[1].z = -5.0f;
+    vertices[2].x = 1.0f;
+    vertices[2].y = 1.0f;
+    vertices[2].z = -5.0f;
+    for (uint32_t i = 0u; i < 3u; ++i) {
+        vertices[i].r = vertices[i].g = vertices[i].b = vertices[i].a = 1.0f;
+    }
+    EXPECT_TRUE(hal_render_backend_draw_triangle(vertices, mvp, RENDER_TEXTURE_INVALID));
+    Render_EndFrame();
+    EXPECT_GE(fake_saturn::vdp1_commands.size(), 1u);
+}
+
+TEST_F(SaturnRenderTest, PatternCoversCubeFace)
+{
+    ASSERT_TRUE(Platform_Init());
+    ASSERT_TRUE(Render_Init(320u, 224u));
+    set_test_camera();
+
+    uint8_t pixels[64u * 64u];
+    uint16_t palette[256];
+    for (uint32_t i = 0u; i < 64u * 64u; ++i) {
+        pixels[i] = static_cast<uint8_t>((i & 0xFEu) + 1u);
+    }
+    for (uint32_t i = 0u; i < 256u; ++i) {
+        palette[i] = static_cast<uint16_t>(i);
+    }
+    ASSERT_TRUE(hal_render_backend_create_texture(1u, 64u, 64u, pixels, palette));
+    ASSERT_NE(vdp1_textures().find(1u), nullptr);
+    EXPECT_EQ(vdp1_textures().find(1u)->clut, 1u);
+
+    HalRenderBackendVertex v[3];
+    memset(v, 0, sizeof(v));
+    v[0].x = -1.0f;
+    v[0].y = -1.0f;
+    v[0].z = -5.0f;
+    v[0].u = 0.0f;
+    v[0].v = 0.0f;
+    v[1].x = 1.0f;
+    v[1].y = -1.0f;
+    v[1].z = -5.0f;
+    v[1].u = 1.0f;
+    v[1].v = 0.0f;
+    v[2].x = 1.0f;
+    v[2].y = 1.0f;
+    v[2].z = -5.0f;
+    v[2].u = 1.0f;
+    v[2].v = 1.0f;
+    for (uint32_t i = 0u; i < 3u; ++i) {
+        v[i].r = v[i].g = v[i].b = v[i].a = 1.0f;
+    }
+
+    Render_BeginFrame();
+    EXPECT_TRUE(hal_render_backend_draw_triangle(v, nullptr, 1u));
+    Render_EndFrame();
+
+    ASSERT_EQ(fake_saturn::vdp1_commands.size(), 1u);
+    const RpeVdp1Command& cmd = fake_saturn::vdp1_commands[0];
+    EXPECT_EQ(cmd.ctrl, 0x0002u);  // textured distorted sprite
+    EXPECT_EQ(cmd.colr, 256u);     // palette 1
+    EXPECT_EQ(cmd.size, (8u << 8) | 64u);
+    EXPECT_NE(cmd.grda, 0u);
+}
+
+TEST_F(SaturnRenderTest, OverlayIsSubmittedAfterScene)
+{
+    ASSERT_TRUE(Platform_Init());
+    ASSERT_TRUE(Render_Init(320u, 224u));
+    set_test_camera();
+
+    HalRenderBackendVertex v[3];
+    memset(v, 0, sizeof(v));
+    v[0].z = v[1].z = v[2].z = -5.0f;
+    v[0].x = -1.0f;
+    v[0].y = -1.0f;
+    v[1].x = 1.0f;
+    v[1].y = -1.0f;
+    v[2].x = 1.0f;
+    v[2].y = 1.0f;
+
+    HalRenderBackendOverlayVertex overlay[3] = {
+        {10, 10, 255, 0, 0}, {60, 10, 0, 255, 0}, {10, 60, 0, 0, 255}};
+
+    Render_BeginFrame();
+    ASSERT_TRUE(hal_render_backend_draw_triangle(v, nullptr, RENDER_TEXTURE_INVALID));
+    ASSERT_TRUE(hal_render_backend_draw_overlay(overlay, 3u));
+    Render_EndFrame();
+
+    ASSERT_EQ(fake_saturn::vdp1_commands.size(), 2u);
+    EXPECT_GT(fake_saturn::vdp1_keys[0], fake_saturn::vdp1_keys[1]);
+    EXPECT_EQ(fake_saturn::vdp1_commands[0].ctrl, 0x0004u);
+    EXPECT_EQ(fake_saturn::vdp1_commands[1].ctrl, 0x0004u);
+}
+
+TEST_F(SaturnRenderTest, ClutSwitchesBetweenPrimitives)
+{
+    ASSERT_TRUE(Platform_Init());
+    ASSERT_TRUE(Render_Init(320u, 224u));
+    set_test_camera();
+
+    uint8_t pixels[64u * 64u];
+    uint16_t palette[256];
+    for (uint32_t i = 0u; i < 64u * 64u; ++i) {
+        pixels[i] = static_cast<uint8_t>((i & 0xFEu) + 1u);
+    }
+    for (uint32_t i = 0u; i < 256u; ++i) {
+        palette[i] = static_cast<uint16_t>(i);
+    }
+    ASSERT_TRUE(hal_render_backend_create_texture(1u, 64u, 64u, pixels, palette));
+    ASSERT_TRUE(hal_render_backend_create_texture(2u, 64u, 64u, pixels, palette));
+    ASSERT_EQ(vdp1_textures().find(1u)->clut, 1u);
+    ASSERT_EQ(vdp1_textures().find(2u)->clut, 2u);
+
+    HalRenderBackendVertex v[3];
+    memset(v, 0, sizeof(v));
+    v[0].x = -1.0f;
+    v[0].y = -1.0f;
+    v[0].z = -5.0f;
+    v[1].x = 1.0f;
+    v[1].y = -1.0f;
+    v[1].z = -5.0f;
+    v[2].x = 1.0f;
+    v[2].y = 1.0f;
+    v[2].z = -5.0f;
+    v[1].u = 1.0f;
+    v[2].u = 1.0f;
+    v[2].v = 1.0f;
+    for (uint32_t i = 0u; i < 3u; ++i) {
+        v[i].r = v[i].g = v[i].b = v[i].a = 1.0f;
+    }
+
+    Render_BeginFrame();
+    ASSERT_TRUE(hal_render_backend_draw_triangle(v, nullptr, 1u));
+    ASSERT_TRUE(hal_render_backend_draw_triangle(v, nullptr, 2u));
+    Render_EndFrame();
+
+    ASSERT_EQ(fake_saturn::vdp1_commands.size(), 2u);
+    EXPECT_EQ(fake_saturn::vdp1_commands[0].colr, 256u);
+    EXPECT_EQ(fake_saturn::vdp1_commands[1].colr, 512u);
+}
+
+TEST_F(SaturnRenderTest, CommandListOverflowIsExplicit)
+{
+    ASSERT_TRUE(Platform_Init());
+    ASSERT_TRUE(Render_Init(320u, 224u));
+    set_test_camera();
+
+    HalRenderBackendVertex v[3];
+    memset(v, 0, sizeof(v));
+    v[0].x = -1.0f;
+    v[0].y = -1.0f;
+    v[0].z = -5.0f;
+    v[1].x = 1.0f;
+    v[1].y = -1.0f;
+    v[1].z = -5.0f;
+    v[2].x = 1.0f;
+    v[2].y = 1.0f;
+    v[2].z = -5.0f;
+    for (uint32_t i = 0u; i < 3u; ++i) {
+        v[i].r = v[i].g = v[i].b = v[i].a = 1.0f;
+    }
+
+    Render_BeginFrame();
+    bool overflowed = false;
+    for (uint32_t i = 0u; i < 600u; ++i) {
+        if (!hal_render_backend_draw_triangle(v, nullptr, RENDER_TEXTURE_INVALID)) {
+            overflowed = true;
+            EXPECT_GE(i, vdp1_command_list().capacity());
+            break;
+        }
+    }
+    EXPECT_TRUE(overflowed);
+    EXPECT_EQ(vdp1_backend_stats().overflows, 1u);
+    Render_EndFrame();
+}
+
+TEST_F(SaturnRenderTest, Vdp1FramebufferGoldenHashIsStable)
+{
+    ASSERT_TRUE(Platform_Init());
+    ASSERT_TRUE(Render_Init(320u, 224u));
+
+    fake_saturn::fill_framebuffer(0u, CLEAR_GOLDEN_WORD);
+    fake_saturn::fill_framebuffer(1u, CLEAR_GOLDEN_WORD);
+    uint32_t hash0 = 0u;
+    uint32_t hash1 = 0u;
+    EXPECT_TRUE(rpe_saturn_vdp1_fb_hash(0u, &hash0));
+    EXPECT_TRUE(rpe_saturn_vdp1_fb_hash(1u, &hash1));
+    EXPECT_EQ(hash0, CLEAR_GOLDEN_HASH);
+    EXPECT_EQ(hash1, CLEAR_GOLDEN_HASH);
+    EXPECT_EQ(rpe_saturn_vdp1_fb_hash(2u, &hash0), false);
 }
 
 TEST_F(SaturnRenderTest, BackendRequiresPlatformAndRejectsDoubleInit)

@@ -77,6 +77,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         saturn/saturn_render_test.cpp
         saturn/saturn_scu_sync_test.cpp
         saturn/saturn_slave_worker_test.cpp
+        saturn/triangle_to_quad_test.cpp
+        saturn/vdp1_command_list_test.cpp
+        saturn/vdp1_texture_test.cpp
+        saturn/vdp1_vram_test.cpp
+        saturn/vdp2_backend_test.cpp
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/platform_saturn.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/filesystem_saturn.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/render_saturn.cpp"
@@ -89,6 +94,12 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_render_utils.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/scu_sync.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/saturn/slave_worker.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/triangle_to_quad.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_backend.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp2_backend.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_command_list.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_texture.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_vram.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/log/log.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/math/fixed.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/math/math.cpp"

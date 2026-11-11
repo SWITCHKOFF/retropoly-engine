@@ -3,7 +3,8 @@
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§13).
 > Источник задач: [`RetroEngine_Engineering_Documentation_v1.43.md`](../RetroEngine_Engineering_Documentation_v1.43.md) §4 «Будущие итерации» — Saturn, S21–32.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-09):** план не начат; пост-MVP v0.2.0.
+> **Статус (2026-11-11):** входные критерии S29–30 выполнены; план готов к
+> старту (hello_triangle Saturn + релиз v0.2.0).
 
 ## Карточка спринта
 

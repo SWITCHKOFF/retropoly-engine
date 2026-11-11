@@ -20,17 +20,31 @@
 #include "hal/saturn/saturn_memory.h"
 #include "hal/saturn/saturn_parallel_workload.h"
 #include "hal/saturn/slave_worker.h"
+#include "hal/saturn/vdp1_backend.h"
+#include "hal/saturn/vdp1_texture.h"
+#include "hal/saturn/vdp2_backend.h"
+
+#include <string.h>
 
 namespace {
 
 constexpr uint32_t kSelfTestScratchBytes = 160u * 1024u;
 constexpr uint32_t kMeshArenaBytes = 64u * 1024u;
 constexpr uint32_t kMetricsPeriodFrames = 300u;
+constexpr uint32_t kDemoMaxVertices = 64u;
 
 LinearAllocator s_mesh_alloc;
 void* s_mesh_block = nullptr;
 MeshAsset* s_boot_mesh = nullptr;
+Mat4 s_view;
+Mat4 s_proj;
 Mat4 s_mvp;
+Mat4 s_cube_model;
+TextureHandle s_texture = RENDER_TEXTURE_INVALID;
+Vertex s_demo_vertices[kDemoMaxVertices];
+uint32_t s_demo_vertex_count = 0u;
+fixed_t s_bg_scroll_x = 0;
+fixed_t s_bg_scroll_y = 0;
 uint32_t s_frame_count = 0u;
 uint32_t s_first_hash = 0u;
 uint32_t s_determinism_failures = 0u;
@@ -113,6 +127,11 @@ void boot_asset_self_test(void)
                 Log_Message(LOG_LEVEL_INFO, "saturn_asset", "TEX0.TEX valid: %ux%u",
                             static_cast<unsigned>(texture->width),
                             static_cast<unsigned>(texture->height));
+                s_texture = Render_CreateTexture(texture->width, texture->height, texture->pixels,
+                                                 texture->palette);
+                if (s_texture == RENDER_TEXTURE_INVALID) {
+                    Log_Message(LOG_LEVEL_ERROR, "saturn_asset", "TEX0.TEX upload to VDP1 failed");
+                }
             } else {
                 Log_Message(LOG_LEVEL_ERROR, "saturn_asset", "TEX0.TEX invalid (asset error %u)",
                             static_cast<unsigned>(error));
@@ -120,6 +139,26 @@ void boot_asset_self_test(void)
             FileSystem_FreeFile(&tex_file);
         } else {
             Log_Message(LOG_LEVEL_WARNING, "saturn_asset", "TEX0.TEX not loaded from CD");
+        }
+
+        // S29–30: фоновая текстура 256×256 → VDP2 NBG1 bitmap.
+        if (saturn::vdp2_backend_available()) {
+            FileData bg_file = FileSystem_LoadFile("TEX1.TEX");
+            if (bg_file.data != nullptr) {
+                TextureAsset* bg = nullptr;
+                uint32_t bg_error = ASSET_ERR_OK;
+                if (texture_validate_and_load(bg_file.data, bg_file.size, &alloc, &bg, &bg_error) &&
+                    saturn::vdp2_backend_upload_background(bg)) {
+                    Log_Message(LOG_LEVEL_INFO, "saturn_asset", "VDP2 bg %ux%u", bg->width,
+                                bg->height);
+                } else {
+                    Log_Message(LOG_LEVEL_WARNING, "saturn_asset",
+                                "VDP2 bg upload failed (asset %u)", static_cast<unsigned>(bg_error));
+                }
+                FileSystem_FreeFile(&bg_file);
+            } else {
+                Log_Message(LOG_LEVEL_WARNING, "saturn_asset", "TEX1.TEX not loaded from CD");
+            }
         }
 
         if (!saturn::asset_heap().free(scratch)) {
@@ -130,20 +169,54 @@ void boot_asset_self_test(void)
     saturn::parallel_workload_init(s_boot_mesh);
 
     // Строка должна уместиться в 40 колонок VDP2-текста (строка 27).
-    Log_Message(LOG_LEVEL_INFO, "asset", "CD mesh=%u tex=%u heap=%u", mesh_ok ? 1u : 0u,
-                texture_ok ? 1u : 0u, static_cast<unsigned>(saturn::asset_heap().used()));
+    Log_Message(LOG_LEVEL_INFO, "asset", "CD mesh=%u tex=%u bg=%u heap=%u", mesh_ok ? 1u : 0u,
+                texture_ok ? 1u : 0u, saturn::vdp2_backend_stats().uploads != 0u ? 1u : 0u,
+                static_cast<unsigned>(saturn::asset_heap().used()));
 }
 
 void build_static_mvp(void)
 {
-    Mat4 view;
-    Mat4 projection;
-    mat4_look_at(&view, vec3_make(0, fixed_from_int(3), fixed_from_int(7)), vec3_make(0, 0, 0),
+    mat4_look_at(&s_view, vec3_make(0, fixed_from_int(3), fixed_from_int(7)), vec3_make(0, 0, 0),
                  vec3_make(0, FIXED_ONE, 0));
     const fixed_t fov = fixed_mul(FIXED_PI, fixed_div(fixed_from_int(70), fixed_from_int(180)));
-    mat4_perspective(&projection, fov, fixed_div(fixed_from_int(320), fixed_from_int(224)),
+    mat4_perspective(&s_proj, fov, fixed_div(fixed_from_int(320), fixed_from_int(224)),
                      fixed_from_int(1), fixed_from_int(100));
-    mat4_multiply(&s_mvp, &projection, &view);
+    mat4_multiply(&s_mvp, &s_proj, &s_view);
+    // S29–30: начальный scroll фона — из статичной камеры (fixed 16.16).
+    s_bg_scroll_x = fixed_from_int(32);
+    s_bg_scroll_y = fixed_from_int(16);
+}
+
+void build_demo_scene(void)
+{
+    // Статичная поза — golden не зависит от времени.
+    const fixed_t angle_y = fixed_div(fixed_mul(FIXED_PI, fixed_from_int(25)), fixed_from_int(180));
+    const fixed_t angle_x =
+        fixed_div(fixed_mul(FIXED_PI, fixed_from_int(-12)), fixed_from_int(180));
+    Mat4 ry;
+    Mat4 rx;
+    mat4_rotate_y(&ry, angle_y);
+    mat4_rotate_x(&rx, angle_x);
+    mat4_multiply(&s_cube_model, &ry, &rx);
+
+    s_demo_vertex_count = 0u;
+    if (s_boot_mesh != nullptr && s_boot_mesh->vertex_count <= kDemoMaxVertices) {
+        for (uint32_t i = 0u; i < s_boot_mesh->vertex_count; ++i) {
+            s_demo_vertices[i] = s_boot_mesh->vertices[i];
+            // Gouraud-тинтинг: разные цвета у вершин куба (ассет — белый).
+            // Мягкий тинт вокруг белого: VDP1 Gouraud — аддитивные offsets
+            // (16 = нейтраль), сильные цвета разрушают текстуру.
+            static const uint8_t tint[8][3] = {{255, 232, 232}, {232, 255, 232},
+                                               {232, 232, 255}, {255, 255, 232},
+                                               {255, 232, 255}, {232, 255, 255},
+                                               {255, 255, 255}, {238, 238, 238}};
+            s_demo_vertices[i].r = tint[i & 7u][0];
+            s_demo_vertices[i].g = tint[i & 7u][1];
+            s_demo_vertices[i].b = tint[i & 7u][2];
+            s_demo_vertices[i].a = 255u;
+        }
+        s_demo_vertex_count = s_boot_mesh->vertex_count;
+    }
 }
 
 void log_benchmark(const saturn::ParallelBenchResult& bench)
@@ -166,7 +239,43 @@ void log_frame_metrics(void)
                 stats.last_wait_us, saturn::parallel_workload_last_hash() & 0xFFFFFFu);
 }
 
+void update_background_scroll(void)
+{
+    const fixed_t step = fixed_from_int(2);
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_LEFT)) {
+        s_bg_scroll_x = fixed_sub(s_bg_scroll_x, step);
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_RIGHT)) {
+        s_bg_scroll_x = fixed_add(s_bg_scroll_x, step);
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_UP)) {
+        s_bg_scroll_y = fixed_sub(s_bg_scroll_y, step);
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_DOWN)) {
+        s_bg_scroll_y = fixed_add(s_bg_scroll_y, step);
+    }
+    const fixed_t max_x = fixed_from_int(static_cast<int32_t>(saturn::VDP2_BITMAP_WIDTH - saturn::VDP2_SCREEN_WIDTH));
+    const fixed_t max_y =
+        fixed_from_int(static_cast<int32_t>(saturn::VDP2_BITMAP_HEIGHT - saturn::VDP2_SCREEN_HEIGHT));
+    if (s_bg_scroll_x < 0) {
+        s_bg_scroll_x = 0;
+    } else if (s_bg_scroll_x > max_x) {
+        s_bg_scroll_x = max_x;
+    }
+    if (s_bg_scroll_y < 0) {
+        s_bg_scroll_y = 0;
+    } else if (s_bg_scroll_y > max_y) {
+        s_bg_scroll_y = max_y;
+    }
+    saturn::vdp2_backend_set_scroll(s_bg_scroll_x, s_bg_scroll_y);
+}
+
 }  // namespace
+
+extern "C" void rpe_saturn_vdp2_vblank_tick(void)
+{
+    saturn::vdp2_backend_commit_vblank();
+}
 
 extern "C" void rpe_saturn_frame_tick(void)
 {
@@ -192,6 +301,13 @@ extern "C" void rpe_saturn_frame_tick(void)
     } else if ((s_frame_count % kMetricsPeriodFrames) == 0u) {
         log_frame_metrics();
     }
+    if ((s_frame_count % 120u) == 0u) {
+        const saturn::Vdp1BackendStats& stats = saturn::vdp1_backend_stats();
+        const uint32_t overdraw = (stats.pixels_last * 1000u) / (320u * 224u);
+        Log_Message(LOG_LEVEL_INFO, "dbg", "S29-30 f=%u c=%u o=%u s=%u", s_frame_count,
+                    stats.commands_last, overdraw,
+                    saturn::vdp2_backend_stats().scroll_commits);
+    }
 #if RPE_SATURN_FAULT_FLOOD
     if ((s_frame_count % (kMetricsPeriodFrames * 3u)) == 0u) {
         Log_Message(LOG_LEVEL_WARNING, "scu", "flood overflows=%u", s_flood_overflows);
@@ -203,8 +319,21 @@ extern "C" void rpe_saturn_frame_tick(void)
     }
 #endif
 
+    update_background_scroll();
+
     Render_BeginFrame();
-    Render_Clear(0u, 0u, 32u);  // golden clear (0,0,32) → VDP2 0x9000
+    Render_Clear(0u, 0u, 32u);  // golden clear (0,0,32) → VDP1 EWDR/VDP2 0x9000
+    if (s_texture != RENDER_TEXTURE_INVALID) {
+        Render_BindTexture(s_texture);
+    } else {
+        Render_BindTexture(RENDER_TEXTURE_INVALID);
+    }
+    if (s_boot_mesh != nullptr && s_demo_vertex_count != 0u) {
+        Render_DrawMesh(s_demo_vertices, s_demo_vertex_count, s_boot_mesh->indices,
+                        s_boot_mesh->index_count, &s_cube_model);
+    }
+    // VDP1-overlay из ~156 команд снижает кадр до 20 Гц; для gate
+    // используем VDP2-строку (см. dbg-лог), VDP1-overlay остаётся API.
     Render_EndFrame();
     Platform_SwapBuffers();
 }
@@ -221,9 +350,17 @@ extern "C" void jo_main(void)
         for (;;) {
         }
     }
+    if (!saturn::vdp2_backend_init()) {
+        Log_Message(LOG_LEVEL_WARNING, "saturn_hal", "VDP2 background disabled");
+    }
 
     if (!rpe_saturn_add_frame_callback(rpe_saturn_frame_tick)) {
         Log_Message(LOG_LEVEL_ERROR, "saturn_hal", "frame callback registration failed");
+        for (;;) {
+        }
+    }
+    if (!rpe_saturn_add_vblank_callback(rpe_saturn_vdp2_vblank_tick)) {
+        Log_Message(LOG_LEVEL_ERROR, "saturn_hal", "vblank callback registration failed");
         for (;;) {
         }
     }
@@ -232,6 +369,8 @@ extern "C" void jo_main(void)
     // становится входом параллельного workload.
     boot_asset_self_test();
     build_static_mvp();
+    Render_SetCamera(&s_view, &s_proj);
+    build_demo_scene();
 
     s_bench = saturn::parallel_workload_benchmark(&s_mvp, 3u);
     log_benchmark(s_bench);
@@ -247,7 +386,9 @@ extern "C" void jo_main(void)
     Log_Message(LOG_LEVEL_WARNING, "scu", "flood overflows=%u", s_flood_overflows);
 #endif
 
-    Log_Message(LOG_LEVEL_INFO, "saturn_hal", "boot complete: dual-CPU prep loop");
+    Log_Message(LOG_LEVEL_INFO, "saturn_hal", "boot complete: bg=%u",
+                saturn::vdp2_backend_stats().uploads);
+
     rpe_saturn_core_run();  // не возвращается: VBlank sync + callbacks
     for (;;) {
     }

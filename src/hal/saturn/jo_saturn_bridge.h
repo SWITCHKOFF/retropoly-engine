@@ -82,6 +82,9 @@ RpeSaturnPadState rpe_saturn_pad_read(void);
  */
 bool rpe_saturn_add_frame_callback(void (*callback)(void));
 
+/** Регистрация VBlank-callback (VDP2 scroll/VRAM commit). */
+bool rpe_saturn_add_vblank_callback(void (*callback)(void));
+
 // ---------------------------------------------------------------------------
 // Master + Slave SH-2 (S25–26)
 // ---------------------------------------------------------------------------
@@ -120,6 +123,133 @@ uint32_t rpe_saturn_frt_ticks_to_us(uint16_t ticks);
 
 /** Пауза busy-wait без обращения к внешней шине (деление SH-2). */
 void rpe_saturn_cpu_relax(void);
+
+// ---------------------------------------------------------------------------
+// VDP1: полигоны, текстуры, CLUT, Gouraud (S27–28)
+// ---------------------------------------------------------------------------
+
+/** Команда VDP1 (8 слов, 32 байта; layout железа big-endian). */
+typedef struct RpeVdp1Command
+{
+    uint16_t ctrl;
+    uint16_t link;
+    uint16_t pmod;
+    uint16_t colr;
+    uint16_t srca;
+    uint16_t size;
+    int16_t xa;
+    int16_t ya;
+    int16_t xb;
+    int16_t yb;
+    int16_t xc;
+    int16_t yc;
+    int16_t xd;
+    int16_t yd;
+    uint16_t grda;
+    uint16_t reserved;
+} RpeVdp1Command;
+
+/**
+ * Инициализация VDP1-пути RPE (после jo_core_init).
+ *
+ * Проверяет, что pinned Jo Engine использует ожидаемую карту VRAM; на host —
+ * no-op. Идемпотентна.
+ *
+ * @return true при успехе.
+ */
+bool rpe_saturn_vdp1_init(void);
+
+/** Сброс VDP1-состояния RPE (не трогает Jo Engine pipeline). */
+void rpe_saturn_vdp1_shutdown(void);
+
+/** Начало кадра RPE: сброс счётчика добавленных команд. */
+void rpe_saturn_vdp1_begin_frame(void);
+
+/** Цвет автоматической очистки VDP1 framebuffer (RGB555 + MSB). */
+void rpe_saturn_vdp1_set_erase_color(uint16_t color);
+
+/**
+ * Загрузка CI8-текстуры в VDP1 VRAM.
+ *
+ * @param vram_offset Смещение от VDP1 VRAM base (кратно 32).
+ * @param pixels CI8-пиксели (width × height).
+ * @param width Ширина (кратна 8).
+ * @param height Высота pattern (1..255).
+ * @param stride Ширина строки в байтах (== width).
+ * @return true при успехе.
+ */
+bool rpe_saturn_vdp1_upload_ci8(uint32_t vram_offset, const uint8_t* pixels, uint16_t width,
+                                uint16_t height, uint16_t stride);
+
+/**
+ * Запись 256-цветной CLUT в VDP2 Color RAM.
+ *
+ * @param palette_id Палитра 1..7 (0 — VDP2-текст Jo Engine).
+ * @param colors 256 × RGB555+STP.
+ */
+void rpe_saturn_vdp1_set_palette(uint8_t palette_id, const uint16_t* colors);
+
+/** Запись Gouraud-таблицы (4 × RGB555 без MSB) в VDP1 VRAM. */
+void rpe_saturn_vdp1_write_gouraud(uint16_t table_index, const uint16_t colors[4]);
+
+/**
+ * Добавление команды в текущий кадр VDP1.
+ *
+ * @param sort_key Ключ Painter's (больше — дальше); Jo Engine сортирует
+ *                 команды по убыванию ключа.
+ * @param command Команда (link игнорируется: pipeline перелинковывает).
+ * @return true при успехе; false — command table переполнена.
+ */
+bool rpe_saturn_vdp1_add_command(uint16_t sort_key, const RpeVdp1Command* command);
+
+/**
+ * FNV-1a 32 по 320×224 словам RGB555 framebuffer A/B (MSB игнорируется).
+ *
+ * @param buffer 0 — A, 1 — B.
+ * @param out_hash Выход: хэш.
+ * @return true при успехе.
+ */
+bool rpe_saturn_vdp1_fb_hash(uint8_t buffer, uint32_t* out_hash);
+
+/** @return Индекс отображаемого в данный момент framebuffer (0/1). */
+uint8_t rpe_saturn_vdp1_displayed_buffer(void);
+
+/** @return Число команд, добавленных RPE в текущем кадре. */
+uint32_t rpe_saturn_vdp1_added_commands(void);
+
+// ---------------------------------------------------------------------------
+// VDP2: NBG1 8-bit bitmap background (S29–30)
+// ---------------------------------------------------------------------------
+
+/**
+ * Инициализация NBG1 8bpp bitmap 320×224 (1024×256 VRAM) и порядка слоёв:
+ * VDP2 text (NBG0) → VDP1 → NBG1 → RBG0 → NBG2 → NBG3.
+ *
+ * @param palette_id Палитра 1..7 (7 зарезервирована под фон).
+ * @return true при успехе; false — bank A0 занят/нет VDP2 VRAM.
+ */
+bool rpe_saturn_vdp2_init(uint8_t palette_id);
+
+/** Отключить NBG1 (идемпотентно; VDP1/VDP2 text остаются). */
+void rpe_saturn_vdp2_shutdown(void);
+
+/** Запись 256-цветной палитры фона в CRAM (RGB555+STP). */
+void rpe_saturn_vdp2_set_palette(uint8_t palette_id, const uint16_t* colors);
+
+/**
+ * Заливка NBG1 bitmap тайлами @p width × @p height (кратны 8).
+ *
+ * @return true при успехе; false — bitmap не инициализирован/неверные размеры.
+ */
+bool rpe_saturn_vdp2_upload_background(const uint8_t* pixels, uint16_t width, uint16_t height);
+
+/** Прокрутка NBG1 в пикселях (VBlank-safe вызов из vblank callback). */
+void rpe_saturn_vdp2_set_scroll(int16_t x, int16_t y);
+
+/** @return true, если NBG1 bitmap инициализирован. */
+bool rpe_saturn_vdp2_available(void);
+
+
 
 /** @return true, если ISO9660-каталог доступен (0.BIN найден). */
 bool rpe_saturn_fs_available(void);

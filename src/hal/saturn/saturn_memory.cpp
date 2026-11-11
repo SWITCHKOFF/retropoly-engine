@@ -9,6 +9,7 @@
 #include "core/log/log.h"
 #include "core/memory/memory_profiler.h"
 #include "hal/saturn/saturn_command_buffer.h"
+#include "hal/saturn/vdp1_command_list.h"
 
 #include <stddef.h>
 #include <stdint.h>
@@ -67,7 +68,10 @@ size_t profiler_frame_used(void* user)
 
 size_t profiler_command_used(void* user)
 {
-    return static_cast<CommandBuffer*>(user)->used();
+    (void)user;
+    const size_t legacy = command_buffer().used();
+    const size_t vdp1 = vdp1_command_list().used_bytes();
+    return (legacy > vdp1) ? legacy : vdp1;
 }
 
 }  // namespace
@@ -330,6 +334,11 @@ bool memory_init(void)
 
     s_frame_scratch.init(base + ASSET_HEAP_BYTES, FRAME_SCRATCH_BYTES);
     command_buffer().init(base + ASSET_HEAP_BYTES + FRAME_SCRATCH_BYTES, COMMAND_BUFFER_BYTES);
+    if (!vdp1_command_list().init(base + ASSET_HEAP_BYTES + FRAME_SCRATCH_BYTES,
+                                  COMMAND_BUFFER_BYTES)) {
+        Log_Message(LOG_LEVEL_ERROR, "saturn_hal", "vdp1 command list init failed");
+        return false;
+    }
     // S25–26: shared Master/Slave region — детерминированно обнуляется при
     // инициализации; worker/workload подключают его через cache-through alias.
     memset(parallel_work_base(), 0, PARALLEL_WORK_BYTES);
@@ -352,6 +361,7 @@ void memory_shutdown(void)
     s_asset_heap.reset();
     s_frame_scratch.reset_frame();
     command_buffer().reset();
+    vdp1_command_list().shutdown();
     memset(parallel_work_base(), 0, PARALLEL_WORK_BYTES);
 }
 

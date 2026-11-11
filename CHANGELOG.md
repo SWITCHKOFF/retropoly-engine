@@ -6,6 +6,50 @@
 
 ### Added
 
+- Спринт 29–30 — VDP2: NBG1 bitmap background + композитинг (недели 57–60):
+  (1) `src/hal/saturn/vdp2_backend.*` — NBG1 8bpp bitmap 1024×256
+  (256 KiB VDP2 VRAM), палитра 7 (VDP1 CLUT 1..6), тайлинг `TEX1.TEX`
+  256×256 через `jo_vdp2_draw_bitmap_nbg1_8bits_image`, VBlank-коммит
+  fixed 16.16 scroll, диагностика размеров/инициализации; host-тесты.
+  (2) Композитинг: порядок `NBG0 (VDP2 log) → VDP1 → NBG1 → RBG0 → NBG2 →
+  NBG3`; при активном фоне VDP1 framebuffer стирается в transparent
+  (`EWDR=0`), поэтому фон виден сквозь прозрачные пиксели, куб — поверх.
+  Пад ←/→/↑/↓ панорамирует фон в пределах bitmap.
+  (3) `docs/SATURN.md` §13, benchmark
+  `docs/benchmarks/saturn_vdp2_s29_30.yaml`, скриншоты
+  `screenshots/saturn_vdp2_s29_30.png` / `saturn_vdp2_scroll_s29_30.png`.
+  (4) Host `saturn_hal_tests` — 112/112; VDP1 `c=6`, overdraw 40‰;
+  эмуляторный composite gate — Mednafen 1.32.1 (BIOS не вендорится).
+- Спринт 27–28 — VDP1: полигоны и текстуры (недели 53–56):
+  (1) `src/hal/saturn/vdp1_backend.*` — fixed 16.16 проекция view-space →
+  320×224 (crop 8), flat-Gouraud polygon и textured distorted sprite
+  (8bpp CI8 + 256-цветный CLUT), Painter's порядок через pinned Jo Engine
+  pipeline (`__jo_vdp1_add_command`, ключ `count−1−index`, tie-breaker
+  submission ASC), overlay `Render_OverlayText` тем же путём.
+  (2) `vdp1_vram.*` — нормативная карта VDP1 VRAM 512 KiB (jump/command
+  tables/451 832 B texture area/Gouraud/Jo Engine light tables,
+  `static_assert`), first-fit texture allocator с 32-байтовым
+  выравниванием, coalescing и явными overflow/foreign/double-free;
+  `vdp1_texture.*` — реестр CI8-текстур, CLUT 1..7 в CRAM, CPU-копия текстуры в VDP1 VRAM, rollback
+  VRAM+CLUT при ошибке (0 persistent-байт), height 256 → 255 с
+  `height_clamped`; `triangle_to_quad.*` — политика UV-углов (допуск
+  2 текселя), source rect X/8, вырожденный quad, screen-bound/degenerate/
+  unsupported-UV диагностика; ADR-010.
+  (3) `vdp1_command_list.*` — 32-байтовые команды, link/END, capacity 511,
+  переполнение — явный `false` + ERROR. Gouraud: 2×32 таблицы по чётности
+  кадра, дедупликация по 4 цветам, flat-fallback при исчерпании.
+  (4) Golden без 307 KiB RGBA: `rpe_saturn_vdp1_fb_hash(A/B)` — FNV-1a по
+  320×224 словам VDP1 framebuffer; демо рисует текстурированный
+  Gouraud-куб `CUBE.MSH` + `TEX0.TEX` с CD, логирует
+  `[INFO][vdp1] f=… c=… t=… h=…`; overlay `VDP1 S27-28`.
+  (5) Host-тесты `saturn_hal_tests` расширены до **106 кейсов** (VRAM,
+  texture/CLUT/rollback, triangle→quad, command list, render/overlay/
+  fb-hash); PC-debug **283/283** (1 skip); `saturn-release` собирается,
+  `__jo_work_end = 0x060F63F8` (запас ≈22 KiB до master stack).
+  Документация: ADR-010, `docs/SATURN.md` §12, `docs/ASSETS.md` §7,
+  план S27–28. Визуальный gate в Mednafen 1.32.1 — ручной (эмулятор/BIOS
+  не входят в CI); до прогона чек-листа `docs/SATURN.md` §12.5 пункты
+  «эмулятор/gate» открыты.
 - Спринт 25–26 — Параллелизм Master + Slave SH-2 (недели 49–52):
   (1) `src/hal/saturn/scu_sync.*` — acquire/release доступ к shared-памяти,
   cache-through alias, purge кэша, FRT-профилирование и bounded wait без
@@ -109,6 +153,17 @@
   Japanese BIOS 1.01 пройден: VDP2 backdrop 320×224 виден, краша нет;
   скриншот `screenshots/saturn_backdrop.png`. CI `build-saturn.yml`
   зелёный (run 42794098944); `build-pc`, `build-ps1`, `tests` — success.
+
+### Fixed
+
+- Спринт 27–28 — визуальный gate: (1) texture upload использовал
+  относительное смещение как абсолютное (текстура попадала в command
+  table, `SRCA` — в пустую область); теперь `VDP1_TEXTURE_BASE+offset` и
+  `jo_dma_copy`. (2) Gouraud-таблица VDP1 — аддитивные offsets с нейтралью
+  16 (`0x4210`), а не абсолютные RGB555; flat — база первой вершины,
+  textured — белая база. (3) VDP1 erase при VDP2-фоне — transparent.
+  Подтверждено 5-минутным прогоном и детерминированным скриншотом
+  `screenshots/saturn_vdp1_s27_28.png`.
 
 ## [0.1.0] — 2026-11-09
 

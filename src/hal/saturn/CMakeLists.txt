@@ -124,6 +124,12 @@ add_library(retro_engine_hal STATIC
     saturn_render_utils.cpp
     scu_sync.cpp
     slave_worker.cpp
+    triangle_to_quad.cpp
+    vdp1_backend.cpp
+    vdp1_command_list.cpp
+    vdp1_texture.cpp
+    vdp1_vram.cpp
+    vdp2_backend.cpp
     jo_saturn_bridge.c)
 retro_engine_apply_flags(retro_engine_hal)
 target_include_directories(retro_engine_hal PRIVATE

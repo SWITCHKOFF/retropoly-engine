@@ -12,7 +12,7 @@
 //   - Slave в v0.2.0 не трогает VDP1/VDP2/периферию — только shared WRAM.
 //
 // Нормативные документы: docs/adr/ADR-009-master-slave.md,
-// docs/SATURN.md §13.
+// docs/SATURN.md §11.2.
 #pragma once
 
 #include <stdint.h>

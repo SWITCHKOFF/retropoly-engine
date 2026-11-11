@@ -1,13 +1,14 @@
 # ============================================================================
-# Saturn CI — Спринты 21–26 (docs/plans/sprint_23_24.md, sprint_25_26.md),
-# ADR-008/ADR-009.
+# Saturn CI — Спринты 21–28 (docs/plans/sprint_23_24.md, sprint_25_26.md,
+# sprint_27_28.md), ADR-008/ADR-009/ADR-010.
 #
 # Собирает pinned toolchain Jo Engine v2026.2 (GCC 8.2.0 sh-none-elf) +
 # bootable ISO/CUE через канонический пресет saturn-release и проверяет
 # наличие .mesh/.tex в ISO. Дополнительно собираются S25–26 variants:
 # saturn-single (fallback), saturn-hang, saturn-flood (fault injection).
 # Эмулятор в CI НЕ запускается: BIOS не вендорится и не публикуется;
-# smoke/stress — ручная приёмка (docs/SATURN.md §9, §11).
+# smoke/stress и VDP1 visual gate — ручная приёмка (docs/SATURN.md §9, §11,
+# §12.5).
 # ============================================================================
 name: build-saturn
 

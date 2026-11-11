@@ -422,7 +422,7 @@ gantt
 | [plans/sprint_29_30.md](plans/sprint_29_30.md) | 29–30 | 57–60 | 06.12.2027–02.01.2028 | VDP2: фоны, композитинг, синхронизация | 55.8 ч |
 | [plans/sprint_31_32.md](plans/sprint_31_32.md) | 31–32 | 61–64 | 03.01–30.01.2028 | Hello Triangle на Saturn + релиз v0.2.0 | 52.5 ч |
 
-> Статус S21–26 (2026-11-10): S21–22 (toolchain/preset/HAL skeleton/CI/docs)
+> Статус S21–28 (2026-11-10): S21–22 (toolchain/preset/HAL skeleton/CI/docs)
 > закрыт, ADR-008 — [`adr/ADR-008-saturn-backend.md`](adr/ADR-008-saturn-backend.md).
 > S23–24 — HAL Master SH-2: идемпотентный lifecycle/rollback, 6-button pad,
 > read-only ISO9660 FS (asset heap 932 KiB + frame/command/parallel арены),
@@ -435,7 +435,17 @@ gantt
 > 5-минутный smoke S23–24 и 10-минутный stress S25–26 в Mednafen 1.32.1 с
 > легальным Japanese BIOS 1.01 пройдены; скриншоты
 > `screenshots/saturn_clear_s23_24.png`, `screenshots/saturn_dual_cpu_s25_26.png`.
-> VDP1/3D — S27–28.
+> S27–28 — VDP1 backend: flat/textured Gouraud (CI8+CLUT 1..6; 7 — VDP2),
+> triangle→quad, first-fit VRAM 451 832 B, Painter's порядок без Z-буфера,
+> fb-hash golden; ADR-010 —
+> [`adr/ADR-010-vdp1-polygons.md`](adr/ADR-010-vdp1-polygons.md);
+> host `saturn_hal_tests` — 112/112. Visual gate S27–28 выполнен в
+> Mednafen 1.32.1 (Japanese BIOS 1.01): текстурированный Gouraud-куб,
+> 5-минутный stress PASS, `screenshots/saturn_vdp1_s27_28.png`.
+> S29–30 — VDP2 NBG1 bitmap 1024×256 (256 KiB, палитра 7), тайлинг
+> `TEX1.TEX`, VDP1 поверх VDP2 (transparent erase), VBlank scroll;
+> `screenshots/saturn_vdp2_s29_30.png`; baseline
+> `benchmarks/saturn_vdp2_s29_30.yaml`. VDP2/3D — S31–32.
 
 Σ E ≈ 335 ч. При 10–15 ч/нед 24 недели дают 240–360 ч: план сходится только у верхней границы темпа; 95%-сценарий (≈ 425 ч) требует recovery-недель или scope reduction.
 
