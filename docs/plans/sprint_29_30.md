@@ -3,9 +3,9 @@
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§13).
 > Источник задач: [`RetroEngine_Engineering_Documentation_v1.43.md`](../RetroEngine_Engineering_Documentation_v1.43.md) §4 «Будущие итерации» — Saturn, S21–32.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-11):** **закрыт по локальному gate**; remote CI —
-> после push. NBG1 bitmap + VDP1 compositing + VBlank scroll приняты в
-> Mednafen 1.32.1; 10-минутный stress PASS (`exit 124`, f=17760).
+> **Статус (2026-11-11):** **закрыт**. NBG1 bitmap + VDP1 compositing +
+> VBlank scroll приняты в Mednafen 1.32.1; 10-минутный stress PASS
+> (`exit 124`, f=17760); remote CI `build-saturn` зелёный (run 43085389214).
 
 ## Карточка спринта
 
@@ -56,7 +56,7 @@
 
 - [x] [B] 10-минутный стресс композитной сцены в pinned-эмуляторе; отсутствие tearing/hang
 - [x] [B] Golden и скриншот; сравнить с PC/PS1, задокументировать отличия
-- [ ] [B] CI: `build-saturn.yml` — после push (локальный эквивалент: `saturn-release` + `saturn-single/hang/flood` собираются; PC/PS1 не регрессировали)
+- [x] [B] CI: `build-saturn.yml` зелёный (run 43085389214); `build-pc`, `build-ps1`, `tests` — success; артефакт образа загружен
 - [x] [B] CHANGELOG + документация; гейт: VDP1+VDP2 синхронизированы, фон виден, priority корректен
 
 ## Критерии приёмки спринта 29–30
@@ -96,10 +96,10 @@
 - **10-минутный stress:** `timeout 640` → `exit 124` (SIGTERM), без
   hang/tearing/сброса; финальный кадр `f=17760` (~29.6 FPS), `c=6`, `o=40`;
   скриншот `screenshots/saturn_vdp2_stress_s29_30.png`.
-- **CI:** локальный эквивалент `build-saturn.yml` зелёный:
-  `saturn-release` + `saturn-single/hang/flood`, ISO с `.mesh/.tex`;
-  remote GitHub Actions — после push (эмулятор в CI не запускается,
-  BIOS не вендорится).
+- **CI:** remote GitHub Actions на `3213c6b` — `build-saturn` success
+  (run 43085389214, артефакт `retro-saturn-disc`), `build-pc` success
+  (macOS/Ubuntu/Windows), `build-ps1` success, `tests` success;
+  эмулятор в CI не запускается, BIOS не вендорится.
 
 ## Риски
 
