@@ -16,7 +16,7 @@
 #include "command.h"
 #include "diagnostics.h"
 #include "i18n.h"
-#include "process.h"
+#include "process_runner.h"
 #include "project.h"
 #include "sdk.h"
 #include "settings.h"

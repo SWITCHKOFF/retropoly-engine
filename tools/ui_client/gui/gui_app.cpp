@@ -238,6 +238,60 @@ int GuiApp::run()
     return 0;
 }
 
+int GuiApp::runProjectOnce(int seconds)
+{
+    if (!core_.hasProject()) {
+        std::fprintf(stderr, "[gate] no project open\n");
+        return 1;
+    }
+    screen_ = Screen::Project;
+    tab_ = 2;
+    startRun();
+    if (!error_message_.empty()) {
+        std::fprintf(stderr, "[gate] run start failed: %s\n", error_message_.c_str());
+        return 1;
+    }
+    pollCore();
+    const RunStatus started = core_.runStatus();
+    if (started.state == RunState::Failed) {
+        std::fprintf(stderr, "[gate] run failed: %s\n", started.error.c_str());
+        return 1;
+    }
+    std::printf("[gate] run command: %s\n", core_.runCommandPreview().c_str());
+    std::printf("[gate] pid: %d\n", static_cast<int>(core_.runStatus().pid));
+
+    const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(seconds);
+    bool captured = false;
+    while (std::chrono::steady_clock::now() < deadline) {
+        SDL_Event event;
+        while (SDL_PollEvent(&event))
+            ImGui_ImplSDL3_ProcessEvent(&event);
+        pollCore();
+        const RunStatus status = core_.runStatus();
+        if (status.state != RunState::Running) {
+            std::printf("[gate] process exited early (exit %d)\n", status.exit_code);
+            break;
+        }
+        renderFrame(!screenshot_dir_.empty() && !captured,
+                    screenshot_dir_.empty() ? "" : joinPath(screenshot_dir_, "gate_run.png"));
+        captured = true;
+        SDL_Delay(50);
+    }
+    core_.stopRun();
+    for (int i = 0; i < 100 && core_.runStatus().state == RunState::Running; ++i) {
+        pollCore();
+        SDL_Delay(20);
+    }
+    pollCore();
+    const RunStatus final_status = core_.runStatus();
+    std::printf("[gate] final state: %d (exit %d, pid %d)\n", static_cast<int>(final_status.state),
+                final_status.exit_code, static_cast<int>(final_status.pid));
+    for (size_t i = 0; i < run_log_.size(); ++i) {
+        std::printf("[gate-log] %s\n", run_log_[i].c_str());
+    }
+    return final_status.state == RunState::Failed ? 1 : 0;
+}
+
 void GuiApp::pollCore()
 {
     std::vector<std::string> build = core_.takeBuildLog();

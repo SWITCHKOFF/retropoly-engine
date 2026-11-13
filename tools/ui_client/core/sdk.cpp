@@ -217,7 +217,7 @@ SdkLoadResult loadSdk(const std::string& path, Lang lang)
     };
     for (size_t i = 0; i < sizeof(required_files) / sizeof(required_files[0]); ++i) {
         if (!isRegularFile(joinPath(root, required_files[i]))) {
-            result.error = trf(lang, "err.sdk_component", required_files[i]);
+            result.error = trf(lang, "err.sdk_component", required_files[i].c_str());
             return result;
         }
     }

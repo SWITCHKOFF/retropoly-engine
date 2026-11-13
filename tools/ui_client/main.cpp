@@ -33,6 +33,8 @@ void printUsage(const char* exe)
         "  --lang ru|en         язык интерфейса\n"
         "  --theme dark|light   тема\n"
         "  --smoke              headless smoke: new project → import → build → run\n"
+        "  --run-project        открыть --project и запустить target/эмулятор\n"
+        "  --emulator PATH      эмулятор для --run-project (PS1/Saturn)\n"
         "  --smoke-platform P   target для smoke: pc|ps1|saturn (default pc)\n"
         "  --work-dir DIR       каталог smoke-проекта\n"
         "  --samples DIR        каталог с cube.gltf/texture.png для импорта\n"
@@ -67,7 +69,9 @@ int main(int argc, char** argv)
     std::string screenshot_dir;
     std::string smoke_platform_code;
     Platform smoke_platform = Platform::Pc;
+    std::string emulator_path;
     int run_seconds = 2;
+    bool run_project = false;
     bool smoke = false;
     bool do_run = true;
 
@@ -92,6 +96,10 @@ int main(int argc, char** argv)
             if (!takeValue(argc, argv, &i, "--theme", &theme)) return 2;
         } else if (arg == "--smoke") {
             smoke = true;
+        } else if (arg == "--run-project") {
+            run_project = true;
+        } else if (arg == "--emulator") {
+            if (!takeValue(argc, argv, &i, "--emulator", &emulator_path)) return 2;
         } else if (arg == "--work-dir") {
             if (!takeValue(argc, argv, &i, "--work-dir", &work_dir)) return 2;
         } else if (arg == "--samples") {
@@ -140,7 +148,18 @@ int main(int argc, char** argv)
         return 1;
     }
     if (!project_path.empty()) app.openProjectAtStartup(project_path);
+    if (!emulator_path.empty() && core.hasProject()) {
+        if (core.project().platform == Platform::Ps1) {
+            core.mutableSettings().emulator_ps1 = emulator_path;
+        } else if (core.project().platform == Platform::Saturn) {
+            core.mutableSettings().emulator_saturn = emulator_path;
+        }
+    }
 
+    if (run_project) {
+        app.setScreenshotDir(screenshot_dir);
+        return app.runProjectOnce(run_seconds);
+    }
     if (smoke) {
         SmokeOptions options;
         options.platform = smoke_platform;

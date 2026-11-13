@@ -49,11 +49,17 @@ public:
     /** Интерактивный цикл; возвращает код выхода. */
     int run();
 
+    /** Открыть проект, запустить target/эмулятор на N секунд и выйти. */
+    int runProjectOnce(int seconds);
+
     /** Скриптованный smoke: welcome → new project → import → build → run. */
     int runSmoke(const SmokeOptions& options);
 
     /** Открыть проект до первого кадра. */
     void openProjectAtStartup(const std::string& path);
+
+    /** Каталог скриншотов для run-project/smoke. */
+    void setScreenshotDir(const std::string& dir) { screenshot_dir_ = dir; }
 
 private:
     enum class Screen

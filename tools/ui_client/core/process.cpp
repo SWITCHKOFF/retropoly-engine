@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: MIT
 // RetroPolyEngine — tools/ui_client/core/process.cpp
-#include "process.h"
+#include "process_runner.h"
 
 #include <atomic>
 #include <chrono>
