@@ -181,7 +181,7 @@ std::string absolutePath(const std::string& path)
     std::error_code ec;
     const fs::path result = fs::absolute(fs::u8path(path), ec);
     if (ec) return path;
-    return result.lexically_normal().u8string();
+    return normalizePath(result.lexically_normal().u8string());
 }
 
 std::string normalizePath(const std::string& path)

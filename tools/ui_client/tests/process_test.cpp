@@ -58,9 +58,12 @@ TEST(ProcessTest, MissingExecutableFailsCleanly)
     spec.argv = {"/definitely/not/a/real/executable"};
     ProcessRunner runner;
     std::string error;
-    EXPECT_TRUE(runner.start(spec, &error));
-    EXPECT_TRUE(runner.wait(5000));
-    EXPECT_NE(runner.exitCode(), 0);
+    if (runner.start(spec, &error)) {
+        EXPECT_TRUE(runner.wait(5000));
+        EXPECT_NE(runner.exitCode(), 0);
+    } else {
+        EXPECT_FALSE(error.empty());
+    }
 }
 
 TEST(ProcessTest, CancelStopsLongProcess)

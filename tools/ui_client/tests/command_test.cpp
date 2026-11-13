@@ -49,7 +49,7 @@ TEST(CommandTest, PcBuildPlanUsesNinjaAndSdk)
     const BuildPlan plan = makeBuildPlan(project, dir.str(), fakeSdk(Platform::Pc, dir.str()),
                                          AppSettings(), Lang::Ru);
     ASSERT_TRUE(plan.ok) << plan.error;
-    EXPECT_EQ(plan.build_dir, dir.str() + "/build/pc");
+    EXPECT_EQ(plan.build_dir, normalizePath(dir.str() + "/build/pc"));
     EXPECT_TRUE(contains(plan.configure, "-S"));
     EXPECT_TRUE(contains(plan.configure, dir.str()));
     EXPECT_TRUE(contains(plan.configure, "-G"));
@@ -75,7 +75,7 @@ TEST(CommandTest, Ps1PlanAddsToolchain)
     EXPECT_TRUE(containsPrefix(plan.configure, "-DCMAKE_TOOLCHAIN_FILE="));
     EXPECT_TRUE(contains(plan.configure,
                          "-DCMAKE_TOOLCHAIN_FILE=" + dir.str() + "/cmake/ps1-toolchain.cmake"));
-    EXPECT_EQ(plan.build_dir, dir.str() + "/build/ps1");
+    EXPECT_EQ(plan.build_dir, normalizePath(dir.str() + "/build/ps1"));
 }
 
 TEST(CommandTest, PcRunFindsExecutable)
@@ -126,7 +126,7 @@ TEST(CommandTest, Ps1RunUsesConfiguredEmulatorAndCue)
     ASSERT_TRUE(plan.ok) << plan.error;
     EXPECT_TRUE(plan.uses_emulator);
     EXPECT_EQ(plan.argv.size(), 2u);
-    EXPECT_EQ(plan.cue_path, cue);
+    EXPECT_EQ(plan.cue_path, normalizePath(cue));
 }
 
 TEST(CommandTest, Ps1RunWithoutEmulatorIsError)
