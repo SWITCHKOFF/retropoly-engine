@@ -112,7 +112,10 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [ ] Публичный SDK-релиз + UI client (release gate v2)
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
-[docs/RELEASING.md](docs/RELEASING.md).
+[docs/RELEASING.md](docs/RELEASING.md). Следующий этап — **S33–38 /
+v0.2.1**: SDK packaging + UI client; планы —
+[docs/plans/sprint_33_34.md](docs/plans/sprint_33_34.md),
+[sprint_35_36](docs/plans/sprint_35_36.md), [sprint_37_38](docs/plans/sprint_37_38.md).
 
 ## Лицензия
 

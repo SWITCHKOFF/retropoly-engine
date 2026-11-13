@@ -180,6 +180,7 @@ gantt
 | [sprint_19_20.md](plans/sprint_19_20.md) | 19–20 | 37–40 | M8 | Документация, release gate, GitHub Release, анонс |
 
 Пост-MVP v0.2.0 (Sega Saturn): детальные планы S21–32 — §13.1.
+v0.2.1 (SDK + UI client): детальные планы S33–38 — §13.2.
 
 ---
 
@@ -413,8 +414,9 @@ gantt
 
 ## 13. Post-MVP roadmap (после v0.1.0 — справочно)
 
-- **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn. Детальные планы S21–32 — §13.1.
-- **v0.3.0 — N64 (6–8 спринтов):** микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, libdragon.
+- **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn. Детальные планы S21–32 — §13.1. GitHub Release отозван (demo-only payload).
+- **v0.2.1 — SDK + UI client (3 пары спринтов, S33–38):** install/export CMake package, SDK-архивы PC/PS1/Saturn, consumer smoke; UI client (project/target/import/build/run); release gate v2 и первый валидный публичный релиз. Детальные планы — §13.2.
+- **v0.3.0 — N64 (6–8 спринтов, S39+):** микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, libdragon.
 - **v0.4.0 — Jaguar (4–6 спринтов):** blitter-программирование (Tom), Jerry-DSP; 68000 host.
 - **v0.5.0 — 3DO (4–6 спринтов):** CEL/MADAM-композитинг; отдельная юридическая проверка SDK перед любым vendoring/перераспределением.
 - **v0.6.0–v0.8.0 — Аудио и ФС:** XA/PCM/ADPCM (SPU/SCSP/AI), расширенный ISO9660/CDFS, memory card save.
@@ -472,6 +474,28 @@ toolchain, hello_triangle работает в pinned-эмуляторе, Master 
 reference-фактов Saturn по первоисточникам (§2.2 инженерной документации).
 
 ---
+
+### 13.2. v0.2.1 — SDK + UI client: детальные планы спринтов
+
+Следующий этап после Saturn; обусловлен политикой
+[`RELEASING.md`](RELEASING.md): публичный релиз = SDK + UI client, а не
+demo-архив. Нумерация S33–38 продолжает план; фактические даты — от
+16.11.2026 (S31–32 выполнены досрочно).
+
+| Файл | Спринты | Недели | Даты | Тема | PERT E |
+|---|---|---|---|---|---|
+| [plans/sprint_33_34.md](plans/sprint_33_34.md) | 33–34 | 65–68 | 16.11–13.12.2026 | SDK: public API, install/export, CMake package, consumer smoke | 55.8 ч |
+| [plans/sprint_35_36.md](plans/sprint_35_36.md) | 35–36 | 69–72 | 14.12.2026–10.01.2027 | UI client MVP: project/target/import/build/run | 60.8 ч |
+| [plans/sprint_37_38.md](plans/sprint_37_38.md) | 37–38 | 73–76 | 11.01–07.02.2027 | Release gate v2, SDK+UI payload, v0.2.1 | 50.0 ч |
+
+Σ E ≈ 166.6 ч. При 10–15 ч/нед 24 недели (S33–38 = 12 недель) дают
+120–180 ч: план сходится у верхней границы; 95%-сценарий (≈ 206.6 ч)
+требует recovery-недели или scope reduction.
+
+**Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
+создаёт проект, импортирует ассет, собирает и запускает target; payload
+содержит `sdk/` + `ui/` + `checksums.sha256`; `verify_release_contract.py`
+`all_ok: true`; v0.2.0 остаётся отозванным. Только после этого — N64 S39+.
 
 ## 14. Реестр рисков (операционный)
 

@@ -106,6 +106,14 @@ withdrawn / SDK+UI pending».
 | Release payload SDK+UI | не реализован | Да |
 | Demo-образы PC/PS1/Saturn | есть | Нет (optional) |
 
-Следующая работа — отдельный спринт/эпик **«SDK packaging + UI client»**:
-install/export CMake targets, SDK archive, UI MVP (project/target/import/build),
-release gate v2 и только затем повторная публикация v0.2.x/v0.3.0.
+Следующий этап — **S33–38** (v0.2.1):
+
+- [`plans/sprint_33_34.md`](plans/sprint_33_34.md) — SDK install/export,
+  CMake package, consumer smoke;
+- [`plans/sprint_35_36.md`](plans/sprint_35_36.md) — UI client MVP
+  (project/target/import/build/run);
+- [`plans/sprint_37_38.md`](plans/sprint_37_38.md) — release gate v2,
+  payload `sdk/`+`ui/`, публикация **v0.2.1**.
+
+Только после успешного gate v0.2.1 считается первым действующим публичным
+релизом; v0.2.0 остаётся отозванным. N64 (v0.3.0) стартует с S39.

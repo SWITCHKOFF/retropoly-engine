@@ -19,7 +19,7 @@
 | Входные критерии | Спринт 29–30 завершён (VDP2, композитинг, синхронизация) ([`sprint_29_30.md`](sprint_29_30.md)) |
 | На критическом пути | Да |
 | Выходные артефакты | Saturn-цель `hello_triangle`, `main_saturn.cpp`, bootable-образ, скриншоты, тег `v0.2.0` (Release отозван); SDK+UI — release gate v2 |
-| Следующий спринт | Эпик SDK packaging + UI client (release gate v2), затем v0.3.0 — N64 (S33+) |
+| Следующий спринт | [`sprint_33_34.md`](sprint_33_34.md) — SDK packaging; затем [`sprint_35_36.md`](sprint_35_36.md), [`sprint_37_38.md`](sprint_37_38.md); N64 — S39+ |
 
 ## PERT-оценка
 
@@ -121,6 +121,9 @@
   BIOS/ROM в архив не попадали, но это не делает payload SDK-релизом.
 
 ## Release gate v2 (блокер)
+
+Реализация gate — [`sprint_33_34.md`](sprint_33_34.md),
+[`sprint_35_36.md`](sprint_35_36.md), [`sprint_37_38.md`](sprint_37_38.md).
 
 - [ ] SDK package: install/export, `find_package(RetroPolyEngine)`,
   headers/libs для PC/PS1/Saturn, toolchain, примеры, LEGAL, checksums.
