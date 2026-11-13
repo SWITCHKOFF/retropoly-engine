@@ -144,7 +144,7 @@ python3 scripts/verify_release_contract.py
 
 ## UI client: core tests, smoke и E2E (S35–36)
 
-- [x] `retro_engine_ui_tests` — 46 тестов без GUI: JSON (включая duplicate
+- [x] `retro_engine_ui_tests` — 47 тестов без GUI: JSON (включая duplicate
       keys/depth/UTF-8), `.rpeproject` round-trip/unknown fields/unsafe paths,
       settings/recent projects, semver/совместимость, SDK manifest,
       command builder, process runner (streaming/cancel), asset import.

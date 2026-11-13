@@ -499,7 +499,7 @@ CMake install/export, `find_package` из build/install tree, SDK-архивы
 PC/PS1/Saturn, `sdk_manifest.json`/checksums, consumer smoke и
 [`SDK.md`](SDK.md); release gate получил SDK-asserts. S35–36 (UI client MVP)
 реализован: `tools/ui_client/` (SDL3 + Dear ImGui), `.rpeproject`,
-target/import/build/run, 46 core-тестов, headless smoke и clean E2E PC,
+target/import/build/run, 47 core-тестов, headless smoke и clean E2E PC,
 package/checksums, [`UI_CLIENT.md`](UI_CLIENT.md), ADR-012; release gate
 получил `ui_archives`/`ui_manifest`. Остались ручной PS1/Saturn gate и S37–38
 (release gate v2, публикация).

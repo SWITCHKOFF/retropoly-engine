@@ -7,7 +7,7 @@
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
 > **Статус (2026-11-13):** MVP реализован: `tools/ui_client/` (core+GUI),
 > `.rpeproject`, SDK discovery, asset import, build/run, diagnostics,
-> version panel, unit-тесты (46), headless smoke и clean E2E PC,
+> version panel, unit-тесты (47), headless smoke и clean E2E PC,
 > `ui-client.yml`, `scripts/package_ui.py`, `docs/UI_CLIENT.md`, ADR-012.
 > Осталось: ручной PS1/Saturn emulator gate и первый green CI matrix;
 > release gate v2 — S37–38.

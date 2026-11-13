@@ -388,6 +388,8 @@ void GuiApp::drawFrame()
                 ImGui::CloseCurrentPopup();
             }
             ImGui::EndPopup();
+        } else {
+            show_confirm_remove_ = false;
         }
     }
     drawStatusBar();
@@ -1216,6 +1218,7 @@ int GuiApp::runSmoke(const SmokeOptions& options)
         }
         SDL_Delay(20);
     }
+    pollCore();
     const BuildStatus build = core_.buildStatus();
     if (build.state != BuildState::Succeeded) {
         std::fprintf(stderr, "[smoke] build failed (state=%d, exit=%d)\n",
@@ -1254,6 +1257,7 @@ int GuiApp::runSmoke(const SmokeOptions& options)
             pollCore();
             SDL_Delay(20);
         }
+        pollCore();
         std::printf("[smoke] run: started and stopped\n");
     }
 

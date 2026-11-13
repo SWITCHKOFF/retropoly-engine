@@ -737,6 +737,11 @@ std::string AppCore::runCommandPreview() const
 SdkInfo AppCore::currentSdk() const
 {
     if (!project_open_) return SdkInfo();
+    const std::string project_sdk = resolveSdkPath(project_root_, project_);
+    if (!project_sdk.empty()) {
+        const SdkLoadResult loaded = loadSdk(project_sdk, lang_);
+        if (loaded.ok && loaded.sdk.platform == project_.platform) return loaded.sdk;
+    }
     return findSdkForPlatform(settings_, project_.platform, lang_);
 }
 

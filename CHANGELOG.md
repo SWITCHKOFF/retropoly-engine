@@ -20,7 +20,7 @@
   target PC/PS1/Saturn с disabled-состояниями, asset list (вершины/
   треугольники/размеры/слоты), build/run с логами, версия/ABI/commit,
   диагностика CMake/Ninja/SDK/эмулятора, темы dark/light, SDL3 file dialogs.
-  (4) `tools/ui_client/tests/` — 46 unit-тестов без GUI; headless smoke
+  (4) `tools/ui_client/tests/` — 47 unit-тестов без GUI; headless smoke
   `scripts/ui_smoke.py` (xvfb-run: new project → import → build PC → run);
   clean E2E `scripts/ui_e2e.py` (SDK archive + UI package, checksums,
   запрет BIOS/ROM/секретов); скриншоты `screenshots/ui_*.png`.

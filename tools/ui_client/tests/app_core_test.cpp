@@ -273,3 +273,18 @@ TEST_F(AppCoreTest, CreatesSaturnProjectFromSdkTemplate)
     EXPECT_TRUE(isRegularFile(projects_.str() + "/saturn_project/src/jo_bridge.c"));
     unsetEnv("JO_ENGINE_ROOT");
 }
+
+TEST_F(AppCoreTest, CurrentSdkPrefersProjectPath)
+{
+    NewProjectOptions options;
+    options.name = "sdk_project";
+    options.location = projects_.str();
+    options.platform = Platform::Pc;
+    std::string error;
+    ASSERT_TRUE(core_.newProject(options, &error)) << error;
+    core_.mutableSettings().sdk_pc = "/definitely/not/a/sdk";
+    core_.refreshTargets();
+    const SdkInfo sdk = core_.currentSdk();
+    EXPECT_TRUE(sdk.valid);
+    EXPECT_EQ(sdk.path, absolutePath(sdk_.str()));
+}

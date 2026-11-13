@@ -167,7 +167,8 @@ RunPlan makeRunPlan(const Project& project, const std::string& project_root, con
         plan.error = tr(lang, plan.error_key.c_str());
         return plan;
     }
-    const std::string emulator_path = absolutePath(emulator);
+    const std::string emulator_path =
+        isAbsolutePath(emulator) ? absolutePath(emulator) : joinPath(project_root, emulator);
     if (!isRegularFile(emulator_path)) {
         plan.error_key = "err.run_emulator_missing";
         plan.error_detail = emulator_path;
