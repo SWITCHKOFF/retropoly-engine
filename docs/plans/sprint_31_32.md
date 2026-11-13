@@ -3,9 +3,9 @@
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§13).
 > Источник задач: [`RetroEngine_Engineering_Documentation_v1.43.md`](../RetroEngine_Engineering_Documentation_v1.43.md) §4 «Будущие итерации» — Saturn, S21–32.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-13):** реализация hello_triangle, бюджетов и релизного
-> контура завершена; 10-минутный stress и remote CI/тег v0.2.0 — см.
-> «Результаты».
+> **Статус (2026-11-13):** **закрыт**. hello_triangle, бюджеты и релизный
+> контур приняты; 10-минутный stress PASS; remote CI зелёный; тег
+> `v0.2.0` и GitHub Release опубликованы — см. «Результаты».
 
 ## Карточка спринта
 
@@ -49,7 +49,7 @@
 - [x] [B] 10-минутный стресс в pinned-эмуляторе; frame pacing; отсутствие hang/tearing
 - [x] [B] Замер загрузки Master/Slave, fillrate VDP1/VDP2; baseline в `docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml`
 - [x] [B] Скриншоты PC/PS1/Saturn; README/демо-материалы
-- [ ] [B] CI: сборка+артефакт; проверить, что `build-pc`, `build-ps1`, `tests` зелёные (remote — после push)
+- [x] [B] CI: сборка+артефакт; проверить, что `build-pc`, `build-ps1`, `tests` зелёные (remote — после push)
 - [x] [B] TROUBLESHOOTING: toolchain, BIOS/эмулятор, CD-образ, типовые ошибки
 
 **Неделя 64 — Релиз v0.2.0:**
@@ -57,9 +57,9 @@
 - [x] [B] Документация: README, BUILDING, ARCHITECTURE, API, ASSETS, LEGAL, TROUBLESHOOTING, `docs/SATURN.md`, CHANGELOG [0.2.0]
 - [x] [B] `ci/normative_contracts.yaml`: Saturn-секция (preset, toolchain pin, бюджеты, разрешение, golden)
 - [x] [B] `scripts/verify_release_contract.py`: Saturn-asserts (сборка, ассеты, память/VRAM, бинарник, golden); релиз без валидатора недействителен
-- [ ] [B] `.github/workflows/release.yml`: Saturn-артефакты в payload; `create_release_archive.sh`; тег `v0.2.0`
-- [ ] [B] GitHub Release + анонс; обновить roadmap (следующий — N64 v0.3.0)
-- [ ] [B] Финальный чек-лист v0.2.0: 3 ОС CI green; PC/PS1/Saturn сборки; unit+sanitizers; примеры; RAM/VRAM; malformed; golden; 0 blocker/critical
+- [x] [B] `.github/workflows/release.yml`: Saturn-артефакты в payload; `create_release_archive.sh`; тег `v0.2.0`
+- [x] [B] GitHub Release + анонс; обновить roadmap (следующий — N64 v0.3.0)
+- [x] [B] Финальный чек-лист v0.2.0: 3 ОС CI green; PC/PS1/Saturn сборки; unit+sanitizers; примеры; RAM/VRAM; malformed; golden; 0 blocker/critical
 
 ## Критерии приёмки спринта 31–32
 
@@ -67,7 +67,7 @@
 - [x] Hello Triangle работает на Saturn: текстура, Gouraud, камера/ввод, VDP1+VDP2
 - [x] Master + Slave SH-2 используются; fallback работает
 - [x] VDP1 + VDP2 синхронизированы; golden стабилен; отличия от PC/PS1 задокументированы
-- [ ] Релиз v0.2.0: тег, GitHub Release, артефакты, `verify_release_contract.py` зелёный
+- [x] Релиз v0.2.0: тег, GitHub Release, артефакты, `verify_release_contract.py` зелёный
 - [x] PC/PS1 не регрессировали; документация и LEGAL обновлены
 
 ## Ручной чек-лист приёмки (эмулятор)
@@ -108,7 +108,14 @@
   скриншоты `screenshots/hello_triangle_saturn_stress{,_mid}.png`.
   Standalone steady-state измерен 60 FPS (360 кадров / 6 с); длинный
   прогон шёл параллельно с CI/сборками, поэтому средний FPS ниже.
-- **Remote CI/тег v0.2.0:** PENDING после push.
+- **Remote CI:** `build-saturn` 43455266369 / final 43458548647, `build-pc`
+  (macOS/Ubuntu/Windows), `build-ps1`, `tests` — success; release workflow
+  43458577309 — success.
+- **Релиз v0.2.0:** тег `v0.2.0` (`ccbd6f3`), GitHub Release
+  <https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.0>;
+  `retro-engine-v0.2.0.tar.gz` (4.2 MB) содержит `pc/`, `ps1/`, `saturn/`;
+  `release_contract_report.json` — `all_ok: true`; BIOS/ROM в архив не
+  попали.
 
 ## Риски
 
