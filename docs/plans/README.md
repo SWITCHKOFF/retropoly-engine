@@ -64,8 +64,10 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ст
 > **Статус (2026-11-13):** S33–34 (SDK) реализован; S35–36 (UI client MVP)
 > реализован: core+GUI, `.rpeproject`, import/build/run, unit-тесты,
 > headless smoke и clean E2E PC, `ui-client.yml`, `scripts/package_ui.py`,
-> `docs/UI_CLIENT.md`, ADR-012. Остались ручной PS1/Saturn emulator gate и
-> release gate v2 (S37–38). v0.2.0 GitHub Release отозван; demo-архив не
+> `docs/UI_CLIENT.md`, ADR-012. Ручной PS1/Saturn gate пройден
+> (DuckStation/Mednafen, `.cue` из UI-проекта); первый полный зелёный CI
+> push `79ce6f4` (`build-pc/ps1/saturn`, `tests`, `sdk-package`,
+> `ui-client`). Остался release gate v2 (S37–38). v0.2.0 GitHub Release отозван; demo-архив не
 > является релизом. Первый валидный публичный релиз — **v0.2.1** после S33–38.
 
 Следующие итерации (N64 v0.3.0, Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 6–8 / 4–6 / 4–6 / 8–12 спринтов. N64 начинается с S39 после приёмки v0.2.1 (SDK+UI release gate v2), когда будут известны фактические темп и ограничения Saturn-toolchain.

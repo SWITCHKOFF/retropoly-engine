@@ -501,8 +501,9 @@ PC/PS1/Saturn, `sdk_manifest.json`/checksums, consumer smoke и
 реализован: `tools/ui_client/` (SDL3 + Dear ImGui), `.rpeproject`,
 target/import/build/run, 47 core-тестов, headless smoke и clean E2E PC,
 package/checksums, [`UI_CLIENT.md`](UI_CLIENT.md), ADR-012; release gate
-получил `ui_archives`/`ui_manifest`. Остались ручной PS1/Saturn gate и S37–38
-(release gate v2, публикация).
+получил `ui_archives`/`ui_manifest`. Ручной PS1/Saturn gate пройден
+(DuckStation/Mednafen, `.cue` из UI-проекта), первый полный зелёный CI
+push `79ce6f4`. Остался S37–38 (release gate v2, публикация).
 
 **Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
 создаёт проект, импортирует ассет, собирает и запускает target; payload

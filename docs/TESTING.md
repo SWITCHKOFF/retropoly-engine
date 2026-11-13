@@ -159,7 +159,13 @@ python3 scripts/verify_release_contract.py
 - [x] Negative: несовместимый SDK (major/minor) → UI отказывается;
       неизвестное поле `.rpeproject`/небезопасный путь → детерминированная
       ошибка; отсутствие CMake/Ninja/эмулятора → диагностика.
-- [x] PS1/Saturn build-only smoke (`--platform ps1|saturn --no-run`):
-      `hello_triangle_ps1`/`hello_triangle_saturn` собираются из UI через
-      SDK; запуск `.cue` — ручной gate настроенного эмулятора, см.
+- [x] PS1/Saturn E2E: `hello_triangle_ps1`/`hello_triangle_saturn`
+      собираются из UI, `.cue` проекта запущен в настроенном эмуляторе
+      (DuckStation / Mednafen 1.32.1); скриншоты
+      [`ui_gate_ps1.png`](../screenshots/ui_gate_ps1.png),
+      [`ui_gate_saturn.png`](../screenshots/ui_gate_saturn.png), см.
       [`plans/sprint_35_36.md`](plans/sprint_35_36.md).
+- [x] CI matrix `ui-client` — Ubuntu/Windows/macOS зелёный (run 43491683644);
+      полный push-CI v0.2.1: `build-pc` 43491683505, `build-ps1` 43491683796,
+      `build-saturn` 43491683545, `tests` 43491683683,
+      `sdk-package` 43491683616.

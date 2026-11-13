@@ -261,6 +261,31 @@ CI: `.github/workflows/ui-client.yml` — matrix Ubuntu/Windows/macOS
 (`ui-debug` тесты, `ui-release` сборка, package artifact), Linux — SDK
 `pc-release` + `sdk_package` + clean E2E под `xvfb-run`.
 
+### 11.1. Ручной gate PS1/Saturn (пройден 2026-11-13)
+
+`.cue` собран из UI-проекта и запущен в настроенном эмуляторе; UI
+показывает команду, pid и лог процесса:
+
+```sh
+# 1) собрать проект из UI (build-only)
+python3 scripts/ui_smoke.py --platform ps1 --no-run \
+  --sdk-dir build/ps1-release/sdk-stage-ps1-mips \
+  --ui-binary build/ui-release/ui/retro_engine_ui --work-dir /tmp/gate
+
+# 2) сгенерировать HELLO.cue/HELLO.bin из build/ps1/hello_triangle_ps1.exe
+#    (mkpsxiso; Saturn — genisoimage + IP.BIN) и положить в <project>/dist
+
+# 3) запустить через UI
+xvfb-run -a build/ui-release/ui/retro_engine_ui \
+  --project /tmp/gate/smoke_project --run-project --run-seconds 20 \
+  --emulator /path/to/duckstation-or-mednafen-wrapper
+```
+
+Результаты: DuckStation — `RETRO SDK PS1`, Mednafen 1.32.1 — Saturn
+`hello_triangle`/HAL init; скриншоты
+[`ui_gate_ps1.png`](../screenshots/ui_gate_ps1.png),
+[`ui_gate_saturn.png`](../screenshots/ui_gate_saturn.png).
+
 ## 12. Упаковка и release gate
 
 `scripts/package_ui.py` создаёт:

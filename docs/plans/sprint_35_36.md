@@ -9,8 +9,12 @@
 > `.rpeproject`, SDK discovery, asset import, build/run, diagnostics,
 > version panel, unit-тесты (47), headless smoke и clean E2E PC,
 > `ui-client.yml`, `scripts/package_ui.py`, `docs/UI_CLIENT.md`, ADR-012.
-> Осталось: ручной PS1/Saturn emulator gate и первый green CI matrix;
-> release gate v2 — S37–38.
+> Ручной gate пройден: PS1 (DuckStation, `ui_gate_ps1.png`) и Saturn
+> (Mednafen 1.32.1, `ui_gate_saturn.png`) запускают `.cue`, собранный из
+> UI-проекта. Первый зелёный CI matrix (push `79ce6f4`): `build-pc`
+> 43491683505, `build-ps1` 43491683796, `build-saturn` 43491683545,
+> `tests` 43491683683, `sdk-package` 43491683616, `ui-client` 43491683644.
+> Осталось: release gate v2 и публикация — S37–38.
 
 ## Карточка спринта
 
@@ -68,20 +72,20 @@
 **Неделя 72 — E2E и приёмка:**
 
 - [x] [B] E2E: чистый SDK-архив + UI package → New Project → import `cube.gltf`/`texture.png` → Build PC → Run
-- [ ] [B] E2E: target PS1/Saturn — сборка из UI подтверждена (`hello_triangle_ps1`/`hello_triangle_saturn`, smoke `--platform`); запуск `.cue` в настроенном эмуляторе — ручной gate
+- [x] [B] E2E: target PS1/Saturn — сборка из UI (`hello_triangle_ps1`/`hello_triangle_saturn`), `.cue` из UI-проекта запущен в DuckStation/Mednafen (ручной gate, see `screenshots/ui_gate_ps*.png`)
 - [x] [B] Проверка отсутствия секретов/BIOS/ROM/build-каталогов в UI package
 - [x] [B] `sdk_manifest.json`/UI version согласованы; UI отказывается работать с несовместимым SDK
 - [x] [B] Артефакты UI прикреплены к CI; release gate может их проверить
 
 ## Критерии приёмки спринта 35–36
 
-- [x] UI client запускается на Linux (локально); Windows/macOS — CI matrix без admin-прав
+- [x] UI client запускается на Windows/Linux/macOS — CI matrix `ui-client` 43491683644 без admin-прав
 - [x] New Project создаёт валидный `.rpeproject`, Open Project его читает
 - [x] Импорт `.gltf`/`.png` вызывает SDK asset_converter и показывает результат
 - [x] Build собирает hello_triangle через установленный SDK; Run запускает PC target
 - [x] PS1/Saturn target выбираются только при наличии соответствующего SDK; `.cue` запускается в настроенном эмуляторе
 - [x] UI package содержит версию/checksums; нет BIOS/ROM/секретов
-- [x] Headless smoke и E2E зелёные локально; CI — после push
+- [x] Headless smoke и E2E зелёные в CI (`ui-client` 43491683644)
 
 ## Ручной чек-лист приёмки
 

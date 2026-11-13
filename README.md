@@ -136,6 +136,12 @@ UI client:
 |---|---|---|---|---|
 | ![ui-welcome](screenshots/ui_welcome.png) | ![ui-project](screenshots/ui_project.png) | ![ui-assets](screenshots/ui_assets.png) | ![ui-build](screenshots/ui_build_done.png) | ![ui-run](screenshots/ui_run.png) |
 
+UI client gate: `.cue` из UI-проекта запущен в эмуляторах:
+
+| PS1 (DuckStation) | Saturn (Mednafen 1.32.1) |
+|---|---|
+| ![ui-gate-ps1](screenshots/ui_gate_ps1.png) | ![ui-gate-saturn](screenshots/ui_gate_saturn.png) |
+
 Saturn `hello_triangle`: D-pad — поворот объекта, A/B — дистанция камеры,
 C/X — высота, Y/Z — орбита, Start — сброс. Сборка/запуск —
 [docs/BUILDING.md](docs/BUILDING.md#сборка-saturn).

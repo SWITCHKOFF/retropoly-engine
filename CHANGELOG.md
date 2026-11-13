@@ -32,6 +32,10 @@
   (7) `ci/normative_contracts.yaml` — секция `ui`; release gate —
   `ui_archives`/`ui_manifest`; документация `docs/UI_CLIENT.md`, ADR-012,
   README/BUILDING/TESTING/LEGAL/RELEASING обновлены.
+  (8) Ручной gate: PS1 `.cue` из UI-проекта в DuckStation
+  (`screenshots/ui_gate_ps1.png`), Saturn — в Mednafen 1.32.1
+  (`screenshots/ui_gate_saturn.png`); первый полный зелёный CI push
+  `79ce6f4` (`build-pc/ps1/saturn`, `tests`, `sdk-package`, `ui-client`).
 
 - Спринт 33–34 — SDK packaging: install/export и consumer smoke (недели 65–68):
   (1) публичный API вынесен в `include/retro_engine/` (umbrella
