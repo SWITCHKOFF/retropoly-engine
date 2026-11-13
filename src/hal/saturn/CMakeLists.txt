@@ -330,7 +330,7 @@ add_custom_command(
     COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_RAW}" "${RPE_HELLO_BIN}"
     COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ELF}" "${RPE_HELLO_ELF}"
     COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_MAP}" "${RPE_HELLO_MAP}"
-    DEPENDS "${RPE_SATURN_ISO}" "${RPE_SATURN_RAW}" "${RPE_SATURN_ELF}" "${RPE_SATURN_MAP}"
+    DEPENDS retro_saturn "${RPE_SATURN_ISO}" "${RPE_SATURN_RAW}"
     COMMENT "saturn: hello_triangle.* alias artifacts"
     VERBATIM)
 add_custom_target(hello_triangle_saturn ALL
