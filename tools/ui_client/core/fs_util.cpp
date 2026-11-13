@@ -291,11 +291,12 @@ bool isSafeRelativePath(const std::string& path)
 bool pathIsInside(const std::string& root, const std::string& child)
 {
     std::error_code ec;
-    std::string normalized_root = fs::absolute(fs::u8path(root), ec).lexically_normal().u8string();
+    std::string normalized_root =
+        normalizePath(fs::absolute(fs::u8path(root), ec).lexically_normal().u8string());
     if (ec) return false;
     ec.clear();
     std::string normalized_child =
-        fs::absolute(fs::u8path(child), ec).lexically_normal().u8string();
+        normalizePath(fs::absolute(fs::u8path(child), ec).lexically_normal().u8string());
     if (ec) return false;
 #ifdef _WIN32
     std::transform(normalized_root.begin(), normalized_root.end(), normalized_root.begin(),

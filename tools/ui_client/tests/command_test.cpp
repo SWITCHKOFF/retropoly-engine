@@ -73,8 +73,8 @@ TEST(CommandTest, Ps1PlanAddsToolchain)
                                          AppSettings(), Lang::Ru);
     ASSERT_TRUE(plan.ok) << plan.error;
     EXPECT_TRUE(containsPrefix(plan.configure, "-DCMAKE_TOOLCHAIN_FILE="));
-    EXPECT_TRUE(contains(plan.configure,
-                         "-DCMAKE_TOOLCHAIN_FILE=" + dir.str() + "/cmake/ps1-toolchain.cmake"));
+    EXPECT_TRUE(contains(plan.configure, "-DCMAKE_TOOLCHAIN_FILE=" +
+                                             joinPath(dir.str(), "cmake/ps1-toolchain.cmake")));
     EXPECT_EQ(plan.build_dir, normalizePath(dir.str() + "/build/ps1"));
 }
 
