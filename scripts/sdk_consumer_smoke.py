@@ -112,10 +112,11 @@ def main():
 
         probes = []
         if args.platform == "pc":
+            exe = ".exe" if os.name == "nt" else ""
             probes = [
-                os.path.join(build_dir, "sdk_probe"),
-                os.path.join(build_dir, "hello_triangle_sdk", "hello_triangle"),
-                os.path.join(build_dir, "rotating_cube_sdk", "rotating_cube"),
+                os.path.join(build_dir, "sdk_probe" + exe),
+                os.path.join(build_dir, "hello_triangle_sdk", "hello_triangle" + exe),
+                os.path.join(build_dir, "rotating_cube_sdk", "rotating_cube" + exe),
             ]
         elif args.platform == "ps1":
             probes = [os.path.join(build_dir, "hello_triangle_ps1.exe"),
