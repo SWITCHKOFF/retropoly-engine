@@ -9,7 +9,7 @@
 
 project:
   name: RetroPolyEngine
-  version: 0.1.0
+  version: 0.2.0
 
 presets:
   canonical:
@@ -17,10 +17,14 @@ presets:
     - pc-release
     - pc-debug-render
     - ps1-release
+    - saturn-release
   optional:
     - pc-asan
     - pc-bench
     - pc-coverage
+    - saturn-single
+    - saturn-hang
+    - saturn-flood
 
 engine_scalar:
   format: Q16.16
@@ -89,6 +93,42 @@ release:
     - RETRO.bin
     - RETRO.cue
     - system.cnf
+  required_artifacts_saturn:
+    - hello_triangle.elf
+    - hello_triangle.bin
+    - hello_triangle.iso
+    - hello_triangle.cue
+    - hello_triangle.map
+
+saturn:
+  preset: saturn-release
+  target: hello_triangle_saturn
+  toolchain:
+    jo_engine_tag: v2026.2
+    jo_engine_commit: 5e99944238030821a48e17a40abefd77e81953c2
+    compiler: sh-none-elf-gcc 8.2.0
+  resolution:
+    width: 320
+    height: 224
+  budgets:
+    work_ram_bytes: 2097152
+    vdp1_vram_bytes: 524288
+    vdp2_vram_bytes: 524288
+    vdp1_texture_area_bytes: 451832
+    vdp2_nbg1_bitmap_bytes: 262144
+    asset_heap_bytes: 954368
+    hello_triangle_elf_max_bytes: 1048576
+    hello_triangle_bin_max_bytes: 1048576
+    hello_triangle_iso_max_bytes: 4194304
+    master_stack_top: 0x060FBC00
+  golden:
+    scene: hello_triangle
+    screenshot: screenshots/hello_triangle_saturn_scene.png
+    sha256: b51b8847e5061a671cf17fec033e993e6a6daa4388412c2730620259b601ec24
+  parallel:
+    master_triangles_per_frame: 16
+    slave_triangles_per_frame: 16
+    single_cpu_preset: saturn-single
 
 workloads:
   w0:

@@ -182,11 +182,11 @@ target_link_options(retro_saturn PRIVATE
 # --- IP.BIN (security/IP header; template — Jo Engine COMMON) ---------------
 set(RPE_SATURN_IP "${CMAKE_CURRENT_BINARY_DIR}/IP.BIN")
 set(RPE_SATURN_IP_OBJ "${CMAKE_CURRENT_BINARY_DIR}/ip.o")
-set(RPE_JO_GAME_TITLE "RetroPolyEngine")
-set(RPE_JO_GAME_VERSION "V1.000")
-set(RPE_JO_GAME_RELEASE_DATE "20261109")
+set(RPE_JO_GAME_TITLE "HELLO TRIANGLE")
+set(RPE_JO_GAME_VERSION "V0.200")
+set(RPE_JO_GAME_RELEASE_DATE "20261113")
 set(RPE_JO_GAME_MAKER_ID "RETROPOLY")
-set(RPE_JO_GAME_PRODUCT_NUMBER "RPE-0001")
+set(RPE_JO_GAME_PRODUCT_NUMBER "RPE-0002")
 set(RPE_JO_GAME_PERIPHERALS "J")
 
 add_custom_command(
@@ -313,6 +313,29 @@ add_custom_command(
 add_custom_target(saturn_disc ALL
     DEPENDS "${RPE_SATURN_ISO}" "${RPE_SATURN_CUE}" "${RPE_SATURN_RAW}")
 add_custom_target(saturn DEPENDS retro_saturn saturn_disc)
+
+# --- S31–32: hello_triangle alias artifacts ---------------------------------
+# Канонический ISO/CUE остаются retro_saturn.* (CI/доки S21–30); для
+# релиза v0.2.0 публикуются те же байты под именем hello_triangle.*.
+set(RPE_HELLO_ISO "${CMAKE_CURRENT_BINARY_DIR}/hello_triangle.iso")
+set(RPE_HELLO_CUE "${CMAKE_CURRENT_BINARY_DIR}/hello_triangle.cue")
+set(RPE_HELLO_BIN "${CMAKE_CURRENT_BINARY_DIR}/hello_triangle.bin")
+set(RPE_HELLO_ELF "${CMAKE_CURRENT_BINARY_DIR}/hello_triangle.elf")
+set(RPE_HELLO_MAP "${CMAKE_CURRENT_BINARY_DIR}/hello_triangle.map")
+file(GENERATE OUTPUT "${RPE_HELLO_CUE}"
+     CONTENT "FILE \"hello_triangle.iso\" BINARY\n  TRACK 01 MODE1/2048\n    INDEX 01 00:00:00\n")
+add_custom_command(
+    OUTPUT "${RPE_HELLO_ISO}" "${RPE_HELLO_BIN}" "${RPE_HELLO_ELF}" "${RPE_HELLO_MAP}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ISO}" "${RPE_HELLO_ISO}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_RAW}" "${RPE_HELLO_BIN}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_ELF}" "${RPE_HELLO_ELF}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_SATURN_MAP}" "${RPE_HELLO_MAP}"
+    DEPENDS "${RPE_SATURN_ISO}" "${RPE_SATURN_RAW}" "${RPE_SATURN_ELF}" "${RPE_SATURN_MAP}"
+    COMMENT "saturn: hello_triangle.* alias artifacts"
+    VERBATIM)
+add_custom_target(hello_triangle_saturn ALL
+    DEPENDS "${RPE_HELLO_ISO}" "${RPE_HELLO_CUE}" "${RPE_HELLO_BIN}"
+            "${RPE_HELLO_ELF}" "${RPE_HELLO_MAP}")
 
 # Артефакты для CI/локальной проверки:
 #   build/saturn-release/src/hal/saturn/retro_saturn.elf  (SH-2 ELF)

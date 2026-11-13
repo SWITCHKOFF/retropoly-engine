@@ -3,8 +3,9 @@
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§13).
 > Источник задач: [`RetroEngine_Engineering_Documentation_v1.43.md`](../RetroEngine_Engineering_Documentation_v1.43.md) §4 «Будущие итерации» — Saturn, S21–32.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-11):** входные критерии S29–30 выполнены; план готов к
-> старту (hello_triangle Saturn + релиз v0.2.0).
+> **Статус (2026-11-13):** реализация hello_triangle, бюджетов и релизного
+> контура завершена; 10-минутный stress и remote CI/тег v0.2.0 — см.
+> «Результаты».
 
 ## Карточка спринта
 
@@ -29,33 +30,33 @@
 
 **Неделя 61 — Интеграция hello_triangle:**
 
-- [ ] [B] Saturn-цель `hello_triangle`: `main_saturn.cpp`, загрузка `.mesh`/`.tex` с CD-образа, сцена, камера, цикл 60 Гц
-- [ ] [B] VDP1+VDP2 в одном кадре: 3D-объект поверх фона; оба SH-2 задействованы; fallback на single-CPU
-- [ ] [B] Сборка bootable-образа с ассетами; артефакт CI; PC/PS1 цели не ломать
-- [ ] [B] Управление с 6-button pad: движение камеры/объекта; детерминированный ввод
-- [ ] [B] CMake preset/targets: `saturn-release` + пример; документация запуска
+- [x] [B] Saturn-цель `hello_triangle`: `main_saturn.cpp`, загрузка `.mesh`/`.tex` с CD-образа, сцена, камера, цикл 60 Гц
+- [x] [B] VDP1+VDP2 в одном кадре: 3D-объект поверх фона; оба SH-2 задействованы; fallback на single-CPU
+- [x] [B] Сборка bootable-образа с ассетами; артефакт CI; PC/PS1 цели не ломать
+- [x] [B] Управление с 6-button pad: движение камеры/объекта; детерминированный ввод
+- [x] [B] CMake preset/targets: `saturn-release` + пример; документация запуска
 
 **Неделя 62 — Корректность и бюджеты:**
 
-- [ ] [B] Golden/reference-сравнение PC/PS1/Saturn; задокументировать ожидаемые отличия (320×224, quad-конверсия, порядок)
-- [ ] [B] Проверить текстуры, Gouraud, clip/cull, отсутствие Z-артефактов; malformed-ассеты безопасно отвергаются
-- [ ] [B] Бюджеты: Work RAM Low/High, VDP1/VDP2 VRAM, размер бинарника/образа; зафиксировать в docs
-- [ ] [B] Input-тесты: все кнопки, disconnect, повторный запуск
-- [ ] [B] Обновить `docs/ASSETS.md`/`docs/SATURN.md` по фактическому пайплайну
+- [x] [B] Golden/reference-сравнение PC/PS1/Saturn; задокументировать ожидаемые отличия (320×224, quad-конверсия, порядок)
+- [x] [B] Проверить текстуры, Gouraud, clip/cull, отсутствие Z-артефактов; malformed-ассеты безопасно отвергаются
+- [x] [B] Бюджеты: Work RAM Low/High, VDP1/VDP2 VRAM, размер бинарника/образа; зафиксировать в docs
+- [x] [B] Input-тесты: все кнопки, disconnect, повторный запуск
+- [x] [B] Обновить `docs/ASSETS.md`/`docs/SATURN.md` по фактическому пайплайну
 
 **Неделя 63 — QA и производительность:**
 
 - [ ] [B] 10-минутный стресс в pinned-эмуляторе; frame pacing; отсутствие hang/tearing
-- [ ] [B] Замер загрузки Master/Slave, fillrate VDP1/VDP2; baseline в `docs/benchmarks/saturn_reference_environment.yaml`
-- [ ] [B] Скриншоты PC/PS1/Saturn; README/демо-материалы
+- [ ] [B] Замер загрузки Master/Slave, fillrate VDP1/VDP2; baseline в `docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml`
+- [x] [B] Скриншоты PC/PS1/Saturn; README/демо-материалы
 - [ ] [B] CI: сборка+артефакт; проверить, что `build-pc`, `build-ps1`, `tests` зелёные
-- [ ] [B] TROUBLESHOOTING: toolchain, BIOS/эмулятор, CD-образ, типовые ошибки
+- [x] [B] TROUBLESHOOTING: toolchain, BIOS/эмулятор, CD-образ, типовые ошибки
 
 **Неделя 64 — Релиз v0.2.0:**
 
-- [ ] [B] Документация: README, BUILDING, ARCHITECTURE, API, ASSETS, LEGAL, TROUBLESHOOTING, `docs/SATURN.md`, CHANGELOG [0.2.0]
-- [ ] [B] `ci/normative_contracts.yaml`: Saturn-секция (preset, toolchain pin, бюджеты, разрешение, golden)
-- [ ] [B] `scripts/verify_release_contract.py`: Saturn-asserts (сборка, ассеты, память/VRAM, бинарник, golden); релиз без валидатора недействителен
+- [x] [B] Документация: README, BUILDING, ARCHITECTURE, API, ASSETS, LEGAL, TROUBLESHOOTING, `docs/SATURN.md`, CHANGELOG [0.2.0]
+- [x] [B] `ci/normative_contracts.yaml`: Saturn-секция (preset, toolchain pin, бюджеты, разрешение, golden)
+- [x] [B] `scripts/verify_release_contract.py`: Saturn-asserts (сборка, ассеты, память/VRAM, бинарник, golden); релиз без валидатора недействителен
 - [ ] [B] `.github/workflows/release.yml`: Saturn-артефакты в payload; `create_release_archive.sh`; тег `v0.2.0`
 - [ ] [B] GitHub Release + анонс; обновить roadmap (следующий — N64 v0.3.0)
 - [ ] [B] Финальный чек-лист v0.2.0: 3 ОС CI green; PC/PS1/Saturn сборки; unit+sanitizers; примеры; RAM/VRAM; malformed; golden; 0 blocker/critical
@@ -71,11 +72,39 @@
 
 ## Ручной чек-лист приёмки (эмулятор)
 
-- [ ] Запустить `saturn-release` образ в pinned-эмуляторе: hello_triangle виден, текстура корректна
-- [ ] Проверить управление с пада: камера/объект, все заявленные кнопки
+- [x] Запустить `saturn-release` образ в pinned-эмуляторе: hello_triangle виден, текстура корректна
+- [x] Проверить управление с пада: камера/объект, все заявленные кнопки
 - [ ] 10-минутный прогон: без hang/tearing/крашей
-- [ ] Скриншот Saturn-сцены для README/релиза
-- [ ] Проверить, что BIOS/ROM не попали в репозиторий и релизный архив
+- [x] Скриншот Saturn-сцены для README/релиза
+- [x] Проверить, что BIOS/ROM не попали в репозиторий и релизный архив
+
+## Результаты (2026-11-13)
+
+- **hello_triangle:** цель `hello_triangle_saturn` + `hello_triangle.*`
+  (ELF/BIN/ISO/CUE/MAP; legacy `retro_saturn.*` байт-идентичны); IP.BIN
+  `HELLO TRIANGLE`, `RPE-0002`, `V0.200`.
+- **Сцена:** VDP2 NBG1 фон `TEX1.TEX` + VDP1 textured Gouraud cube
+  `CUBE.MSH`/`TEX0.TEX`; Painter's без Z-буфера; VDP1 erase transparent.
+- **Master+Slave:** каждый кадр 16 треугольников на CPU
+  (`parallel_workload_run_frame_n`), boot benchmark 256; `saturn-single` —
+  fallback. Лог `[par] f=300 c=303 w=549 h=d40494` — Slave реально
+  работал; 60 Гц (360 кадров / 6 с).
+- **Ввод:** D-pad — yaw/pitch объекта; A/B — дистанция; C/X — высота;
+  Y/Z — орбита; Start — сброс. Без ввода — deterministic golden.
+  Host `saturn_hal_tests` — 112/112 (все 6-button/disconnect).
+- **Бюджеты:** ELF 264 480 B, raw 132 392 B, ISO 837 632 B,
+  `__jo_work_end=0x060F63F8` (< stack 0x060FBC00, headroom ≈22 KiB);
+  VDP1 texture 65 280 B / 451 832 B; VDP2 bitmap 256 KiB / 512 KiB.
+  Снапшот — `docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml`.
+- **Golden:** `screenshots/hello_triangle_saturn.png`,
+  `hello_triangle_saturn_scene.png` (file sha256 `b51b8847…`);
+  `hello_triangle_saturn_input.png` — ввод.
+- **Release contract:** Saturn-секция в `ci/normative_contracts.yaml`;
+  `verify_release_contract.py` — `saturn_artifacts`, `saturn_map_budget`,
+  `saturn_golden`; `release.yml` собирает Saturn и кладёт `saturn/` в
+  payload; `create_release_archive.sh` обновлён.
+- **10-минутный stress:** PENDING (см. ниже).
+- **Remote CI/тег v0.2.0:** PENDING после push.
 
 ## Риски
 

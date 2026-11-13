@@ -445,7 +445,10 @@ gantt
 > S29–30 — VDP2 NBG1 bitmap 1024×256 (256 KiB, палитра 7), тайлинг
 > `TEX1.TEX`, VDP1 поверх VDP2 (transparent erase), VBlank scroll;
 > `screenshots/saturn_vdp2_s29_30.png`; baseline
-> `benchmarks/saturn_vdp2_s29_30.yaml`. VDP2/3D — S31–32.
+> `benchmarks/saturn_vdp2_s29_30.yaml`. S31–32 — hello_triangle
+> (`hello_triangle.*`, 60 Гц, Master+Slave 16/16, VDP1+VDP2), Saturn-
+> секция `ci/normative_contracts.yaml`, `release.yml` payload `saturn/`;
+> бюджеты — `benchmarks/saturn_hello_triangle_v0_2_0.yaml`.
 
 Σ E ≈ 335 ч. При 10–15 ч/нед 24 недели дают 240–360 ч: план сходится только у верхней границы темпа; 95%-сценарий (≈ 425 ч) требует recovery-недель или scope reduction.
 

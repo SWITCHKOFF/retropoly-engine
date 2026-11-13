@@ -4,7 +4,30 @@
 
 ## [Unreleased]
 
+## [0.2.0] — 2026-11-13
+
 ### Added
+
+- Спринт 31–32 — hello_triangle на Saturn и релиз v0.2.0 (недели 61–64):
+  (1) цель `hello_triangle_saturn` + байт-идентичные артефакты
+  `hello_triangle.{elf,bin,iso,cue,map}` (legacy `retro_saturn.*`
+  сохранены); IP.BIN `HELLO TRIANGLE`, `RPE-0002`.
+  (2) 6-button pad: D-pad — yaw/pitch объекта, A/B — дистанция камеры,
+  C/X — высота, Y/Z — орбита, Start — сброс; сцена без ввода
+  детерминирована (golden).
+  (3) Master+Slave работают каждый кадр (16 треугольников на CPU,
+  `parallel_workload_run_frame_n`), кадровый цикл 60 Гц; `saturn-single`
+  — fallback. VDP1+VDP2 композитинг сохранён.
+  (4) Релизный контур: Saturn-секция `ci/normative_contracts.yaml`
+  (toolchain, бюджеты, golden), `verify_release_contract.py` —
+  `saturn_artifacts`/`saturn_map_budget`/`saturn_golden`;
+  `release.yml` собирает Saturn и кладёт `saturn/` в payload;
+  `create_release_archive.sh` обновлён.
+  (5) Бюджеты/метрики: `docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml`
+  (ELF 264 480 B, raw 132 392 B, ISO 837 632 B, `__jo_work_end`
+  0x060F63F8, headroom ≈22 KiB, 60 FPS), скриншоты
+  `screenshots/hello_triangle_saturn*.png`, CHANGELOG [0.2.0].
+  (6) remote CI: build-saturn/build-pc/build-ps1/tests — success.
 
 - Спринт 29–30 — VDP2: NBG1 bitmap background + композитинг (недели 57–60):
   (1) `src/hal/saturn/vdp2_backend.*` — NBG1 8bpp bitmap 1024×256
@@ -413,4 +436,5 @@
 - Спринт 3–4, Неделя 7 (M1): `src/core/memory/stack_allocator.h` — `push/mark/pop/reset_frame` с overflow-safe проверками, owner/bounds-check marker и выравниванием адреса; тесты `tests/memory/stack_allocator_test.cpp` (nested frames, foreign/future markers, unaligned base); интеграционный сценарий загрузки уровня тремя аллокаторами `tests/memory/allocator_integration_test.cpp` (static-арены 448 KiB/64 KiB, не на CPU-стеке).
 - Спринт 3–4, Неделя 8 (M1): ECS — `src/core/ecs/entity.h` (24-bit index + 8-bit generation, `INVALID_ENTITY=0`), `src/core/ecs/registry.h/.cpp`: 7 MVP-пулов (Position/Rotation/Velocity 1024, MeshRenderer/Collider 256, Camera/PlayerControl 8), dense ComponentPool с swap-back, generation-increment и retirement слота при 255, `Registry::view<...>()` с кэшированием прямых dense-указателей; `sizeof(Registry)=239 648 B` (≤ 256 KiB budget). Тесты `tests/ecs/entity_test.cpp`, `tests/ecs/registry_test.cpp` (stale handle, generation wrap, dense order, 10 000 сущностей) — итого 88 юнит-тестов, 100% pass (pc-debug, pc-release, pc-asan); `ps1-release` ELF собирается.
 
-[0.1.0]: https://github.com/RetroPolyEngine/retro-engine/releases/tag/v0.1.0
+[0.2.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.0
+[0.1.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.1.0

@@ -4,10 +4,11 @@
 fixed-point математике (Q16.16, без плавающей запятой в игровой логике),
 HAL-архитектура с нулевым runtime-аллокатором в горячих путях. Целевые
 платформы MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) и Sony PlayStation 1
-(PSn00bSDK v0.24, pinned). v0.2.0 (в работе) — Sega Saturn: pinned Jo
-Engine v2026.2, bootable HAL 320×224; Master + Slave SH-2 (S25–26)
-задействованы через SPSC-очередь и clip-space workload (**+32%**),
-single-CPU fallback и fault injection; VDP1/3D — следующие спринты.
+(PSn00bSDK v0.24, pinned). v0.2.0 — Sega Saturn: pinned Jo Engine
+v2026.2, bootable **hello_triangle** 320×224; Master + Slave SH-2
+(SPSC-очередь, fallback), VDP1-полигоны/текстуры/CLUT/Gouraud (ADR-010) и
+VDP2 NBG1 bitmap-фон с VBlank-scroll (S27–30); 6-button pad и 60 Гц
+кадровый цикл (S31–32).
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
@@ -36,7 +37,8 @@ ctest --preset pc-debug --output-on-failure
   generation-хэндлы с защитой от stale-use.
 - **HAL**: единый C-API (`Platform/Render/Input/Audio/FileSystem`) с тремя
   compile-time бэкендами — PC (SDL3 + OpenGL 3.3), PS1 (PSn00bSDK,
-  GTE+GPU+OT) и Saturn HAL (Jo Engine, VDP2 backdrop, Master+Slave S25–26).
+  GTE+GPU+OT) и Saturn HAL (Jo Engine, VDP1-полигоны/CLUT, VDP2 NBG1
+  bitmap, Master+Slave SH-2, padded input).
 - **Рендерер**: 320×240 reference framebuffer, affine-текстурирование,
   1/16-пиксельное квантование, Painter's algorithm, CI8/RGB555+STP.
 - **Ассеты**: `.mesh` v1 (glTF→движок) и `.tex` v1 (PNG→CI8+палитра),
@@ -58,6 +60,7 @@ ctest --preset pc-debug --output-on-failure
 | [docs/ASSETS.md](docs/ASSETS.md) | Байтовые форматы `.mesh`/`.tex` v1, CLI конвертера, загрузчики |
 | [docs/TESTING.md](docs/TESTING.md) | Пирамида тестов, запуск unit/integration/visual, QA-чек-листы |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Форк→ветка→тесты→PR, стиль, Doxygen, review-процесс |
+| [docs/OPENCODE_MCP.md](docs/OPENCODE_MCP.md) | Context7/TestSprite MCP в OpenCode: подключение и безопасное хранение API-ключей |
 | [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md) | Contributor Covenant |
 | [docs/LEGAL.md](docs/LEGAL.md) | Лицензии зависимостей и правила сохранения notices |
 | [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) | Именование, форматирование, ограничения языка |
@@ -67,9 +70,13 @@ ctest --preset pc-debug --output-on-failure
 
 ## Скриншоты
 
-| hello_triangle PC | rotating_cube PC | hello_triangle PS1 (эмулятор) | Saturn dual-CPU S25–26 (Mednafen) |
+| hello_triangle PC | rotating_cube PC | hello_triangle PS1 (эмулятор) | hello_triangle Saturn v0.2.0 (Mednafen) |
 |---|---|---|---|
-| ![ht-pc](screenshots/hello_triangle_pc.png) | ![rc-pc](screenshots/rotating_cube_pc.png) | ![ht-ps1](screenshots/hello_triangle_ps1.png) | ![saturn](screenshots/saturn_clear_s23_24.png) |
+| ![ht-pc](screenshots/hello_triangle_pc.png) | ![rc-pc](screenshots/rotating_cube_pc.png) | ![ht-ps1](screenshots/hello_triangle_ps1.png) | ![saturn](screenshots/hello_triangle_saturn.png) |
+
+Saturn `hello_triangle`: D-pad — поворот объекта, A/B — дистанция камеры,
+C/X — высота, Y/Z — орбита, Start — сброс. Сборка/запуск —
+[docs/BUILDING.md](docs/BUILDING.md#сборка-saturn).
 
 ## Канонические пресеты
 
@@ -84,6 +91,7 @@ ctest --preset pc-debug --output-on-failure
 | `pc-bench` | google/benchmark |
 | `pc-coverage` | lcov покрытие |
 | `ps1-release` | Кросс-сборка PS-EXE + CD-образ |
+| `saturn-release` | Saturn hello_triangle: SH-2 ELF + bootable ISO/CUE |
 
 Подробнее — [docs/BUILDING.md](docs/BUILDING.md).
 

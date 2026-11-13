@@ -31,6 +31,25 @@ sudo apt-get install -y git cmake ninja-build libgl1-mesa-dev \
   libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev
 ```
 
+Автоматическая установка (Debian / Ubuntu / Linux Mint) — пакеты, PS1/Saturn
+тулчейны и переменные окружения:
+
+```sh
+tools/linux/setup-linux.sh --check   # только диагностика, без изменений
+tools/linux/setup-linux.sh --yes     # установить всё недостающее
+tools/linux/setup-linux.sh --pc-only # только зависимости PC-сборки
+```
+
+Скрипт идемпотентен; внешние тулчейны ставятся по пинам из `VERSION.txt`
+(PSn00bSDK v0.24 с проверкой SHA-256, Jo Engine v2026.2 с проверкой commit).
+
+Если DNS не разрешает `archive.ubuntu.com` / `security.ubuntu.com`, укажите
+доступное Ubuntu-зеркало — системные `sources.list` не изменяются:
+
+```sh
+tools/linux/setup-linux.sh --yes --apt-mirror http://mirror.yandex.ru/ubuntu
+```
+
 ### Windows
 
 Можно использовать автоматический скрипт:
@@ -190,14 +209,14 @@ cmake --preset saturn-release
 cmake --build --preset saturn-release
 ```
 
-Артефакты:
+Артефакты `hello_triangle` (S31–32; байт-идентичны legacy `retro_saturn.*`):
 
-- `build/saturn-release/src/hal/saturn/retro_saturn.elf` (SH-2 ELF)
-- `build/saturn-release/src/hal/saturn/retro_saturn.bin` (raw)
-- `build/saturn-release/src/hal/saturn/retro_saturn.iso` (ISO9660)
-- `build/saturn-release/src/hal/saturn/retro_saturn.cue` (`MODE1/2048`)
+- `build/saturn-release/src/hal/saturn/hello_triangle.elf` (SH-2 ELF)
+- `build/saturn-release/src/hal/saturn/hello_triangle.bin` (raw)
+- `build/saturn-release/src/hal/saturn/hello_triangle.iso` (ISO9660)
+- `build/saturn-release/src/hal/saturn/hello_triangle.cue` (`MODE1/2048`)
+- `build/saturn-release/src/hal/saturn/hello_triangle.map`
 - `build/saturn-release/src/hal/saturn/IP.BIN`
-- `build/saturn-release/src/hal/saturn/retro_saturn.map`
 
 В `disc/` автоматически копируются CD-ассеты под bare 8.3-именами:
 `CUBE.MSH`, `TRIANGLE.MSH`, `TEXTURE.TEX`, `TEX0.TEX`…`TEX3.TEX`. HAL
@@ -223,9 +242,9 @@ ctest --test-dir build/pc-debug -R 'Saturn|AssetHeap' --output-on-failure
 ### Запуск Saturn-образа в Mednafen 1.32.1
 
 ```sh
-mednafen -ss.bios_jp /path/to/sega_101.bin \
+mednafen -video.driver softfb -ss.bios_jp /path/to/sega_101.bin \
   -ss.region_autodetect 0 -ss.region_default jp \
-  build/saturn-release/src/hal/saturn/retro_saturn.cue
+  build/saturn-release/src/hal/saturn/hello_triangle.cue
 ```
 
 BIOS (`mpr-17933.bin` NA/EU или `sega_101.bin` JP) пользователь
@@ -234,8 +253,10 @@ BIOS (`mpr-17933.bin` NA/EU или `sega_101.bin` JP) пользователь
 `[INFO][asset] CD mesh=1 tex=1 heap=65560`, 5 минут S23–24 и 10 минут
 S25–26 без краша. 6-button pad (D-pad, A/B/C, X/Y/Z, L/R, Start) мапится
 в `INPUT_PAD_*`; SMPC-порт настраивается `ss.input.port1=gamepad`,
-mapping/latch/disconnect покрыты host-тестами. Полный чек-лист и
-настройки — [`SATURN.md`](SATURN.md) §9 и §11.
+mapping/latch/disconnect покрыты host-тестами. Управление
+`hello_triangle`: D-pad — поворот объекта, A/B — дистанция камеры,
+C/X — высота, Y/Z — орбита, Start — сброс. Полный чек-лист и
+настройки — [`SATURN.md`](SATURN.md) §9, §11, §13.
 
 ### Варианты Saturn-сборки (S25–26)
 

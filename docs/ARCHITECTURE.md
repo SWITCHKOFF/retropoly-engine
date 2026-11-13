@@ -113,6 +113,10 @@ TRANSFORM → CLIP → CULL → SORT → PACK → SUBMIT
 
 - Reference resolution: 320×240 (PC и PS1). Saturn v0.2.0 отображает
   центральные 224 строки (native 320×224, policy crop; ADR-008 §4).
+  `hello_triangle` (S31–32) совмещает VDP1-полигоны/текстуры с VDP2 NBG1
+  bitmap-фоном; VDP1 framebuffer стирается в transparent, scroll VDP2
+  коммитится в VBlank, Master+Slave получают лёгкий workload каждый кадр
+  (60 Гц).
 - Цвет: RGB555+STP для текстур, Gouraud-интерполяция вершинного цвета.
 - Depth: `depth_key_from_camera_z` без modulo-aliasing; `DEPTH_REJECT`
   за пределами `[depth_min..depth_max]`.

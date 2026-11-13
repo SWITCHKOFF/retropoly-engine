@@ -42,8 +42,10 @@
 > golden `screenshots/saturn_vdp2_s29_30.png` / `saturn_vdp2_scroll_s29_30.png`;
 > host `saturn_hal_tests` — 112/112; ADR-010. 10-минутный stress S29–30 —
 > PASS (f=17760, exit 124); remote CI — `build-saturn` run 43085389214,
-> `build-pc`/`build-ps1`/`tests` success. Следующий — S31–32
-> (hello_triangle Saturn + v0.2.0).
+> `build-pc`/`build-ps1`/`tests` success. **S31–32** — hello_triangle
+> (`hello_triangle.*`, 60 Гц, Master+Slave 16/16), release contract Saturn,
+> `release.yml` payload `saturn/`; 10-мин stress/тег v0.2.0 — см.
+> `sprint_31_32.md`.
 
 Следующие итерации (N64 v0.3.0, Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 6–8 / 4–6 / 4–6 / 8–12 спринтов. Их детальные файлы создаются после приёмки v0.2.0, когда будут известны фактические темп и ограничения Saturn-toolchain.
 

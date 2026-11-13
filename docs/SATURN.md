@@ -618,7 +618,34 @@ Baseline: [`benchmarks/saturn_vdp2_s29_30.yaml`](benchmarks/saturn_vdp2_s29_30.y
 - [x] 10-минутный stress без tearing/hang (exit 124, f=17760 ≈29.6 FPS);
 - [x] PC/PS1 сборки и host-тесты не регрессировали.
 
-### 13.5. Ограничения S29–30
+### 13.5. hello_triangle (S31–32)
+
+Цель `hello_triangle_saturn` (алиас `retro_saturn`, байт-идентичные
+артефакты `hello_triangle.*`):
+
+```sh
+cmake --preset saturn-release
+cmake --build --preset saturn-release
+mednafen -video.driver softfb -sound 0 -ss.bios_jp sega_101.bin \
+  -ss.region_autodetect 0 -ss.region_default jp \
+  build/saturn-release/src/hal/saturn/hello_triangle.cue
+```
+
+- Сцена: VDP2 NBG1 фон `TEX1.TEX` + VDP1 текстурированный Gouraud-куб
+  `CUBE.MSH`/`TEX0.TEX`; Master+Slave получают по 16 треугольников
+  workload каждый кадр (fallback — `saturn-single`).
+- Управление 6-button pad: **D-pad** — yaw/pitch объекта; **A/B** —
+  дистанция камеры; **C/X** — высота; **Y/Z** — орбита; **Start** —
+  сброс. Без ввода сцена детерминирована (golden).
+- Кадровый бюджет: 60 Гц (измерено 360 кадров / 6 с); VDP1 `c=6`,
+  overdraw 40‰; VDP2 bitmap 256 KiB.
+- Бюджеты/артефакты: [`benchmarks/saturn_hello_triangle_v0_2_0.yaml`](benchmarks/saturn_hello_triangle_v0_2_0.yaml);
+  golden: `screenshots/hello_triangle_saturn_scene.png`
+  (sha256 `b51b8847…`).
+- Отличия от PC/PS1: 320×224 (crop 8), аффинные UV, triangle→quad,
+  Painter's без Z-буфера; см. §12.6.
+
+### 13.6. Ограничения S29–30
 
 - Один NBG1-слой; параллакс/второй слой — post-v0.2.0.
 - 8bpp bitmap 1024×256; source `.tex` тайлится, не масштабируется.

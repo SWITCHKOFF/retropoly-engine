@@ -18,6 +18,7 @@
 # ps1-release в канонических каталогах build/<preset>.
 
 import argparse
+import hashlib
 import json
 import os
 import re
@@ -42,6 +43,11 @@ PC_RENDER_TESTS = os.path.join(REPO_ROOT, "build", "pc-debug-render", "tests",
                                "retro_engine_visual_tests")
 W1_BENCH = os.path.join(REPO_ROOT, "build", "pc-release", "game",
                         "rotating_cube")
+SATURN_DIR = os.path.join(REPO_ROOT, "build", "saturn-release", "src",
+                          "hal", "saturn")
+SATURN_REQUIRED = ["hello_triangle.elf", "hello_triangle.bin",
+                   "hello_triangle.iso", "hello_triangle.cue",
+                   "hello_triangle.map"]
 
 
 def load_contract():
@@ -186,6 +192,73 @@ def assert_w1_ps1_fps(contract):
                 "source": "docs/benchmarks/reference_environment.yaml"}
 
 
+def assert_saturn_artifacts(contract):
+    saturn = contract["saturn"]
+    limits = saturn["budgets"]
+    files = {}
+    ok = True
+    for name in contract["release"]["required_artifacts_saturn"]:
+        path = os.path.join(SATURN_DIR, name)
+        exists = os.path.isfile(path)
+        size = os.path.getsize(path) if exists else None
+        files[name] = {"path": path, "size": size}
+        ok = ok and exists
+    if not ok:
+        return False, {"files": files, "error": "missing Saturn artifact"}
+
+    # hello_triangle.* должны быть байт-идентичны retro_saturn.*
+    pairs = [("hello_triangle.iso", "retro_saturn.iso"),
+             ("hello_triangle.bin", "retro_saturn.bin")]
+    for hello, legacy in pairs:
+        a = os.path.join(SATURN_DIR, hello)
+        b = os.path.join(SATURN_DIR, legacy)
+        same = os.path.isfile(b) and open(a, "rb").read() == open(b, "rb").read()
+        files[hello]["same_as_" + legacy] = same
+        ok = ok and same
+
+    checks = [
+        ("hello_triangle.elf", "hello_triangle_elf_max_bytes"),
+        ("hello_triangle.bin", "hello_triangle_bin_max_bytes"),
+        ("hello_triangle.iso", "hello_triangle_iso_max_bytes"),
+    ]
+    for name, limit_key in checks:
+        limit = limits[limit_key]
+        size = files[name]["size"]
+        within = size is not None and size <= limit
+        files[name]["limit"] = limit
+        files[name]["within_limit"] = within
+        ok = ok and within
+    return ok, {"files": files}
+
+
+def assert_saturn_map_budget(contract):
+    path = os.path.join(SATURN_DIR, "hello_triangle.map")
+    if not os.path.isfile(path):
+        return False, {"error": "hello_triangle.map not found", "path": path}
+    text = open(path, "r", encoding="utf-8", errors="replace").read()
+    m = re.search(r"0x([0-9a-fA-F]+)\s+__jo_work_end", text)
+    if not m:
+        return False, {"error": "__jo_work_end not found"}
+    work_end = int(m.group(1), 16)
+    stack_top = int(contract["saturn"]["budgets"]["master_stack_top"])
+    ok = work_end <= stack_top
+    return ok, {"__jo_work_end": hex(work_end),
+                "master_stack_top": hex(stack_top),
+                "headroom_bytes": stack_top - work_end}
+
+
+def assert_saturn_golden(contract):
+    golden = contract["saturn"]["golden"]
+    path = os.path.join(REPO_ROOT, golden["screenshot"])
+    if not os.path.isfile(path):
+        return False, {"error": "Saturn golden screenshot not found",
+                       "path": path}
+    digest = hashlib.sha256(open(path, "rb").read()).hexdigest()
+    ok = digest == golden["sha256"]
+    return ok, {"path": golden["screenshot"], "sha256": digest,
+                "expected": golden["sha256"]}
+
+
 def assert_asset_validation():
     if not os.path.isfile(PC_DEBUG_TESTS):
         return False, {"error": "unit tests binary not found", "ok": False}
@@ -223,6 +296,9 @@ def main():
     results["presets"] = assert_presets(contract)
     results["ps1_exe_size"] = assert_ps1_exe_size(contract)
     results["ps1_ram_vram"] = assert_ps1_ram_vram(contract)
+    results["saturn_artifacts"] = assert_saturn_artifacts(contract)
+    results["saturn_map_budget"] = assert_saturn_map_budget(contract)
+    results["saturn_golden"] = assert_saturn_golden(contract)
 
     if not args.skip_build_checks:
         results["w0_hash"] = assert_w0_hash(contract)

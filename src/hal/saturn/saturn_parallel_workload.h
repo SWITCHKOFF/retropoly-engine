@@ -99,6 +99,15 @@ void parallel_workload_shutdown(void);
 ParallelFrameResult parallel_workload_run_frame(const Mat4* mvp, uint32_t timeout_ms);
 
 /**
+ * Облегчённый кадр: по @p per_cpu треугольников на Master/Slave.
+ *
+ * Используется hello_triangle (S31–32), чтобы оба SH-2 были задействованы
+ * каждый кадр, но кадровый бюджет оставался 60 Гц. @p per_cpu ≤ 128.
+ */
+ParallelFrameResult parallel_workload_run_frame_n(const Mat4* mvp, uint32_t per_cpu,
+                                                 uint32_t timeout_ms);
+
+/**
  * Boot-бенчмарк: @p iterations прогонов single-CPU и dual-CPU.
  *
  * @param mvp Матрица proj·view.

@@ -45,6 +45,11 @@ Vertex s_demo_vertices[kDemoMaxVertices];
 uint32_t s_demo_vertex_count = 0u;
 fixed_t s_bg_scroll_x = 0;
 fixed_t s_bg_scroll_y = 0;
+fixed_t s_object_yaw = 0;
+fixed_t s_object_pitch = 0;
+fixed_t s_camera_yaw = 0;
+fixed_t s_camera_distance = 0;
+fixed_t s_camera_height = 0;
 uint32_t s_frame_count = 0u;
 uint32_t s_first_hash = 0u;
 uint32_t s_determinism_failures = 0u;
@@ -174,36 +179,47 @@ void boot_asset_self_test(void)
                 static_cast<unsigned>(saturn::asset_heap().used()));
 }
 
-void build_static_mvp(void)
+fixed_t degrees(int32_t value)
 {
-    mat4_look_at(&s_view, vec3_make(0, fixed_from_int(3), fixed_from_int(7)), vec3_make(0, 0, 0),
-                 vec3_make(0, FIXED_ONE, 0));
-    const fixed_t fov = fixed_mul(FIXED_PI, fixed_div(fixed_from_int(70), fixed_from_int(180)));
-    mat4_perspective(&s_proj, fov, fixed_div(fixed_from_int(320), fixed_from_int(224)),
-                     fixed_from_int(1), fixed_from_int(100));
-    mat4_multiply(&s_mvp, &s_proj, &s_view);
-    // S29–30: начальный scroll фона — из статичной камеры (fixed 16.16).
+    return fixed_mul(fixed_div(fixed_mul(FIXED_PI, fixed_from_int(value)), fixed_from_int(180)),
+                     FIXED_ONE);
+}
+
+void reset_scene_state(void)
+{
+    s_object_yaw = degrees(25);
+    s_object_pitch = degrees(-12);
+    s_camera_yaw = 0;
+    s_camera_distance = fixed_from_int(7);
+    s_camera_height = fixed_from_int(3);
     s_bg_scroll_x = fixed_from_int(32);
     s_bg_scroll_y = fixed_from_int(16);
 }
 
-void build_demo_scene(void)
+void update_camera_matrices(void)
 {
-    // Статичная поза — golden не зависит от времени.
-    const fixed_t angle_y = fixed_div(fixed_mul(FIXED_PI, fixed_from_int(25)), fixed_from_int(180));
-    const fixed_t angle_x =
-        fixed_div(fixed_mul(FIXED_PI, fixed_from_int(-12)), fixed_from_int(180));
-    Mat4 ry;
-    Mat4 rx;
-    mat4_rotate_y(&ry, angle_y);
-    mat4_rotate_x(&rx, angle_x);
-    mat4_multiply(&s_cube_model, &ry, &rx);
+    const fixed_t eye_x = fixed_mul(sin_fixed(s_camera_yaw), s_camera_distance);
+    const fixed_t eye_z = fixed_mul(cos_fixed(s_camera_yaw), s_camera_distance);
+    mat4_look_at(&s_view, vec3_make(eye_x, s_camera_height, eye_z), vec3_make(0, 0, 0),
+                 vec3_make(0, FIXED_ONE, 0));
+    const fixed_t fov = degrees(70);
+    mat4_perspective(&s_proj, fov, fixed_div(fixed_from_int(320), fixed_from_int(224)),
+                     fixed_from_int(1), fixed_from_int(100));
+    mat4_multiply(&s_mvp, &s_proj, &s_view);
+}
 
+void build_static_mvp(void)
+{
+    reset_scene_state();
+    update_camera_matrices();
+}
+
+void init_demo_vertices(void)
+{
     s_demo_vertex_count = 0u;
     if (s_boot_mesh != nullptr && s_boot_mesh->vertex_count <= kDemoMaxVertices) {
         for (uint32_t i = 0u; i < s_boot_mesh->vertex_count; ++i) {
             s_demo_vertices[i] = s_boot_mesh->vertices[i];
-            // Gouraud-тинтинг: разные цвета у вершин куба (ассет — белый).
             // Мягкий тинт вокруг белого: VDP1 Gouraud — аддитивные offsets
             // (16 = нейтраль), сильные цвета разрушают текстуру.
             static const uint8_t tint[8][3] = {{255, 232, 232}, {232, 255, 232},
@@ -218,6 +234,93 @@ void build_demo_scene(void)
         s_demo_vertex_count = s_boot_mesh->vertex_count;
     }
 }
+
+void update_demo_model(void)
+{
+    Mat4 ry;
+    Mat4 rx;
+    mat4_rotate_y(&ry, s_object_yaw);
+    mat4_rotate_x(&rx, s_object_pitch);
+    mat4_multiply(&s_cube_model, &ry, &rx);
+}
+
+void update_input_and_scene(void)
+{
+    const fixed_t step = degrees(2);
+    const fixed_t zero = 0;
+
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_START)) {
+        reset_scene_state();
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_LEFT)) {
+        s_object_yaw = fixed_sub(s_object_yaw, step);
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_RIGHT)) {
+        s_object_yaw = fixed_add(s_object_yaw, step);
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_UP)) {
+        s_object_pitch = fixed_sub(s_object_pitch, step);
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_DOWN)) {
+        s_object_pitch = fixed_add(s_object_pitch, step);
+    }
+    const fixed_t pitch_limit = degrees(60);
+    if (s_object_pitch < fixed_sub(zero, pitch_limit)) {
+        s_object_pitch = fixed_sub(zero, pitch_limit);
+    } else if (s_object_pitch > pitch_limit) {
+        s_object_pitch = pitch_limit;
+    }
+
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_CROSS)) {
+        s_camera_distance = fixed_sub(s_camera_distance, fixed_from_int(1));
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_CIRCLE)) {
+        s_camera_distance = fixed_add(s_camera_distance, fixed_from_int(1));
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_SQUARE)) {
+        s_camera_height = fixed_sub(s_camera_height, fixed_from_int(1));
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_TRIANGLE)) {
+        s_camera_height = fixed_add(s_camera_height, fixed_from_int(1));
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_L1)) {
+        s_camera_yaw = fixed_sub(s_camera_yaw, step);
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_R1)) {
+        s_camera_yaw = fixed_add(s_camera_yaw, step);
+    }
+    // Диапазоны камеры: 4..12 units, высота 1..6.
+    const fixed_t min_dist = fixed_from_int(4);
+    const fixed_t max_dist = fixed_from_int(12);
+    if (s_camera_distance < min_dist) {
+        s_camera_distance = min_dist;
+    } else if (s_camera_distance > max_dist) {
+        s_camera_distance = max_dist;
+    }
+    const fixed_t min_height = fixed_from_int(1);
+    const fixed_t max_height = fixed_from_int(6);
+    if (s_camera_height < min_height) {
+        s_camera_height = min_height;
+    } else if (s_camera_height > max_height) {
+        s_camera_height = max_height;
+    }
+
+    update_camera_matrices();
+    update_demo_model();
+    // Фон следует за орбитой камеры: fixed yaw → целые пиксели VDP2.
+    s_bg_scroll_x = fixed_add(fixed_from_int(32), fixed_mul(s_camera_yaw, fixed_from_int(32)));
+    s_bg_scroll_y = fixed_from_int(16);
+    if (s_bg_scroll_x < 0) {
+        s_bg_scroll_x = 0;
+    }
+    const fixed_t max_x =
+        fixed_from_int(static_cast<int32_t>(saturn::VDP2_BITMAP_WIDTH - saturn::VDP2_SCREEN_WIDTH));
+    if (s_bg_scroll_x > max_x) {
+        s_bg_scroll_x = max_x;
+    }
+    saturn::vdp2_backend_set_scroll(s_bg_scroll_x, s_bg_scroll_y);
+}
+
 
 void log_benchmark(const saturn::ParallelBenchResult& bench)
 {
@@ -239,37 +342,6 @@ void log_frame_metrics(void)
                 stats.last_wait_us, saturn::parallel_workload_last_hash() & 0xFFFFFFu);
 }
 
-void update_background_scroll(void)
-{
-    const fixed_t step = fixed_from_int(2);
-    if (Input_IsPadButtonDown(0u, INPUT_PAD_LEFT)) {
-        s_bg_scroll_x = fixed_sub(s_bg_scroll_x, step);
-    }
-    if (Input_IsPadButtonDown(0u, INPUT_PAD_RIGHT)) {
-        s_bg_scroll_x = fixed_add(s_bg_scroll_x, step);
-    }
-    if (Input_IsPadButtonDown(0u, INPUT_PAD_UP)) {
-        s_bg_scroll_y = fixed_sub(s_bg_scroll_y, step);
-    }
-    if (Input_IsPadButtonDown(0u, INPUT_PAD_DOWN)) {
-        s_bg_scroll_y = fixed_add(s_bg_scroll_y, step);
-    }
-    const fixed_t max_x = fixed_from_int(static_cast<int32_t>(saturn::VDP2_BITMAP_WIDTH - saturn::VDP2_SCREEN_WIDTH));
-    const fixed_t max_y =
-        fixed_from_int(static_cast<int32_t>(saturn::VDP2_BITMAP_HEIGHT - saturn::VDP2_SCREEN_HEIGHT));
-    if (s_bg_scroll_x < 0) {
-        s_bg_scroll_x = 0;
-    } else if (s_bg_scroll_x > max_x) {
-        s_bg_scroll_x = max_x;
-    }
-    if (s_bg_scroll_y < 0) {
-        s_bg_scroll_y = 0;
-    } else if (s_bg_scroll_y > max_y) {
-        s_bg_scroll_y = max_y;
-    }
-    saturn::vdp2_backend_set_scroll(s_bg_scroll_x, s_bg_scroll_y);
-}
-
 }  // namespace
 
 extern "C" void rpe_saturn_vdp2_vblank_tick(void)
@@ -283,10 +355,11 @@ extern "C" void rpe_saturn_frame_tick(void)
         return;  // На Saturn нет SDL_QUIT; контракт на будущее.
     }
 
-    // S25–26: параллельная подготовка вершин/command list. Slave пишет
-    // только shared Work RAM; VDP1/VDP2 не трогает, поэтому VBlank-окно
-    // для VRAM не нарушается.
-    const saturn::ParallelFrameResult frame = saturn::parallel_workload_run_frame(&s_mvp, 20u);
+    // S31–32: ввод камеры/объекта и лёгкий Master+Slave workload каждый
+    // кадр (16 треугольников на CPU) — оба SH-2 задействованы, бюджет 60 Гц.
+    update_input_and_scene();
+    const saturn::ParallelFrameResult frame =
+        saturn::parallel_workload_run_frame_n(&s_mvp, 16u, 20u);
     if (s_frame_count == 0u) {
         s_first_hash = frame.hash;
     } else if (frame.hash != s_first_hash) {
@@ -304,7 +377,7 @@ extern "C" void rpe_saturn_frame_tick(void)
     if ((s_frame_count % 120u) == 0u) {
         const saturn::Vdp1BackendStats& stats = saturn::vdp1_backend_stats();
         const uint32_t overdraw = (stats.pixels_last * 1000u) / (320u * 224u);
-        Log_Message(LOG_LEVEL_INFO, "dbg", "S29-30 f=%u c=%u o=%u s=%u", s_frame_count,
+        Log_Message(LOG_LEVEL_INFO, "dbg", "HELLO f=%u c=%u o=%u s=%u", s_frame_count,
                     stats.commands_last, overdraw,
                     saturn::vdp2_backend_stats().scroll_commits);
     }
@@ -319,8 +392,7 @@ extern "C" void rpe_saturn_frame_tick(void)
     }
 #endif
 
-    update_background_scroll();
-
+    Render_SetCamera(&s_view, &s_proj);
     Render_BeginFrame();
     Render_Clear(0u, 0u, 32u);  // golden clear (0,0,32) → VDP1 EWDR/VDP2 0x9000
     if (s_texture != RENDER_TEXTURE_INVALID) {
@@ -370,7 +442,8 @@ extern "C" void jo_main(void)
     boot_asset_self_test();
     build_static_mvp();
     Render_SetCamera(&s_view, &s_proj);
-    build_demo_scene();
+    init_demo_vertices();
+    update_demo_model();
 
     s_bench = saturn::parallel_workload_benchmark(&s_mvp, 3u);
     log_benchmark(s_bench);

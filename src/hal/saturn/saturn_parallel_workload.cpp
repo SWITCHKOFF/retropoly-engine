@@ -214,13 +214,12 @@ void execute_batch(void* argument)
     }
 }
 
-uint32_t hash_outputs(const PreparedTriangle* second_half)
+uint32_t hash_outputs_n(const PreparedTriangle* second_half, uint32_t per_cpu)
 {
-    constexpr uint32_t kChunkBytes =
-        static_cast<uint32_t>(sizeof(PreparedTriangle)) * PARALLEL_TRIANGLES_PER_CPU;
+    const uint32_t chunk_bytes = static_cast<uint32_t>(sizeof(PreparedTriangle)) * per_cpu;
     uint32_t hash = kFnvOffset;
-    hash = fnv1a_continue(hash, s_master_out, kChunkBytes);
-    hash = fnv1a_continue(hash, second_half, kChunkBytes);
+    hash = fnv1a_continue(hash, s_master_out, chunk_bytes);
+    hash = fnv1a_continue(hash, second_half, chunk_bytes);
     return hash;
 }
 
@@ -262,10 +261,14 @@ void parallel_workload_shutdown(void)
     s_last_hash = 0u;
 }
 
-ParallelFrameResult parallel_workload_run_frame(const Mat4* mvp, uint32_t timeout_ms)
+ParallelFrameResult parallel_workload_run_frame_n(const Mat4* mvp, uint32_t per_cpu,
+                                                   uint32_t timeout_ms)
 {
     ParallelFrameResult result = {};
-    result.master_triangles = PARALLEL_TRIANGLES_PER_CPU;
+    if (per_cpu == 0u || per_cpu > PARALLEL_TRIANGLES_PER_CPU) {
+        per_cpu = PARALLEL_TRIANGLES_PER_CPU;
+    }
+    result.master_triangles = per_cpu;
 
     if (mvp == nullptr || s_master_out == nullptr || s_slave_out == nullptr ||
         s_fallback_out == nullptr || s_slave_batch == nullptr) {
@@ -273,14 +276,14 @@ ParallelFrameResult parallel_workload_run_frame(const Mat4* mvp, uint32_t timeou
     }
 
     ParallelBatch* slave_batch = static_cast<ParallelBatch*>(shared_ptr(s_slave_batch));
-    fill_batch(slave_batch, mvp, PARALLEL_TRIANGLES_PER_CPU, PARALLEL_TRIANGLES_PER_CPU,
+    fill_batch(slave_batch, mvp, per_cpu, per_cpu,
                static_cast<PreparedTriangle*>(shared_ptr(s_slave_out)));
     shared_barrier();
 
     const bool dispatched = slave_worker_dispatch(execute_batch, slave_batch);
 
     ParallelBatch master_batch;
-    fill_batch(&master_batch, mvp, 0u, PARALLEL_TRIANGLES_PER_CPU, s_master_out);
+    fill_batch(&master_batch, mvp, 0u, per_cpu, s_master_out);
     execute_batch(&master_batch);
 
     bool slave_ok = false;
@@ -290,23 +293,27 @@ ParallelFrameResult parallel_workload_run_frame(const Mat4* mvp, uint32_t timeou
 
     if (!slave_ok) {
         ParallelBatch fallback_batch;
-        fill_batch(&fallback_batch, mvp, PARALLEL_TRIANGLES_PER_CPU, PARALLEL_TRIANGLES_PER_CPU,
-                   s_fallback_out);
+        fill_batch(&fallback_batch, mvp, per_cpu, per_cpu, s_fallback_out);
         execute_batch(&fallback_batch);
         slave_worker_record_fallback();
     }
 
     const PreparedTriangle* second_half = slave_ok ? s_slave_out : s_fallback_out;
-    const uint32_t hash = hash_outputs(second_half);
+    const uint32_t hash = hash_outputs_n(second_half, per_cpu);
 
     result.ok = true;
     result.used_slave = slave_ok;
     result.fallback = !slave_ok;
     result.hash = hash;
-    result.slave_triangles = slave_ok ? PARALLEL_TRIANGLES_PER_CPU : 0u;
+    result.slave_triangles = slave_ok ? per_cpu : 0u;
     result.wait_us = slave_ok ? slave_worker_stats().last_wait_us : 0u;
     s_last_hash = hash;
     return result;
+}
+
+ParallelFrameResult parallel_workload_run_frame(const Mat4* mvp, uint32_t timeout_ms)
+{
+    return parallel_workload_run_frame_n(mvp, PARALLEL_TRIANGLES_PER_CPU, timeout_ms);
 }
 
 ParallelBenchResult parallel_workload_benchmark(const Mat4* mvp, uint32_t iterations)

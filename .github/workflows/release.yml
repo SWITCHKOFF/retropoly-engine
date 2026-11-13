@@ -1,8 +1,8 @@
 # ============================================================================
-# Релизный workflow — Спринт 19–20 (docs/plans/sprint_19_20.md, неделя 40).
+# Релизный workflow — Спринты 19–20 / 31–32 (v0.2.0).
 # Триггер: annotated tag v*.
-# Собирает PC (hello_triangle + rotating_cube) и PS1 (PS-EXE + CD-образ),
-# валидирует артефакты, публикует GitHub Release.
+# Собирает PC (hello_triangle + rotating_cube), PS1 (PS-EXE + CD) и Saturn
+# hello_triangle (ISO/CUE), валидирует артефакты, публикует GitHub Release.
 # ============================================================================
 name: release
 
@@ -28,7 +28,7 @@ jobs:
           sudo apt-get install -y cmake ninja-build libgl1-mesa-dev \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev \
-            xvfb python3-yaml
+            xvfb python3-yaml genisoimage
 
       - name: Verify vendored dependencies
         run: sh ci/verify_vendored.sh
@@ -81,9 +81,44 @@ jobs:
           test -s RETRO.cue
           grep -Fx 'BOOT = cdrom:\RETRO.EXE;1' system.cnf
 
+      - name: Jo Engine v2026.2 (pinned, Saturn)
+        run: |
+          set -euo pipefail
+          git config --global advice.detachedHead false
+          git clone --depth 1 --branch v2026.2 --filter=blob:none --sparse \
+            https://github.com/johannes-fetz/joengine.git "$RUNNER_TEMP/joengine"
+          cd "$RUNNER_TEMP/joengine"
+          git sparse-checkout set \
+            Compiler/COMMON Compiler/LINUX \
+            Compiler/WINDOWS/sh-elf/include jo_engine
+          test "$(git rev-parse HEAD)" = "5e99944238030821a48e17a40abefd77e81953c2"
+          sha256sum -c "$GITHUB_WORKSPACE/ci/joengine-v2026.2.sha256"
+          echo "JO_ENGINE_ROOT=$RUNNER_TEMP/joengine" >> "$GITHUB_ENV"
+
+      - name: Build saturn-release (hello_triangle)
+        run: |
+          cmake --preset saturn-release
+          cmake --build --preset saturn-release
+
+      - name: Validate Saturn artifacts
+        run: |
+          set -euo pipefail
+          cd build/saturn-release/src/hal/saturn
+          for f in hello_triangle.elf hello_triangle.bin hello_triangle.iso \
+                   hello_triangle.cue hello_triangle.map; do
+            test -s "$f"
+          done
+          cmp hello_triangle.iso retro_saturn.iso
+          cmp hello_triangle.bin retro_saturn.bin
+          grep -Fx 'FILE "hello_triangle.iso" BINARY' hello_triangle.cue
+          isoinfo -i hello_triangle.iso -f | grep -q '/0.BIN;1'
+          isoinfo -i hello_triangle.iso -f | grep -q '/CUBE.MSH;1'
+          isoinfo -i hello_triangle.iso -f | grep -q '/TEX0.TEX;1'
+          isoinfo -i hello_triangle.iso -f | grep -q '/TEX1.TEX;1'
+
       - name: Release contract
         run: |
-          python3 scripts/verify_release_contract.py --w1-seconds 60
+          xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60
 
       - name: Upload release contract report
         uses: actions/upload-artifact@v4
@@ -102,6 +137,13 @@ jobs:
              build/ps1-release/src/hal/ps1/RETRO.cue \
              build/ps1-release/src/hal/ps1/retro_ps1.exe \
              "dist/retro-engine-${tag}/ps1/"
+          mkdir -p "dist/retro-engine-${tag}/saturn"
+          cp build/saturn-release/src/hal/saturn/hello_triangle.elf \
+             build/saturn-release/src/hal/saturn/hello_triangle.bin \
+             build/saturn-release/src/hal/saturn/hello_triangle.iso \
+             build/saturn-release/src/hal/saturn/hello_triangle.cue \
+             build/saturn-release/src/hal/saturn/hello_triangle.map \
+             "dist/retro-engine-${tag}/saturn/"
           cp README.md LICENSE docs/LEGAL.md "dist/retro-engine-${tag}/"
           tar -czf "retro-engine-${tag}.tar.gz" -C dist "retro-engine-${tag}"
 

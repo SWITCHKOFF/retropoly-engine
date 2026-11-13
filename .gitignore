@@ -30,3 +30,4 @@ testsprite_tests/tmp/config.json
 
 # Локальные BIOS/ROM для ручного эмуляторного gate (не вендорятся, не публикуются).
 /bios/
+__pycache__
