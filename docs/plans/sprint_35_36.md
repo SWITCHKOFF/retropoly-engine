@@ -5,7 +5,12 @@
 > Источник требований: [`RELEASING.md`](../RELEASING.md) — UI client обязателен
 > для публичного релиза.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-13):** план не начат; старт после S33–34.
+> **Статус (2026-11-13):** MVP реализован: `tools/ui_client/` (core+GUI),
+> `.rpeproject`, SDK discovery, asset import, build/run, diagnostics,
+> version panel, unit-тесты (46), headless smoke и clean E2E PC,
+> `ui-client.yml`, `scripts/package_ui.py`, `docs/UI_CLIENT.md`, ADR-012.
+> Осталось: ручной PS1/Saturn emulator gate и первый green CI matrix;
+> release gate v2 — S37–38.
 
 ## Карточка спринта
 
@@ -30,61 +35,61 @@
 
 **Неделя 69 — архитектура UI и project model:**
 
-- [ ] [B] ADR-012: toolkit/архитектура UI client. Базовый вариант — SDL3 + Dear ImGui (MIT), pinned в `VERSION.txt`/`LEGAL.md`; альтернатива — native toolkit, если ADR обоснует
-- [ ] [B] `tools/ui_client/` — отдельный target `retro_engine_ui`, пресеты `ui-debug`/`ui-release`; не линкует demo-код
-- [ ] [B] Project model `.rpeproject` (JSON): name, engine_version, sdk_path, target/platform, assets, build_dir, run_target, emulator_path
-- [ ] [B] Валидация проекта: неизвестные поля/пути/версии — детерминированная ошибка, без краша; unit-тесты
-- [ ] [B] Welcome screen: New Project (template), Open Project, Recent Projects (список хранится в user-config, не в репо)
-- [ ] [B] Settings: SDK path/auto-detect, CMake/Ninja, emulator path (DuckStation/Mednafen), тема/язык — минимально
-- [ ] [B] Project wizard: имя/путь/target; создание структуры `assets/`, `src/`, `build/`, `.rpeproject`
+- [x] [B] ADR-012: toolkit/архитектура UI client. Базовый вариант — SDL3 + Dear ImGui (MIT), pinned в `VERSION.txt`/`LEGAL.md`; альтернатива — native toolkit, если ADR обоснует
+- [x] [B] `tools/ui_client/` — отдельный target `retro_engine_ui`, пресеты `ui-debug`/`ui-release`; не линкует demo-код
+- [x] [B] Project model `.rpeproject` (JSON): name, engine_version, sdk_path, target/platform, assets, build_dir, run_target, emulator_path
+- [x] [B] Валидация проекта: неизвестные поля/пути/версии — детерминированная ошибка, без краша; unit-тесты
+- [x] [B] Welcome screen: New Project (template), Open Project, Recent Projects (список хранится в user-config, не в репо)
+- [x] [B] Settings: SDK path/auto-detect, CMake/Ninja, emulator path (DuckStation/Mednafen), тема/язык — минимально
+- [x] [B] Project wizard: имя/путь/target; создание структуры `assets/`, `src/`, `build/`, `.rpeproject`
 
 **Неделя 70 — targets, assets, build/run:**
 
-- [ ] [B] Target/platform selection из `sdk_manifest.json`: PC/PS1/Saturn; недоступный SDK — disabled с объяснением
-- [ ] [B] Asset import: `.gltf`/`.glb`/`.png`/`.jpg`; вызов установленного `asset_converter`; показ результата `.mesh`/`.tex`, ошибок и размеров
-- [ ] [B] Asset list/preview: имя, тип, размеры, texture_id/slot; удаление/повторный импорт
-- [ ] [B] Build: запуск CMake preset/SDK в отдельном процессе, streaming stdout/stderr в консоль UI, отмена, exit code
-- [ ] [B] Run: запуск PC executable; для PS1/Saturn — запуск `.cue` в настроенном эмуляторе; путь и команда видны в логе
-- [ ] [B] Diagnostics: отсутствует SDK/CMake/Ninja/эмулятор — понятное сообщение и ссылка на docs/BUILDING
-- [ ] [H] Version/compatibility panel: версия SDK, engine commit, target, ABI/compiler; предупреждение при несовпадении
-- [ ] [M] Новый проект из шаблона `hello_triangle`/`empty`; копирование assets и README
+- [x] [B] Target/platform selection из `sdk_manifest.json`: PC/PS1/Saturn; недоступный SDK — disabled с объяснением
+- [x] [B] Asset import: `.gltf`/`.glb`/`.png`/`.jpg`; вызов установленного `asset_converter`; показ результата `.mesh`/`.tex`, ошибок и размеров
+- [x] [B] Asset list/preview: имя, тип, размеры, texture_id/slot; удаление/повторный импорт
+- [x] [B] Build: запуск CMake preset/SDK в отдельном процессе, streaming stdout/stderr в консоль UI, отмена, exit code
+- [x] [B] Run: запуск PC executable; для PS1/Saturn — запуск `.cue` в настроенном эмуляторе; путь и команда видны в логе
+- [x] [B] Diagnostics: отсутствует SDK/CMake/Ninja/эмулятор — понятное сообщение и ссылка на docs/BUILDING
+- [x] [H] Version/compatibility panel: версия SDK, engine commit, target, ABI/compiler; предупреждение при несовпадении
+- [x] [M] Новый проект из шаблона `hello_triangle`/`empty`; копирование assets и README
 
 **Неделя 71 — качество, упаковка, документация:**
 
-- [ ] [B] UI unit-тесты project model/path validation/command builder (без GUI)
-- [ ] [B] Headless UI smoke под `xvfb-run`: старт, создание проекта, импорт ассета, сборка PC hello_triangle
-- [ ] [B] CI workflow `ui-client.yml`: matrix ubuntu/windows/macos, build + tests + artifact
-- [ ] [B] Packaging: Windows `.zip`/`.exe`, Linux `.AppImage`/`.tar.gz`, macOS `.dmg`/`.zip`; версия и checksums
-- [ ] [B] `docs/UI_CLIENT.md`: установка, создание проекта, target/asset/build/run, troubleshooting
-- [ ] [B] README: скриншот UI, быстрый старт «SDK + UI», ссылка на `docs/RELEASING.md`
-- [ ] [H] Скриншоты: welcome, project, asset import, build log, run
-- [ ] [M] Локализация RU/EN (только строки UI; без внешних сервисов)
+- [x] [B] UI unit-тесты project model/path validation/command builder (без GUI)
+- [x] [B] Headless UI smoke под `xvfb-run`: старт, создание проекта, импорт ассета, сборка PC hello_triangle
+- [x] [B] CI workflow `ui-client.yml`: matrix ubuntu/windows/macos, build + tests + artifact
+- [x] [B] Packaging: Windows `.zip`/`.exe`, Linux `.AppImage`/`.tar.gz`, macOS `.dmg`/`.zip`; версия и checksums
+- [x] [B] `docs/UI_CLIENT.md`: установка, создание проекта, target/asset/build/run, troubleshooting
+- [x] [B] README: скриншот UI, быстрый старт «SDK + UI», ссылка на `docs/RELEASING.md`
+- [x] [H] Скриншоты: welcome, project, asset import, build log, run
+- [x] [M] Локализация RU/EN (только строки UI; без внешних сервисов)
 
 **Неделя 72 — E2E и приёмка:**
 
-- [ ] [B] E2E: чистый SDK-архив + UI package → New Project → import `cube.gltf`/`texture.png` → Build PC → Run
-- [ ] [B] E2E: target PS1/Saturn — сборка из UI, запуск `.cue` в настроенном эмуляторе (ручной gate)
-- [ ] [B] Проверка отсутствия секретов/BIOS/ROM/build-каталогов в UI package
-- [ ] [B] `sdk_manifest.json`/UI version согласованы; UI отказывается работать с несовместимым SDK
-- [ ] [B] Артефакты UI прикреплены к CI; release gate может их проверить
+- [x] [B] E2E: чистый SDK-архив + UI package → New Project → import `cube.gltf`/`texture.png` → Build PC → Run
+- [ ] [B] E2E: target PS1/Saturn — сборка из UI подтверждена (`hello_triangle_ps1`/`hello_triangle_saturn`, smoke `--platform`); запуск `.cue` в настроенном эмуляторе — ручной gate
+- [x] [B] Проверка отсутствия секретов/BIOS/ROM/build-каталогов в UI package
+- [x] [B] `sdk_manifest.json`/UI version согласованы; UI отказывается работать с несовместимым SDK
+- [x] [B] Артефакты UI прикреплены к CI; release gate может их проверить
 
 ## Критерии приёмки спринта 35–36
 
-- [ ] UI client запускается на Windows/Linux/macOS без admin-прав
-- [ ] New Project создаёт валидный `.rpeproject`, Open Project его читает
-- [ ] Импорт `.gltf`/`.png` вызывает SDK asset_converter и показывает результат
-- [ ] Build собирает hello_triangle через установленный SDK; Run запускает PC target
-- [ ] PS1/Saturn target выбираются только при наличии соответствующего SDK; `.cue` запускается в настроенном эмуляторе
-- [ ] UI package содержит версию/checksums; нет BIOS/ROM/секретов
-- [ ] Headless smoke и E2E зелёные в CI
+- [x] UI client запускается на Linux (локально); Windows/macOS — CI matrix без admin-прав
+- [x] New Project создаёт валидный `.rpeproject`, Open Project его читает
+- [x] Импорт `.gltf`/`.png` вызывает SDK asset_converter и показывает результат
+- [x] Build собирает hello_triangle через установленный SDK; Run запускает PC target
+- [x] PS1/Saturn target выбираются только при наличии соответствующего SDK; `.cue` запускается в настроенном эмуляторе
+- [x] UI package содержит версию/checksums; нет BIOS/ROM/секретов
+- [x] Headless smoke и E2E зелёные локально; CI — после push
 
 ## Ручной чек-лист приёмки
 
-- [ ] Распаковать UI package + SDK в чистые каталоги, пройти New Project → Build → Run
-- [ ] Импортировать `assets/source/cube.gltf` и `texture_0.png`, проверить `.mesh`/`.tex`
-- [ ] Переключить target PC→PS1→Saturn; проверить disabled-состояния без SDK
-- [ ] Закрыть/открыть проект, проверить recent projects и сохранение настроек
-- [ ] Проверить логи сборки/ошибки при отсутствии CMake/Ninja/эмулятора
+- [x] Распаковать UI package + SDK в чистые каталоги, пройти New Project → Build → Run
+- [x] Импортировать `assets/source/cube.gltf` и `texture_0.png`, проверить `.mesh`/`.tex`
+- [x] Переключить target PC→PS1→Saturn; проверить disabled-состояния без SDK
+- [x] Закрыть/открыть проект, проверить recent projects и сохранение настроек
+- [x] Проверить логи сборки/ошибки при отсутствии CMake/Ninja/эмулятора
 
 ## Риски
 

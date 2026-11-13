@@ -179,3 +179,23 @@ ctest --preset pc-debug --output-on-failure
 ```
 
 Подробнее — [`BUILDING.md`](BUILDING.md) и [`TESTING.md`](TESTING.md).
+
+## 9. UI client (`tools/ui_client/`)
+
+UI client — отдельный host-процесс (SDL3 + Dear ImGui), не входящий в
+runtime движка. Он не линкует `retro_engine`/примеры, а работает с
+установленным SDK:
+
+```
+tools/ui_client/
+  core/   # без GUI: JSON, .rpeproject, settings, SDK discovery,
+          # command builder, process runner, asset import, diagnostics, i18n
+  gui/    # SDL3 + Dear ImGui: welcome/project/wizard/settings, tabs, log
+  tests/  # unit-тесты core (не требуют дисплея)
+```
+
+Поток: `.rpeproject` (schema 1) → SDK `sdk_manifest.json` → CMake/Ninja
+configure+build → target/эмулятор. Ассеты конвертируются внешним
+`asset_converter`; процессы запускаются без shell, со streaming
+stdout/stderr и отменой. Архитектурное решение — ADR-012; руководство —
+[`UI_CLIENT.md`](UI_CLIENT.md).

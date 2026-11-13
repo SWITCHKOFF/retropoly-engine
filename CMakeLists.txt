@@ -91,6 +91,7 @@ option(PLATFORM_PS1    "Собирать целевой бэкенд PS1 (PSn00b
 option(PLATFORM_SATURN "Собирать целевой бэкенд Saturn (Jo Engine v2026.2, pinned)" OFF)
 option(BUILD_TESTS                       "Собирать юнит-тесты (GoogleTest)"               ON)
 option(BUILD_EXAMPLES                    "Собирать примеры hello_triangle/rotating_cube"  OFF)
+option(BUILD_UI_CLIENT                   "Собирать UI client (SDL3 + Dear ImGui, PC host)" OFF)
 option(BUILD_RENDER_INTEGRATION_TESTS    "Рендер-интеграционные тесты (W0-golden, §3.5)"  OFF)
 option(BUILD_BENCHMARKS                  "Собирать benchmarks (пресет pc-bench)"          OFF)
 option(ENABLE_ASAN    "AddressSanitizer для целей движка (только PC)"         OFF)
@@ -107,6 +108,9 @@ if(NOT RPE_PLATFORM_COUNT EQUAL 1)
     message(FATAL_ERROR
         "Не выбран ровно один бэкенд (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN): "
         "включённых платформ — ${RPE_PLATFORM_COUNT}. См. CMakePresets.json.")
+endif()
+if(BUILD_UI_CLIENT AND NOT PLATFORM_PC)
+    message(FATAL_ERROR "BUILD_UI_CLIENT=ON требует PLATFORM_PC=ON (host UI client).")
 endif()
 
 # --- Канонические флаги компиляции (cmake/CompilerFlags.cmake) ----------------
@@ -249,6 +253,11 @@ if(PLATFORM_PC)
     # CTest агрегирует тесты рекурсивно (ctest --preset pc-debug из build/<preset>).
     enable_testing()
     add_subdirectory(tests)
+
+    # UI client — отдельный host-target retro_engine_ui (S35–36).
+    if(BUILD_UI_CLIENT)
+        add_subdirectory(tools/ui_client)
+    endif()
 endif()
 
 # ============================================================================

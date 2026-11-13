@@ -16,6 +16,8 @@ presets:
     - pc-debug
     - pc-release
     - pc-debug-render
+    - ui-debug
+    - ui-release
     - ps1-release
     - saturn-release
   optional:
@@ -142,6 +144,33 @@ sdk:
     - LICENSE
     - sdk_manifest.json
     - checksums.sha256
+
+ui:
+  # Спринт 35–36: launcher/editor (SDL3 + Dear ImGui), пакет ui/.
+  schema_version: 1
+  package_name: retro-engine-ui
+  archive_naming: "retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip,dmg}"
+  manifest: ui_manifest.json
+  sdk_series: "0.2"
+  required_files:
+    - retro-engine-ui
+    - assets/DejaVuSans.ttf
+    - assets/DejaVu-LICENSE.txt
+    - samples/cube.gltf
+    - samples/texture.png
+    - README-ui.md
+    - VERSION.txt
+    - LEGAL.md
+    - ui_manifest.json
+    - checksums.sha256
+  required_components:
+    - project_create_open
+    - target_select
+    - asset_import
+    - build_and_run
+    - diagnostics
+    - version_compatibility
+  forbidden_parts: [.git, build, CMakeFiles, bios, roms, secrets]
 
 release:
   # Политика с v0.2.0: публичный релиз = готовый SDK + UI client.

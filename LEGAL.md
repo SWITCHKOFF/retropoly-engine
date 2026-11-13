@@ -11,6 +11,8 @@
 | cgltf | `src/third_party/cgltf/cgltf.h` | MIT | Pinned v1.15 |
 | stb (image, image_write) | `src/third_party/stb/` | PD/MIT (dual) | Pinned archive `003501f6` |
 | glad | `src/third_party/glad/` | MIT | Сгенерирован glad2: OpenGL Core 3.3 + loader, extensions=all |
+| Dear ImGui | `src/third_party/imgui` | MIT | Pinned v1.93.0 (`c1aaac65`); UI client (S35–36), SDL3/OpenGL3 backends |
+| DejaVuSans | `tools/ui_client/assets/DejaVuSans.ttf` | Bitstream Vera Fonts license (см. below) | Шрифт UI client для RU/EN; распространяется вместе с `LEGAL.md` |
 | Jo Engine | `JO_ENGINE_ROOT` (env-install) | MIT | Pinned v2026.2 (`5e99944`); Saturn backend, не вендорится |
 | sh-none-elf-gcc | bundled в Jo Engine `Compiler/LINUX` | GPL-3.0-or-later + GCC Runtime Library Exception; newlib BSD-style | Только сборка; скомпилированный код движка остаётся MIT |
 | Mednafen | env-install (ручная приёмка) | GPL-2.0-or-later | В релизы/CI/репозиторий не входит; BIOS не вендорится |
@@ -34,3 +36,20 @@
   `JO_ENGINE_ROOT`.
 - BIOS/ROM/ключи и build-каталоги запрещены в любом SDK-архиве; проверка —
   `scripts/package_sdk.py` + `scripts/verify_release_contract.py`.
+
+## UI-пакет (S35–36)
+
+- `retro-engine-ui-*-<os>-<arch>` содержит Dear ImGui v1.93.0 (MIT) и
+  шрифт DejaVuSans (Bitstream Vera Fonts license). Тексты лицензий
+  сохраняются в `LEGAL.md`; исходники ImGui доступны в upstream.
+- DejaVu Fonts license: Copyright (c) 2003 by Bitstream, Inc. All Rights
+  Reserved. DejaVu changes are in public domain. Permission is hereby
+  granted, free of charge, to any person obtaining a copy of the fonts and
+  associated documentation files, to use, copy, merge, publish, distribute,
+  and/or sell copies, subject to the conditions of the Bitstream Vera
+  license (copyright notices preserved; fonts not sold by themselves;
+  modified versions not use the reserved names). Полный текст —
+  `assets/DejaVu-LICENSE.txt` в UI-пакете.
+- BIOS/ROM/секреты/build-каталоги не входят в UI-пакет; проверка —
+  `scripts/package_ui.py`, `scripts/ui_e2e.py`,
+  `scripts/verify_release_contract.py`.

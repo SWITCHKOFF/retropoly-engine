@@ -55,6 +55,31 @@ target_link_libraries(game PRIVATE RetroPolyEngine::retro_engine)
 consumer smoke — `scripts/sdk_consumer_smoke.py`; полное руководство —
 [docs/SDK.md](docs/SDK.md), границы API — [ADR-011](docs/adr/ADR-011-public-sdk-api.md).
 
+## UI client (v0.2.1)
+
+Отдельный launcher/editor (SDL3 + Dear ImGui, MIT): создание/открытие
+проекта, target PC/PS1/Saturn, импорт ассетов через SDK
+`asset_converter`, сборка CMake/Ninja и запуск target'а/эмулятора.
+
+![UI client: проект](screenshots/ui_project.png)
+
+```sh
+# сборка + unit-тесты ядра UI
+cmake --preset ui-debug
+cmake --build --preset ui-debug --target retro_engine_ui_tests
+./build/ui-debug/tools/ui_client/retro_engine_ui_tests
+
+# release-пакет
+cmake --preset ui-release
+cmake --build --preset ui-release --target retro_engine_ui
+python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
+```
+
+Пакет: `dist/retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip}`;
+руководство — [docs/UI_CLIENT.md](docs/UI_CLIENT.md), архитектура —
+[ADR-012](docs/adr/ADR-012-ui-client.md), headless smoke —
+`scripts/ui_smoke.py`, clean E2E — `scripts/ui_e2e.py`.
+
 ## Что внутри
 
 - **Fixed-point ядро**: скаляр/вектор/матрицы Q16.16, saturating arithmetic,
@@ -80,10 +105,12 @@ consumer smoke — `scripts/sdk_consumer_smoke.py`; полное руковод�
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Слои движка, пайплайн рендера, ассет-пайплайн, платформенные контракты |
 | [docs/BUILDING.md](docs/BUILDING.md) | Установка тулчейна, канонические пресеты, запуск PC/PS1/Saturn, troubleshooting |
 | [docs/SDK.md](docs/SDK.md) | SDK: install/export, `find_package`, примеры, пакеты PC/PS1/Saturn, manifest/checksums |
+| [docs/UI_CLIENT.md](docs/UI_CLIENT.md) | UI client: установка, project/target/import/build/run, диагностика, упаковка |
 | [docs/SATURN.md](docs/SATURN.md) | Saturn: первоисточники, toolchain, разрешение, память, ввод, эмулятор |
 | [docs/adr/ADR-008-saturn-backend.md](docs/adr/ADR-008-saturn-backend.md) | Нормативное решение по Saturn backend |
 | [docs/adr/ADR-009-master-slave.md](docs/adr/ADR-009-master-slave.md) | Master+Slave SH-2: SPSC-синхронизация, workload, fallback |
 | [docs/adr/ADR-011-public-sdk-api.md](docs/adr/ADR-011-public-sdk-api.md) | Границы публичного SDK API и install/export |
+| [docs/adr/ADR-012-ui-client.md](docs/adr/ADR-012-ui-client.md) | UI client: SDL3 + Dear ImGui, `.rpeproject`, границы UI/SDK |
 | [docs/API.md](docs/API.md) | Вводный обзор API: ECS, Renderer, Input, FileSystem, Math |
 | [docs/ASSETS.md](docs/ASSETS.md) | Байтовые форматы `.mesh`/`.tex` v1, CLI конвертера, загрузчики |
 | [docs/TESTING.md](docs/TESTING.md) | Пирамида тестов, запуск unit/integration/visual, QA-чек-листы |
@@ -103,6 +130,12 @@ consumer smoke — `scripts/sdk_consumer_smoke.py`; полное руковод�
 |---|---|---|---|
 | ![ht-pc](screenshots/hello_triangle_pc.png) | ![rc-pc](screenshots/rotating_cube_pc.png) | ![ht-ps1](screenshots/hello_triangle_ps1.png) | ![saturn](screenshots/hello_triangle_saturn.png) |
 
+UI client:
+
+| Welcome | Project | Assets | Build log | Run |
+|---|---|---|---|---|
+| ![ui-welcome](screenshots/ui_welcome.png) | ![ui-project](screenshots/ui_project.png) | ![ui-assets](screenshots/ui_assets.png) | ![ui-build](screenshots/ui_build_done.png) | ![ui-run](screenshots/ui_run.png) |
+
 Saturn `hello_triangle`: D-pad — поворот объекта, A/B — дистанция камеры,
 C/X — высота, Y/Z — орбита, Start — сброс. Сборка/запуск —
 [docs/BUILDING.md](docs/BUILDING.md#сборка-saturn).
@@ -116,6 +149,8 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 | `pc-debug` | Разработка + unit-тесты |
 | `pc-release` | Оптимизированные примеры |
 | `pc-debug-render` | W0-golden + visual regression (`xvfb-run` в CI) |
+| `ui-debug` | UI client Debug + core-тесты |
+| `ui-release` | UI client Release (пакет) |
 | `pc-asan` | AddressSanitizer |
 | `pc-bench` | google/benchmark |
 | `pc-coverage` | lcov покрытие |
@@ -136,7 +171,8 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] rotating_cube demo (M7)
 - [x] Документация + release gate (M8)
 - [x] SDK packaging: install/export, CMake package, consumer smoke (S33–34)
-- [ ] UI client + публичный релиз v0.2.1 (release gate v2, S35–38)
+- [x] UI client MVP: project/target/import/build/run, package, smoke/E2E (S35–36)
+- [ ] Release gate v2 + публикация v0.2.1 (S37–38)
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
 [docs/RELEASING.md](docs/RELEASING.md). Следующий этап — **S33–38 /

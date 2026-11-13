@@ -137,6 +137,8 @@ git submodule update --init --recursive
 | `pc-debug` | PC | ON | OFF | Разработка, unit-тесты |
 | `pc-release` | PC | OFF | ON | Оптимизированные примеры |
 | `pc-debug-render` | PC | ON | OFF | W0-golden + visual regression |
+| `ui-debug` | PC | ON | OFF | UI client Debug + core-тесты (S35–36) |
+| `ui-release` | PC | OFF | OFF | UI client Release + пакет |
 | `pc-asan` | PC | ON | OFF | AddressSanitizer |
 | `pc-bench` | PC | OFF | OFF | google/benchmark |
 | `pc-coverage` | PC | ON | OFF | lcov покрытие |
@@ -178,6 +180,31 @@ cmake --install build/pc-release --prefix /opt/retro-engine-sdk
 
 `find_package(RetroPolyEngine CONFIG REQUIRED)` и цели
 `RetroPolyEngine::{retro_engine,hal,log}` — см. [`SDK.md`](SDK.md).
+
+## UI client (S35–36)
+
+UI client — отдельный host-таргет `retro_engine_ui` (SDL3 + Dear ImGui),
+не линкует примеры/движок и работает с установленным SDK:
+
+```sh
+# Debug + unit-тесты ядра
+cmake --preset ui-debug
+cmake --build --preset ui-debug --target retro_engine_ui_tests
+./build/ui-debug/tools/ui_client/retro_engine_ui_tests
+
+# Release + запуск
+cmake --preset ui-release
+cmake --build --preset ui-release --target retro_engine_ui
+./build/ui-release/ui/retro_engine_ui
+
+# Пакет ui/ + checksums
+python3 scripts/package_ui.py --build-dir build/ui-release \
+  --version 0.2.1 --output-dir dist
+```
+
+Требования: Dear ImGui submodule (`git submodule update --init --recursive`),
+OpenGL 3.3; headless smoke — `xvfb-run`. Руководство —
+[`UI_CLIENT.md`](UI_CLIENT.md).
 
 ## Сборка PC
 

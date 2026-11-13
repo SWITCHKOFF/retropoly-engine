@@ -2,8 +2,8 @@
 # SPDX-License-Identifier: MIT
 # RetroPolyEngine — scripts/verify_release_contract.py
 #
-# Release gate v2: legacy-контракты + SDK (Спринт 33–34).
-#   1. presets == {pc-debug, pc-release, pc-debug-render, ps1-release, ...}
+# Release gate v2: legacy-контракты + SDK (Спринт 33–34) + UI (Спринт 35–36).
+#   1. presets == {pc-debug, pc-release, pc-debug-render, ui-debug, ui-release, ps1-release, ...}
 #   2. ps1_executable_size <= 512000
 #   3. ps1_peak_main_ram <= 1572864; ps1_peak_vram <= 819200
 #   4. w0_framebuffer_hash == canonical_w0_hash
@@ -12,7 +12,9 @@
 #   7. Saturn artifacts/map/golden
 #   8. SDK: архивы + sidecar SHA-256, sdk_manifest.json, public headers,
 #      checksums.sha256 и clean consumer smoke (find_package RetroPolyEngine)
-#   9. Публикация результата как CI-artifact (release_contract_report.json)
+#   9. UI: retro-engine-ui-* archive, ui_manifest.json, components,
+#      checksums, запрет BIOS/ROM/секретов/build-каталогов
+#  10. Публикация результата как CI-artifact (release_contract_report.json)
 #
 # Вызов:
 #   python3 scripts/verify_release_contract.py [--w1-seconds 60] \
@@ -60,6 +62,7 @@ SATURN_REQUIRED = ["hello_triangle.elf", "hello_triangle.bin",
 DIST_DIR = os.path.join(REPO_ROOT, "dist")
 SDK_CONSUMER_SCRIPT = os.path.join(REPO_ROOT, "scripts",
                                    "sdk_consumer_smoke.py")
+UI_ARCHIVE_GLOB = os.path.join(DIST_DIR, "retro-engine-ui-*.tar.gz")
 
 
 def load_contract():
@@ -555,6 +558,105 @@ def assert_sdk_consumer(contract, sdk_dir, skip, platform):
                 "tail": (err if err else out)[-1200:]}
 
 
+def _extract_ui(archive, dest):
+    os.makedirs(dest, exist_ok=True)
+    if archive.endswith((".tar.gz", ".tgz")):
+        with tarfile.open(archive, "r:gz") as tar:
+            tar.extractall(dest)
+    else:
+        with zipfile.ZipFile(archive) as zf:
+            zf.extractall(dest)
+    root = os.path.join(dest, "ui")
+    return root if os.path.isdir(root) else dest
+
+
+def _assert_ui_archive(contract, archive):
+    required = contract.get("ui", {}).get("required_files", [
+        "ui/ui_manifest.json", "ui/checksums.sha256", "ui/README-ui.md"])
+    forbidden = tuple(contract.get("ui", {}).get("forbidden_parts", [
+        ".git", "build", "CMakeFiles", "bios", "roms", "secrets"]))
+    if archive.endswith((".tar.gz", ".tgz")):
+        with tarfile.open(archive, "r:gz") as tar:
+            names = set(tar.getnames())
+    else:
+        with zipfile.ZipFile(archive) as zf:
+            names = set(zf.namelist())
+    required = [name if name.startswith("ui/") else "ui/" + name
+                for name in required]
+    required.append("ui/retro-engine-ui")
+    missing = [name for name in required
+               if name not in names and not (name.endswith("retro-engine-ui") and
+                                             "ui/retro-engine-ui.exe" in names)]
+    parts = [name.split("/")[1] for name in names if name.startswith("ui/") and
+             "/" in name]
+    present_forbidden = sorted({p for p in parts if p in forbidden})
+    ok = not missing and not present_forbidden
+    return ok, {"archive": os.path.basename(archive), "missing": missing,
+                "forbidden": present_forbidden}
+
+
+def assert_ui_archives(contract, archives):
+    if not archives:
+        return False, {"error": "UI packages not found in dist/ "
+                               "(run scripts/package_ui.py)"}
+    details = []
+    ok = True
+    for archive in archives:
+        archive_ok, detail = _assert_ui_archive(contract, archive)
+        ok = ok and archive_ok
+        details.append(detail)
+    return ok, {"archives": details}
+
+
+def assert_ui_manifest(contract, archive):
+    if archive is None:
+        return False, {"error": "UI archive not found"}
+    tempdir = tempfile.mkdtemp(prefix="rpe_ui_gate_")
+    try:
+        ui_dir = _extract_ui(archive, tempdir)
+        manifest_path = os.path.join(ui_dir, "ui_manifest.json")
+        if not os.path.isfile(manifest_path):
+            return False, {"error": "ui_manifest.json not found"}
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+        ui_contract = contract.get("ui", {})
+        checks = []
+        checks.append(("schema", manifest.get("schema") ==
+                       ui_contract.get("schema_version", 1)))
+        checks.append(("package", manifest.get("package") ==
+                       ui_contract.get("package_name", "retro-engine-ui")))
+        checks.append(("version", manifest.get("version") ==
+                       contract["project"]["version"]))
+        series = ui_contract.get("sdk_series", "0.2")
+        checks.append(("sdk_series", str(manifest.get("version", "")).startswith(
+            series + ".") and manifest.get("sdk_series") == series))
+        required_components = ui_contract.get("required_components", [])
+        components = manifest.get("components", {})
+        checks.append(("components", all(components.get(name) is True
+                                         for name in required_components)))
+        checks.append(("files", bool(manifest.get("files"))))
+        checksums_path = os.path.join(ui_dir, "checksums.sha256")
+        checksum_ok = os.path.isfile(checksums_path)
+        bad_hashes = []
+        if checksum_ok:
+            with open(checksums_path, "r", encoding="utf-8") as f:
+                for line in f:
+                    line = line.strip()
+                    if not line:
+                        continue
+                    digest, rel = line.split("  ", 1)
+                    target = os.path.join(ui_dir, rel)
+                    if not os.path.isfile(target) or _sha256(target) != digest:
+                        bad_hashes.append(rel)
+        checks.append(("checksums", checksum_ok and not bad_hashes))
+        failed = [name for name, ok in checks if not ok]
+        return not failed, {"failed": failed, "version": manifest.get("version"),
+                            "sdk_series": manifest.get("sdk_series"),
+                            "components": components, "bad_hashes": bad_hashes}
+    finally:
+        shutil.rmtree(tempdir, ignore_errors=True)
+
+
 def main():
     parser = argparse.ArgumentParser(description="Release contract verifier")
     parser.add_argument("--w1-seconds", type=int, default=60,
@@ -586,6 +688,11 @@ def main():
     results["sdk_consumer"] = assert_sdk_consumer(
         contract, sdk_dir, args.skip_build_checks or args.skip_sdk_consumer,
         sdk_platform)
+
+    ui_archives = sorted(glob.glob(UI_ARCHIVE_GLOB))
+    results["ui_archives"] = assert_ui_archives(contract, ui_archives)
+    results["ui_manifest"] = assert_ui_manifest(
+        contract, ui_archives[-1] if ui_archives else None)
 
     results["presets"] = assert_presets(contract)
     results["ps1_exe_size"] = assert_ps1_exe_size(contract)

@@ -27,7 +27,7 @@ die() {
 }
 
 # --- 1) Submodules: pin по commit из VERSION.txt -----------------------------
-for _s in sdl3 googletest psn00bsdk; do
+for _s in sdl3 googletest psn00bsdk imgui; do
     _expected=$(field "$_s" commit)
     [ -n "$_expected" ] || die "нет 'commit' в секции [$_s] VERSION.txt"
     _actual=$(git -C "src/third_party/$_s" rev-parse HEAD 2>/dev/null) \

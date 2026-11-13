@@ -141,3 +141,25 @@ python3 scripts/verify_release_contract.py
 - [x] `python3 scripts/verify_release_contract.py --skip-build-checks`
       — `sdk_archives`/`sdk_manifest`/`sdk_headers` зелёные;
 - [x] negative: отсутствующий manifest/архив → gate `all_ok: false`.
+
+## UI client: core tests, smoke и E2E (S35–36)
+
+- [x] `retro_engine_ui_tests` — 46 тестов без GUI: JSON (включая duplicate
+      keys/depth/UTF-8), `.rpeproject` round-trip/unknown fields/unsafe paths,
+      settings/recent projects, semver/совместимость, SDK manifest,
+      command builder, process runner (streaming/cancel), asset import.
+- [x] Headless smoke `scripts/ui_smoke.py` под `xvfb-run`: старт UI,
+      New Project `hello_triangle`, импорт `cube.gltf`/`texture.png`,
+      Build PC (CMake+Ninja через SDK), Run/Stop.
+- [x] Clean E2E `scripts/ui_e2e.py`: SDK archive + UI package в чистых
+      каталогах, проверка checksums/manifest, запрет BIOS/ROM/секретов,
+      совпадение версий SDK/UI.
+- [x] Скриншоты smoke: welcome/project/assets/build/run
+      (`screenshots/ui_*.png`).
+- [x] Negative: несовместимый SDK (major/minor) → UI отказывается;
+      неизвестное поле `.rpeproject`/небезопасный путь → детерминированная
+      ошибка; отсутствие CMake/Ninja/эмулятора → диагностика.
+- [x] PS1/Saturn build-only smoke (`--platform ps1|saturn --no-run`):
+      `hello_triangle_ps1`/`hello_triangle_saturn` собираются из UI через
+      SDK; запуск `.cue` — ручной gate настроенного эмулятора, см.
+      [`plans/sprint_35_36.md`](plans/sprint_35_36.md).

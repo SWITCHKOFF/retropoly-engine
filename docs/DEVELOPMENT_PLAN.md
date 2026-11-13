@@ -20,7 +20,7 @@
    - Каждые 2 спринта — «работающий результат» (демо/артефакт, который можно показать).
 3. Scope reduction: если спринт затягивается — отсекать фичи, а не двигать границу MVP.
 4. Ветвление git: `develop` — основная, `feature/*`, `fix/*`, `release/*`, `hotfix/*`. Merge в `develop` через squash-PR; релизы — merge в `main` + тег `v*`.
-5. Все сборки — только через канонические пресеты: `pc-debug`, `pc-release`, `pc-debug-render`, `ps1-release` (+ опциональные `pc-asan`, `pc-bench`, `pc-coverage`). Никаких ручных `cmake -B` с нестандартными путями.
+5. Все сборки — только через канонические пресеты: `pc-debug`, `pc-release`, `pc-debug-render`, `ui-debug`, `ui-release`, `ps1-release` (+ опциональные `pc-asan`, `pc-bench`, `pc-coverage`). Никаких ручных `cmake -B` с нестандартными путями.
 6. Изменение любого нормативного значения (бюджеты, форматы, пресеты) = обновление `ci/normative_contracts.yaml` + соответствующего ADR/теста **в одном изменении**.
 7. Структура файлов: детальные чек-боксы спринтов живут в `plans/sprint_NN.md` (указатель — §2.5, сводка — `plans/README.md`); чек-боксы обновляются только там. Этот файл — вехи, критический путь, PERT-сводка, треки и нормативные приложения; при расхождении файл спринта первичен для задач, этот — для контрактов.
 
@@ -245,6 +245,8 @@ v0.2.1 (SDK + UI client): детальные планы S33–38 — §13.2.
 | `build-ps1.yml` | Спринт 13–14 | Pinned PSn00bSDK v0.24 + sha256; ps1-release; upload artifacts |
 | `coverage.yml` | Спринт 15–16 | pc-coverage → lcov → Codecov (порог core/ > 70%) |
 | `release.yml` | Спринт 19–20 | Тег v*: PC+PS1 артефакты + валидация + GitHub Release (готов) |
+| `sdk-package.yml` | Спринт 33–34 | SDK-архивы PC/PS1/Saturn + clean consumer smoke (готов) |
+| `ui-client.yml` | Спринт 35–36 | UI matrix: core-тесты, ui-release package, Linux clean E2E |
 | `docs.yml` | Спринт 19–20 | Doxygen → GitHub Pages (по тегу) (готов) |
 | `issue-triage.yml` | Спринт 19–20 | Автолейбл «needs-info» без шаблона (готов) |
 | `stale.yml` | После релиза | 30 дней stale → 7 дней close (готов) |
@@ -495,8 +497,12 @@ demo-архив. Нумерация S33–38 продолжает план; фа
 **Статус (2026-11-13):** S33–34 закрыты: публичный API `include/retro_engine/`,
 CMake install/export, `find_package` из build/install tree, SDK-архивы
 PC/PS1/Saturn, `sdk_manifest.json`/checksums, consumer smoke и
-[`SDK.md`](SDK.md); release gate получил SDK-asserts. Следующий — S35–36
-(UI client).
+[`SDK.md`](SDK.md); release gate получил SDK-asserts. S35–36 (UI client MVP)
+реализован: `tools/ui_client/` (SDL3 + Dear ImGui), `.rpeproject`,
+target/import/build/run, 46 core-тестов, headless smoke и clean E2E PC,
+package/checksums, [`UI_CLIENT.md`](UI_CLIENT.md), ADR-012; release gate
+получил `ui_archives`/`ui_manifest`. Остались ручной PS1/Saturn gate и S37–38
+(release gate v2, публикация).
 
 **Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
 создаёт проект, импортирует ассет, собирает и запускает target; payload

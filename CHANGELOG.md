@@ -6,6 +6,33 @@
 
 ### Added
 
+- Спринт 35–36 — UI client MVP: project/target/import/build/run (недели 69–72):
+  (1) ADR-012: SDL3 + Dear ImGui v1.93.0 (MIT, pinned в `VERSION.txt`),
+  отдельный host-target `retro_engine_ui`, пресеты `ui-debug`/`ui-release`;
+  UI не линкует движок/demo и работает с установленным SDK.
+  (2) `tools/ui_client/core/`: JSON, `.rpeproject` (schema 1) с
+  детерминированной валидацией неизвестных полей/путей/версий, settings и
+  recent projects вне репозитория, SDK discovery по `sdk_manifest.json`,
+  command builder CMake/Ninja, process runner (streaming stdout/stderr,
+  cancel, exit code), asset import через `asset_converter` с проверкой
+  `.mesh`/`.tex`, diagnostics, semver-совместимость, RU/EN i18n.
+  (3) GUI: welcome/recent, project wizard (`hello_triangle`/`empty`),
+  target PC/PS1/Saturn с disabled-состояниями, asset list (вершины/
+  треугольники/размеры/слоты), build/run с логами, версия/ABI/commit,
+  диагностика CMake/Ninja/SDK/эмулятора, темы dark/light, SDL3 file dialogs.
+  (4) `tools/ui_client/tests/` — 46 unit-тестов без GUI; headless smoke
+  `scripts/ui_smoke.py` (xvfb-run: new project → import → build PC → run);
+  clean E2E `scripts/ui_e2e.py` (SDK archive + UI package, checksums,
+  запрет BIOS/ROM/секретов); скриншоты `screenshots/ui_*.png`.
+  (5) `scripts/package_ui.py`: детерминированный `retro-engine-ui-<ver>-
+  <os>-<arch>.{tar.gz,zip}` (+ macOS `.dmg` при `hdiutil`),
+  `ui_manifest.json`/`checksums.sha256`, samples и DejaVuSans (RU/EN).
+  (6) CI `ui-client.yml`: matrix Ubuntu/Windows/macOS (ui-debug тесты,
+  ui-release package, artifacts); Linux — SDK `pc-release` + clean E2E.
+  (7) `ci/normative_contracts.yaml` — секция `ui`; release gate —
+  `ui_archives`/`ui_manifest`; документация `docs/UI_CLIENT.md`, ADR-012,
+  README/BUILDING/TESTING/LEGAL/RELEASING обновлены.
+
 - Спринт 33–34 — SDK packaging: install/export и consumer smoke (недели 65–68):
   (1) публичный API вынесен в `include/retro_engine/` (umbrella
   `retro_engine.h`, `core/`, `hal/platform.h`, `assets/`, `game/`),

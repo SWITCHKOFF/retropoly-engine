@@ -56,6 +56,15 @@ path_image_write  = src/third_party/stb/stb_image_write.h
 sha256_image_write = cbd5f0ad7a9cf4468affb36354a1d2338034f2c12473cf1a8e32053cb6914a05
 license     = PD/MIT (dual)
 
+[imgui]
+repo        = https://github.com/ocornut/imgui.git
+tag         = v1.93.0
+commit      = c1aaac65e896a45f81f47a4d68f9959e0f86c859
+path        = src/third_party/imgui (submodule)
+license     = MIT
+note        = UI client (S35–36): backends imgui_impl_sdl3 + imgui_impl_opengl3;
+              baseline ADR-012; без docking-ветки
+
 [glad]
 generator   = glad2 (официальный генератор, pip-пакет `glad2`)
 parameters  = API=OpenGL, Profile=Core, Version=3.3, Generator=C, Extensions=все (+loader — для загрузки указателей функций GL в Спринтах 7–8)

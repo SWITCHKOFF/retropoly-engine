@@ -66,9 +66,20 @@ sdk/
 
 ```
 ui/
-  retro-engine-ui-<version>-<os>-<arch>.(exe|AppImage|dmg|zip)
+  retro-engine-ui[.exe]           # SDL3 + Dear ImGui, host-only
+  assets/DejaVuSans.ttf
+  samples/cube.gltf
+  samples/texture.png
   README-ui.md
+  VERSION.txt
+  LEGAL.md
+  ui_manifest.json                # version/sdk_series/components/files
+  checksums.sha256
 ```
+
+Архивы: `retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip}` (+ macOS
+`.dmg` при наличии `hdiutil`) с sidecar `.sha256`; Linux AppImage —
+опционально при наличии `appimagetool`.
 
 UI client должен уметь как минимум:
 
@@ -104,8 +115,8 @@ withdrawn / SDK+UI pending».
 | Пробел | Статус | Блокирует релиз |
 |---|---|---|
 | SDK package (install/export/CMake config) | реализован в S33–34 (`docs/SDK.md`, `sdk_package`) | Да (до опубликованного v0.2.1) |
-| UI client (editor/launcher) | не реализован | Да |
-| `verify_release_contract.py` SDK/UI asserts | SDK-asserts готовы (S33–34); UI — S35–38 | Да |
+| UI client (editor/launcher) | MVP реализован в S35–36 (`tools/ui_client/`, `retro-engine-ui-*`, smoke/E2E) | Да (до публикации v0.2.1) |
+| `verify_release_contract.py` SDK/UI asserts | SDK-asserts готовы (S33–34); UI — `ui_archives`/`ui_manifest` (S35–36), полный gate — S37–38 | Да |
 | Release payload SDK+UI | не реализован | Да |
 | Demo-образы PC/PS1/Saturn | есть | Нет (optional) |
 
