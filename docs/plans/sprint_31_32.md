@@ -46,10 +46,10 @@
 
 **Неделя 63 — QA и производительность:**
 
-- [ ] [B] 10-минутный стресс в pinned-эмуляторе; frame pacing; отсутствие hang/tearing
-- [ ] [B] Замер загрузки Master/Slave, fillrate VDP1/VDP2; baseline в `docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml`
+- [x] [B] 10-минутный стресс в pinned-эмуляторе; frame pacing; отсутствие hang/tearing
+- [x] [B] Замер загрузки Master/Slave, fillrate VDP1/VDP2; baseline в `docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml`
 - [x] [B] Скриншоты PC/PS1/Saturn; README/демо-материалы
-- [ ] [B] CI: сборка+артефакт; проверить, что `build-pc`, `build-ps1`, `tests` зелёные
+- [ ] [B] CI: сборка+артефакт; проверить, что `build-pc`, `build-ps1`, `tests` зелёные (remote — после push)
 - [x] [B] TROUBLESHOOTING: toolchain, BIOS/эмулятор, CD-образ, типовые ошибки
 
 **Неделя 64 — Релиз v0.2.0:**
@@ -63,18 +63,18 @@
 
 ## Критерии приёмки спринта 31–32
 
-- [ ] Saturn-бинарник компилируется с pinned toolchain и загружается в эмуляторе
-- [ ] Hello Triangle работает на Saturn: текстура, Gouraud, камера/ввод, VDP1+VDP2
-- [ ] Master + Slave SH-2 используются; fallback работает
-- [ ] VDP1 + VDP2 синхронизированы; golden стабилен; отличия от PC/PS1 задокументированы
+- [x] Saturn-бинарник компилируется с pinned toolchain и загружается в эмуляторе
+- [x] Hello Triangle работает на Saturn: текстура, Gouraud, камера/ввод, VDP1+VDP2
+- [x] Master + Slave SH-2 используются; fallback работает
+- [x] VDP1 + VDP2 синхронизированы; golden стабилен; отличия от PC/PS1 задокументированы
 - [ ] Релиз v0.2.0: тег, GitHub Release, артефакты, `verify_release_contract.py` зелёный
-- [ ] PC/PS1 не регрессировали; документация и LEGAL обновлены
+- [x] PC/PS1 не регрессировали; документация и LEGAL обновлены
 
 ## Ручной чек-лист приёмки (эмулятор)
 
 - [x] Запустить `saturn-release` образ в pinned-эмуляторе: hello_triangle виден, текстура корректна
 - [x] Проверить управление с пада: камера/объект, все заявленные кнопки
-- [ ] 10-минутный прогон: без hang/tearing/крашей
+- [x] 10-минутный прогон: без hang/tearing/крашей
 - [x] Скриншот Saturn-сцены для README/релиза
 - [x] Проверить, что BIOS/ROM не попали в репозиторий и релизный архив
 
@@ -103,7 +103,11 @@
   `verify_release_contract.py` — `saturn_artifacts`, `saturn_map_budget`,
   `saturn_golden`; `release.yml` собирает Saturn и кладёт `saturn/` в
   payload; `create_release_archive.sh` обновлён.
-- **10-минутный stress:** PENDING (см. ниже).
+- **10-минутный stress:** `timeout 640` → `exit 124` (SIGTERM), без
+  hang/tearing/сброса; финальный кадр `f=27240`, `c=6`, `o=40`;
+  скриншоты `screenshots/hello_triangle_saturn_stress{,_mid}.png`.
+  Standalone steady-state измерен 60 FPS (360 кадров / 6 с); длинный
+  прогон шёл параллельно с CI/сборками, поэтому средний FPS ниже.
 - **Remote CI/тег v0.2.0:** PENDING после push.
 
 ## Риски

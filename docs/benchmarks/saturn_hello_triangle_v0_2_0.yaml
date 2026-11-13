@@ -105,8 +105,20 @@ results:
     scene_crop: screenshots/hello_triangle_saturn_scene.png
     scene_crop_sha256: "b51b8847e5061a671cf17fec033e993e6a6daa4388412c2730620259b601ec24"
   stress_600s:
-    status: PENDING
-    note: "заполняется после 10-минутного прогона"
+    status: PASS
+    command: "timeout 640 mednafen -video.driver softfb ... hello_triangle.cue"
+    exit_code: 124
+    final_frames: 27240
+    approx_fps: 42.6
+    standalone_steady_fps: 60
+    hang_or_tearing: false
+    screenshots:
+      - screenshots/hello_triangle_saturn_stress.png
+      - screenshots/hello_triangle_saturn_stress_mid.png
+    note: >-
+      Процесс дожил до SIGTERM; длинный прогон шёл параллельно с CI/сборками,
+      поэтому средний FPS ниже standalone-замера 60 FPS. Эмуляторный gate,
+      не real-hardware performance.
 
 notes: |-
   Hello_triangle использует лёгкий Master+Slave workload (16 треугольников
