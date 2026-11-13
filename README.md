@@ -8,7 +8,9 @@ HAL-архитектура с нулевым runtime-аллокатором в �
 v2026.2, bootable **hello_triangle** 320×224; Master + Slave SH-2
 (SPSC-очередь, fallback), VDP1-полигоны/текстуры/CLUT/Gouraud (ADR-010) и
 VDP2 NBG1 bitmap-фон с VBlank-scroll (S27–30); 6-button pad и 60 Гц
-кадровый цикл (S31–32).
+кадровый цикл (S31–32). **Публикация v0.2.0 отозвана:** payload содержал
+demo-образы, но не готовый SDK и UI-клиент — см.
+[docs/RELEASING.md](docs/RELEASING.md).
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
@@ -67,6 +69,7 @@ ctest --preset pc-debug --output-on-failure
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Частые проблемы и решения |
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | Операционный план: вехи M0–M8, PERT, критический путь, гейты G1–G13 |
 | [docs/plans/README.md](docs/plans/README.md) | Детальные планы спринтов (`docs/plans/sprint_NN.md`) |
+| [docs/RELEASING.md](docs/RELEASING.md) | Релизная политика: обязательные SDK + UI client, gate v2, статус v0.2.0 |
 
 ## Скриншоты
 
@@ -105,9 +108,11 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] HAL PS1 + CD-ROM ФС (M5)
 - [x] hello_triangle PS1 (M6)
 - [x] rotating_cube demo (M7)
-- [x] Документация + release gate + GitHub Release (M8)
+- [x] Документация + release gate (M8)
+- [ ] Публичный SDK-релиз + UI client (release gate v2)
 
-Release-контракт: `scripts/verify_release_contract.py`.
+Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
+[docs/RELEASING.md](docs/RELEASING.md).
 
 ## Лицензия
 

@@ -1,8 +1,10 @@
 # ============================================================================
 # Релизный workflow — Спринты 19–20 / 31–32 (v0.2.0).
 # Триггер: annotated tag v*.
-# Собирает PC (hello_triangle + rotating_cube), PS1 (PS-EXE + CD) и Saturn
-# hello_triangle (ISO/CUE), валидирует артефакты, публикует GitHub Release.
+# ВНИМАНИЕ: текущий workflow собирает legacy demo-payload (PC/PS1/Saturn
+# demo-образы + report). По политике docs/RELEASING.md это НЕ публичный
+# SDK-релиз: для тега v0.2.x/v0.3.0 обязательны готовый SDK и UI-клиент.
+# Не создавать/не анонсировать GitHub Release до release gate v2.
 # ============================================================================
 name: release
 

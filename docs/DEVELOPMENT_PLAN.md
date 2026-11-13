@@ -1,6 +1,10 @@
 # RetroPolyEngine — Детальный план разработки (Development Plan)
 
 > **Источник:** `RetroEngine_Engineering_Documentation_v1.43.md` (каноническая инженерная спецификация MVP, дата 2026-09-07).
+> **Релизная политика:** публичный релиз = готовый **SDK + UI client**;
+> demo-образы и source-only архив релизом не считаются. v0.2.0 GitHub
+> Release отозван; см. [`RELEASING.md`](RELEASING.md).
+>
 > **Статус:** операционный план работ. Детальные чек-боксы спринтов разложены на атомарные действия в `plans/sprint_NN.md` (указатель — §2.5); этот файл содержит своды, вехи, PERT-оценки, сквозные треки и нормативные приложения.
 > **Скоуп:** MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) + Sony PlayStation 1 (PSn00bSDK v0.24, target `mipsel-none-elf`); §13 — пост-MVP roadmap (v0.2.0+), включая детальные планы Saturn S21–32.
 > **Сроки:** 20 спринтов × 2 недели = 40 недель (~10 месяцев) при 10–15 ч/нед. Recovery/buffer-недели учитываются отдельно и не входят в 40 недель. Ориентир календаря: старт Спринта 0 — 02.11.2026, релиз — 15.08.2027 (см. §2.3).
@@ -351,9 +355,16 @@ gantt
 
 ---
 
-## 11. Релиз v0.1.0 — финальный чек-лист (гейт)
+## 11. Релиз — финальный чек-лист (гейт)
+
+> **Политика с v0.2.0:** публичный релиз обязан содержать готовый **SDK**
+> (headers/libs/CMake package/toolchain/examples) и **UI-клиент** движка;
+> demo-образы и source-only архив — не релиз. Публикация v0.2.0 отозвана
+> как несоответствующая. Детали и payload — [`RELEASING.md`](RELEASING.md).
 
 Каждый пункт обязателен:
+- [ ] 0a. SDK-архив: публичные заголовки, библиотеки, `find_package(RetroPolyEngine)`, toolchain, примеры, лицензии, checksums
+- [ ] 0b. UI client: editor/launcher (project/target/import/build), пакет под поддерживаемые ОС
 - [ ] 1. PC Release сборки зелёные на Windows/Linux/macOS CI
 - [ ] 2. PS1 Release сборка зелёная с pinned PSn00bSDK v0.24 (+sha256)
 - [ ] 3. Unit-тесты зелёные; sanitizer-прогоны без findings (поддерживаемые host-конфигурации)
@@ -452,7 +463,13 @@ gantt
 
 Σ E ≈ 335 ч. При 10–15 ч/нед 24 недели дают 240–360 ч: план сходится только у верхней границы темпа; 95%-сценарий (≈ 425 ч) требует recovery-недель или scope reduction.
 
-Гейт v0.2.0: Saturn-бинарник собирается pinned toolchain, hello_triangle работает в pinned-эмуляторе, Master + Slave SH-2 задействованы, VDP1 + VDP2 синхронизированы. Перед стартом S21–22 обязательна повторная сверка reference-фактов Saturn по первоисточникам (§2.2 инженерной документации).
+Гейт v0.2.0 (**release gate v2**): Saturn-бинарник собирается pinned
+toolchain, hello_triangle работает в pinned-эмуляторе, Master + Slave SH-2
+задействованы, VDP1 + VDP2 синхронизированы; **дополнительно** обязательны
+готовый SDK (headers/libs/CMake package/toolchain/examples) и UI-клиент
+([`RELEASING.md`](RELEASING.md)). Demo-тег v0.2.0 без SDK+UI релизом не
+считается. Перед стартом S21–22 обязательна повторная сверка
+reference-фактов Saturn по первоисточникам (§2.2 инженерной документации).
 
 ---
 

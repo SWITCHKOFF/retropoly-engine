@@ -3,9 +3,10 @@
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§13).
 > Источник задач: [`RetroEngine_Engineering_Documentation_v1.43.md`](../RetroEngine_Engineering_Documentation_v1.43.md) §4 «Будущие итерации» — Saturn, S21–32.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-13):** **закрыт**. hello_triangle, бюджеты и релизный
-> контур приняты; 10-минутный stress PASS; remote CI зелёный; тег
-> `v0.2.0` и GitHub Release опубликованы — см. «Результаты».
+> **Статус (2026-11-13):** реализация hello_triangle/бюджетов закрыта,
+> 10-минутный stress PASS, remote CI зелёный. **Публикация GitHub Release
+> v0.2.0 отозвана:** payload содержал demo-образы/исходники/report, но не
+> SDK и не UI-клиент. Release gate v2 — [`../RELEASING.md`](../RELEASING.md).
 
 ## Карточка спринта
 
@@ -17,8 +18,8 @@
 | Цель | Полный hello_triangle на Saturn: ассеты с CD, управление с пада, VDP1+VDP2, оба SH-2; документация и релиз v0.2.0 |
 | Входные критерии | Спринт 29–30 завершён (VDP2, композитинг, синхронизация) ([`sprint_29_30.md`](sprint_29_30.md)) |
 | На критическом пути | Да |
-| Выходные артефакты | Saturn-цель `hello_triangle`, `main_saturn.cpp`, bootable-образ, скриншоты, тег `v0.2.0`, GitHub Release, обновлённые docs/release workflow |
-| Следующий спринт | Планирование v0.3.0 — N64 (S33+), после приёмки v0.2.0 |
+| Выходные артефакты | Saturn-цель `hello_triangle`, `main_saturn.cpp`, bootable-образ, скриншоты, тег `v0.2.0` (Release отозван); SDK+UI — release gate v2 |
+| Следующий спринт | Эпик SDK packaging + UI client (release gate v2), затем v0.3.0 — N64 (S33+) |
 
 ## PERT-оценка
 
@@ -57,9 +58,9 @@
 - [x] [B] Документация: README, BUILDING, ARCHITECTURE, API, ASSETS, LEGAL, TROUBLESHOOTING, `docs/SATURN.md`, CHANGELOG [0.2.0]
 - [x] [B] `ci/normative_contracts.yaml`: Saturn-секция (preset, toolchain pin, бюджеты, разрешение, golden)
 - [x] [B] `scripts/verify_release_contract.py`: Saturn-asserts (сборка, ассеты, память/VRAM, бинарник, golden); релиз без валидатора недействителен
-- [x] [B] `.github/workflows/release.yml`: Saturn-артефакты в payload; `create_release_archive.sh`; тег `v0.2.0`
-- [x] [B] GitHub Release + анонс; обновить roadmap (следующий — N64 v0.3.0)
-- [x] [B] Финальный чек-лист v0.2.0: 3 ОС CI green; PC/PS1/Saturn сборки; unit+sanitizers; примеры; RAM/VRAM; malformed; golden; 0 blocker/critical
+- [ ] [B] `.github/workflows/release.yml`: Saturn-артефакты в payload; `create_release_archive.sh`; тег `v0.2.0` — **тег есть, Release отозван**
+- [ ] [B] GitHub Release + анонс; обновить roadmap (следующий — N64 v0.3.0) — **заблокировано SDK+UI**
+- [ ] [B] Финальный чек-лист v0.2.0: 3 ОС CI green; PC/PS1/Saturn сборки; unit+sanitizers; примеры; RAM/VRAM; malformed; golden; 0 blocker/critical — **SDK/UI не входят в текущий payload**
 
 ## Критерии приёмки спринта 31–32
 
@@ -67,7 +68,7 @@
 - [x] Hello Triangle работает на Saturn: текстура, Gouraud, камера/ввод, VDP1+VDP2
 - [x] Master + Slave SH-2 используются; fallback работает
 - [x] VDP1 + VDP2 синхронизированы; golden стабилен; отличия от PC/PS1 задокументированы
-- [x] Релиз v0.2.0: тег, GitHub Release, артефакты, `verify_release_contract.py` зелёный
+- [ ] Релиз v0.2.0: тег, GitHub Release, артефакты, `verify_release_contract.py` зелёный — **Release отозван, требуется gate v2**
 - [x] PC/PS1 не регрессировали; документация и LEGAL обновлены
 
 ## Ручной чек-лист приёмки (эмулятор)
@@ -111,11 +112,23 @@
 - **Remote CI:** `build-saturn` 43455266369 / final 43458548647, `build-pc`
   (macOS/Ubuntu/Windows), `build-ps1`, `tests` — success; release workflow
   43458577309 — success.
-- **Релиз v0.2.0:** тег `v0.2.0` (`ccbd6f3`), GitHub Release
-  <https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.0>;
-  `retro-engine-v0.2.0.tar.gz` (4.2 MB) содержит `pc/`, `ps1/`, `saturn/`;
-  `release_contract_report.json` — `all_ok: true`; BIOS/ROM в архив не
-  попали.
+- **Релиз v0.2.0: ОТОЗВАН.** Тег `v0.2.0` (`ccbd6f3`) остаётся
+  технической меткой, но GitHub Release удалён владельцем: payload
+  содержал только исходники, `release_contract_report.json` и архив
+  demo-образов `pc/` + `ps1/` + `saturn/`. В нём **нет готового SDK**
+  (headers/libs/CMake package/toolchain/examples) и **нет UI-клиента**.
+  Публичный release gate v2 и требования — [`../RELEASING.md`](../RELEASING.md).
+  BIOS/ROM в архив не попадали, но это не делает payload SDK-релизом.
+
+## Release gate v2 (блокер)
+
+- [ ] SDK package: install/export, `find_package(RetroPolyEngine)`,
+  headers/libs для PC/PS1/Saturn, toolchain, примеры, LEGAL, checksums.
+- [ ] UI client: editor/launcher (project/target/import/build), пакет под
+  Windows/Linux/macOS.
+- [ ] `verify_release_contract.py`: SDK/UI asserts + checksums.
+- [ ] Повторная публикация v0.2.x/v0.3.0 только после 1–3; анонс не
+  выпускать.
 
 ## Риски
 

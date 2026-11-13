@@ -1,8 +1,11 @@
 # Sega Saturn — платформа, toolchain и контракты v0.2.0
 
-> Статус: **S27–28 (недели 53–56) — реализация завершена; эмуляторный gate
-> ожидает pinned Mednafen** (BIOS не вендорится). S25–26 и S23–24 — gate
-> закрыт. `saturn-release` собирается с pinned Jo Engine v2026.2; bootable
+> **Статус (2026-11-13):** S21–32 реализованы; visual/stress gate в
+> Mednafen 1.32.1 пройдены. **GitHub Release v0.2.0 отозван** — payload
+> содержит demo-образы, но не готовый SDK и UI-клиент; публичный релиз
+> требует release gate v2 ([`RELEASING.md`](RELEASING.md)).
+>
+> S23–24, S25–26, S27–28, S29–30 и S31–32 — gate закрыт. `saturn-release` собирается с pinned Jo Engine v2026.2; bootable
 > ISO/CUE + IP.BIN + ELF/raw/map проходят структурные проверки. Работают
 > lifecycle VDP1/VDP2 (320×224 NTSC), 6-button pad, read-only ISO9660 FS с
 > арены Work RAM-L, VDP2-лог и детерминированный clear. CD-ассеты
@@ -10,7 +13,7 @@
 > ядра. **S25–26:** оба SH-2 реально используются через Slave worker
 > (SPSC-очередь, bounded wait, fallback); параллельный clip-space workload
 > даёт **32%** выигрыша (23838 → 16113 µs), hash single/dual совпадает.
-> **S27–28:** VDP1-полигоны (flat/Gouraud и textured 8bpp CI8), CLUT 1..7,
+> **S27–28:** VDP1-полигоны (flat/Gouraud и textured 8bpp CI8), CLUT 1..6,
 > triangle→quad, Painter's порядок без Z-буфера, VRAM-аллокатор 451 832 B,
 > FNV-hash VDP1 framebuffer; ADR-010. 5-минутный smoke S23–24 и 10-минутный
 > stress S25–26 в Mednafen 1.32.1 с легальным Japanese BIOS (1.01) пройдены;
@@ -61,7 +64,7 @@
   `c`/`w`/`slave_jobs` — в VDP2-метриках. Параллельный workload — clip-space
   подготовка 256 треугольников (128/CPU), fixed 16.16, hash single==dual.
 - **S27–28:** VDP1-путь `vdp1_backend.*`: view-space → экран 320×224 (fixed),
-  flat/Gouraud polygon и textured distorted sprite 8bpp CI8 + CLUT 1..7,
+  flat/Gouraud polygon и textured distorted sprite 8bpp CI8 + CLUT 1..6,
   triangle→quad с UV-углами, first-fit VRAM-аллокатор 451 832 B,
   команды через pinned Jo Engine pipeline (radix sort far→near, VBlank/DMA),
   Painter's порядок без Z-буфера. Два набора Gouraud-таблиц по чётности

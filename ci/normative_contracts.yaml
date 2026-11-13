@@ -83,6 +83,27 @@ assets:
   allowed_texture_dims: [64, 128, 256]
 
 release:
+  # Политика с v0.2.0: публичный релиз = готовый SDK + UI client.
+  # Demo-образы/source-only архив НЕ являются релизом; см. docs/RELEASING.md.
+  payload_policy: sdk_plus_ui_client
+  sdk_required: true
+  ui_client_required: true
+  v0_2_0_release_withdrawn: true
+  required_sdk_components:
+    - public_headers
+    - pc_libraries
+    - ps1_libraries
+    - saturn_libraries
+    - cmake_package_config
+    - asset_converter
+    - examples
+    - legal_notices
+    - checksums
+  required_ui_components:
+    - project_create_open
+    - target_select
+    - asset_import
+    - build_and_run
   ps1_exe_max_bytes: 512000
   required_artifacts_pc:
     - hello_triangle

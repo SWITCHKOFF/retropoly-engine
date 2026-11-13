@@ -201,6 +201,10 @@ sh scripts/check_binary_size.sh
 
 Лимит: 512 000 байт.
 
+> Публичные релизы: только SDK + UI client по
+> [`RELEASING.md`](RELEASING.md); demo-образы `hello_triangle.*` — примеры,
+> не релиз.
+
 ## Сборка Saturn
 
 ```sh

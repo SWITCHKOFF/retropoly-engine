@@ -4,6 +4,15 @@
 
 ## [Unreleased]
 
+### Changed
+
+- **GitHub Release v0.2.0 отозван.** Payload содержал исходники,
+  `release_contract_report.json` и demo-образы `pc/` + `ps1/` + `saturn/`,
+  но не готовый SDK и не UI-клиент движка. Новый обязательный release gate
+  v2 (SDK: headers/libs/CMake package/toolchain/examples; UI client;
+  checksums) — [`docs/RELEASING.md`](docs/RELEASING.md). Тег `v0.2.0`
+  остаётся технической меткой и не считается действующим публичным релизом.
+
 ## [0.2.0] — 2026-11-13
 
 ### Added
@@ -436,5 +445,4 @@
 - Спринт 3–4, Неделя 7 (M1): `src/core/memory/stack_allocator.h` — `push/mark/pop/reset_frame` с overflow-safe проверками, owner/bounds-check marker и выравниванием адреса; тесты `tests/memory/stack_allocator_test.cpp` (nested frames, foreign/future markers, unaligned base); интеграционный сценарий загрузки уровня тремя аллокаторами `tests/memory/allocator_integration_test.cpp` (static-арены 448 KiB/64 KiB, не на CPU-стеке).
 - Спринт 3–4, Неделя 8 (M1): ECS — `src/core/ecs/entity.h` (24-bit index + 8-bit generation, `INVALID_ENTITY=0`), `src/core/ecs/registry.h/.cpp`: 7 MVP-пулов (Position/Rotation/Velocity 1024, MeshRenderer/Collider 256, Camera/PlayerControl 8), dense ComponentPool с swap-back, generation-increment и retirement слота при 255, `Registry::view<...>()` с кэшированием прямых dense-указателей; `sizeof(Registry)=239 648 B` (≤ 256 KiB budget). Тесты `tests/ecs/entity_test.cpp`, `tests/ecs/registry_test.cpp` (stale handle, generation wrap, dense order, 10 000 сущностей) — итого 88 юнит-тестов, 100% pass (pc-debug, pc-release, pc-asan); `ps1-release` ELF собирается.
 
-[0.2.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.0
 [0.1.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.1.0

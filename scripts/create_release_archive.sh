@@ -2,7 +2,9 @@
 # SPDX-License-Identifier: MIT
 # RetroPolyEngine — scripts/create_release_archive.sh
 #
-# Формирует релизный архив retro-engine-<tag>.tar.gz для GitHub Release.
+# Формирует legacy demo-архив retro-engine-<tag>.tar.gz.
+# ВНИМАНИЕ: по docs/RELEASING.md это НЕ публичный SDK-релиз; для релиза
+# обязательны sdk/ (headers/libs/CMake package/toolchain/examples) и ui/.
 # Тег передаётся первым аргументом; по умолчанию — текущий git-тег.
 
 set -euo pipefail
