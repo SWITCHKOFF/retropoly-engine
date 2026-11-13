@@ -31,6 +31,30 @@ ctest --preset pc-debug --output-on-failure
 
 > Без `--recursive` SDL3/googletest не подтянутся — см. [docs/BUILDING.md](docs/BUILDING.md).
 
+## SDK (v0.2.1)
+
+Движок собирается как устанавливаемый SDK с публичными заголовками,
+CMake package, примерами и checksums (S33–34):
+
+```sh
+cmake --preset pc-release
+cmake --build --preset pc-release
+cmake --build build/pc-release --target sdk_package
+```
+
+```cmake
+find_package(RetroPolyEngine CONFIG REQUIRED)
+target_link_libraries(game PRIVATE RetroPolyEngine::retro_engine)
+```
+
+```cpp
+#include <retro_engine/retro_engine.h>
+```
+
+Пакеты: `dist/retro-engine-sdk-<version>-{pc,ps1,saturn}-<arch>.{tar.gz,zip}`;
+consumer smoke — `scripts/sdk_consumer_smoke.py`; полное руководство —
+[docs/SDK.md](docs/SDK.md), границы API — [ADR-011](docs/adr/ADR-011-public-sdk-api.md).
+
 ## Что внутри
 
 - **Fixed-point ядро**: скаляр/вектор/матрицы Q16.16, saturating arithmetic,
@@ -55,9 +79,11 @@ ctest --preset pc-debug --output-on-failure
 | [docs/RetroEngine_Engineering_Documentation_v1.43.md](docs/RetroEngine_Engineering_Documentation_v1.43.md) | Каноническая инженерная спецификация MVP (нормативная) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Слои движка, пайплайн рендера, ассет-пайплайн, платформенные контракты |
 | [docs/BUILDING.md](docs/BUILDING.md) | Установка тулчейна, канонические пресеты, запуск PC/PS1/Saturn, troubleshooting |
+| [docs/SDK.md](docs/SDK.md) | SDK: install/export, `find_package`, примеры, пакеты PC/PS1/Saturn, manifest/checksums |
 | [docs/SATURN.md](docs/SATURN.md) | Saturn: первоисточники, toolchain, разрешение, память, ввод, эмулятор |
 | [docs/adr/ADR-008-saturn-backend.md](docs/adr/ADR-008-saturn-backend.md) | Нормативное решение по Saturn backend |
 | [docs/adr/ADR-009-master-slave.md](docs/adr/ADR-009-master-slave.md) | Master+Slave SH-2: SPSC-синхронизация, workload, fallback |
+| [docs/adr/ADR-011-public-sdk-api.md](docs/adr/ADR-011-public-sdk-api.md) | Границы публичного SDK API и install/export |
 | [docs/API.md](docs/API.md) | Вводный обзор API: ECS, Renderer, Input, FileSystem, Math |
 | [docs/ASSETS.md](docs/ASSETS.md) | Байтовые форматы `.mesh`/`.tex` v1, CLI конвертера, загрузчики |
 | [docs/TESTING.md](docs/TESTING.md) | Пирамида тестов, запуск unit/integration/visual, QA-чек-листы |
@@ -109,7 +135,8 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] hello_triangle PS1 (M6)
 - [x] rotating_cube demo (M7)
 - [x] Документация + release gate (M8)
-- [ ] Публичный SDK-релиз + UI client (release gate v2)
+- [x] SDK packaging: install/export, CMake package, consumer smoke (S33–34)
+- [ ] UI client + публичный релиз v0.2.1 (release gate v2, S35–38)
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
 [docs/RELEASING.md](docs/RELEASING.md). Следующий этап — **S33–38 /

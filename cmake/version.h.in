@@ -1,0 +1,11 @@
+// SPDX-License-Identifier: MIT
+// RetroPolyEngine — generated version header (CMake configure_file).
+// Не редактировать вручную: источник — cmake/version.h.in.
+#pragma once
+
+#define RETRO_ENGINE_VERSION_MAJOR @PROJECT_VERSION_MAJOR@
+#define RETRO_ENGINE_VERSION_MINOR @PROJECT_VERSION_MINOR@
+#define RETRO_ENGINE_VERSION_PATCH @PROJECT_VERSION_PATCH@
+#define RETRO_ENGINE_VERSION_STRING "@PROJECT_VERSION@"
+#define RETRO_ENGINE_PLATFORM_NAME "@RPE_PLATFORM_NAME@"
+#define RETRO_ENGINE_VERSION_HEADER 1

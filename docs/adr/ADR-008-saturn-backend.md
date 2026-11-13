@@ -23,7 +23,7 @@ Saturn-спринта. Reference-факты Saturn перепроверены п
 
 Saturn — третий compile-time backend: CMake-опция `PLATFORM_SATURN`, ровно
 один из `PLATFORM_PC` / `PLATFORM_PS1` / `PLATFORM_SATURN`. Публичный
-[`../../src/hal/platform.h`](../../src/hal/platform.h) не включает SH-2/Jo
+[`../../include/retro_engine/hal/platform.h`](../../include/retro_engine/hal/platform.h) не включает SH-2/Jo
 Engine; платформенные заголовки живут только в `src/hal/saturn/*.c/.cpp`.
 `src/CMakeLists.txt` выбирает `hal/saturn/` на этапе конфигурации. Runtime
 virtual dispatch в кадре не появляется (ADR-001).

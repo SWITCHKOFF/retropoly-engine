@@ -2,14 +2,14 @@
 
 > Этот документ — вводный обзор публичных интерфейсов. Полные сигнатуры и
 > Doxygen-комментарии живут в исходниках; при расхождении приоритет у
-> [`src/hal/platform.h`](../src/hal/platform.h),
-> [`src/core/ecs/registry.h`](../src/core/ecs/registry.h),
-> [`src/core/math/`](../src/core/math/) и
-> [`src/assets/assets.h`](../src/assets/assets.h).
+> [`include/retro_engine/hal/platform.h`](../include/retro_engine/hal/platform.h),
+> [`include/retro_engine/core/ecs/registry.h`](../include/retro_engine/core/ecs/registry.h),
+> [`include/retro_engine/core/math/`](../include/retro_engine/core/math/) и
+> [`include/retro_engine/assets/assets.h`](../include/retro_engine/assets/assets.h).
 
 ## 1. HAL — единый C-API
 
-Весь платформенный API объявлен в [`src/hal/platform.h`](../src/hal/platform.h).
+Весь платформенный API объявлен в [`include/retro_engine/hal/platform.h`](../include/retro_engine/hal/platform.h).
 
 ### 1.1 Платформа
 
@@ -98,7 +98,7 @@ PC: буфер принадлежит SDL-аллокатору; освобожд
 ## 2. ECS
 
 ```cpp
-#include "core/ecs/registry.h"
+#include <retro_engine/core/ecs/registry.h>
 
 Registry registry;
 Entity e = registry.create_entity();
@@ -136,7 +136,7 @@ mat4_look_at(&view, eye, target, up);
 ## 4. Память
 
 ```cpp
-#include "core/memory/linear_allocator.h"
+#include <retro_engine/core/memory/linear_allocator.h>
 
 static uint8_t s_level_memory[448 * 1024];
 LinearAllocator level_arena(s_level_memory, sizeof(s_level_memory));
@@ -150,7 +150,7 @@ level_arena.rollback(m);
 ## 5. Ассеты
 
 ```c
-#include "assets/assets.h"
+#include <retro_engine/assets/assets.h>
 
 MeshAsset* mesh = nullptr;
 uint32_t err = 0;
@@ -165,12 +165,12 @@ ok = texture_validate_and_load(data, size, &arena, &tex, &err);
 ## 6. Слой игры
 
 ```cpp
-#include "game/components.h"
-#include "game/systems/render_system.h"
+#include <retro_engine/game/components.h>
+#include <retro_engine/game/systems/render_system.h>
 
 Registry registry;
 game::RenderBanks banks = ...;
 game::RenderSystem::update(registry, banks);
 ```
 
-Системы находятся в [`game/systems/`](../game/systems/).
+Системы находятся в [`include/retro_engine/game/systems/`](../include/retro_engine/game/systems/).

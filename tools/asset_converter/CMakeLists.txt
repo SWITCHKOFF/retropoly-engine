@@ -36,4 +36,10 @@ else()
 endif()
 
 # Классы форматов/LE-хелперы/структуры — общий источник истины src/assets.
-target_include_directories(asset_converter PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_include_directories(asset_converter PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${RPE_PUBLIC_INCLUDE_DIR}"
+    "${RPE_PUBLIC_API_INCLUDE_DIR}")
+
+# Host-инструмент входит в SDK (bin/asset_converter[.exe]).
+install(TARGETS asset_converter RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

@@ -10,3 +10,4 @@ ADR-001…ADR-007 зафиксированы в
 | 008 | Saturn backend: toolchain, разрешение, память, triangle→quad | Accepted (2026-11-09) | [ADR-008-saturn-backend.md](ADR-008-saturn-backend.md) |
 | 009 | Master+Slave SH-2: partitioning, SPSC-синхронизация, fallback | Accepted (2026-11-10) | [ADR-009-master-slave.md](ADR-009-master-slave.md) |
 | 010 | VDP1: полигоны, texture/CLUT, triangle→quad, Painter's порядок | Accepted (2026-11-10) | [ADR-010-vdp1-polygons.md](ADR-010-vdp1-polygons.md) |
+| 011 | Публичный SDK API: `include/retro_engine/`, install/export, consumer smoke | Accepted (2026-11-13) | [ADR-011-public-sdk-api.md](ADR-011-public-sdk-api.md) |

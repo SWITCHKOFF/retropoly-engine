@@ -98,7 +98,7 @@ void render_texture_pool_reset(void);
  *
  * @return Использовано байт (0 — пул пуст/после reset).
  */
-uint32_t render_texture_pool_used_bytes(void);
+/* render_texture_pool_used_bytes объявлена в публичном hal/platform.h (ADR-011). */
 
 /**
  * Захват слота текстуры: копирует @p pixels (w×h CI8) и @p palette

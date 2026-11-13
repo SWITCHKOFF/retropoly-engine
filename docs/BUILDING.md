@@ -146,6 +146,39 @@ git submodule update --init --recursive
 | `saturn-hang` | Saturn | OFF | OFF | S25–26 fault injection: Slave зависает |
 | `saturn-flood` | Saturn | OFF | OFF | S25–26 fault injection: переполнение очереди |
 
+## SDK: install/export и пакет
+
+SDK собирается из любого платформенного пресета и упаковывается в
+детерминированный архив:
+
+```sh
+# PC
+cmake --preset pc-release
+cmake --build --preset pc-release
+cmake --build build/pc-release --target sdk_package
+
+# PS1 / Saturn — аналогично своим пресетам
+cmake --build build/ps1-release --target sdk_package
+cmake --build build/saturn-release --target sdk_package
+```
+
+Результат: `build/<preset>/sdk-stage-<platform>-<arch>/` и
+`dist/retro-engine-sdk-<version>-<platform>-<arch>.{tar.gz,zip}`.
+Проверка consumer-проекта:
+
+```sh
+python3 scripts/sdk_consumer_smoke.py --sdk-dir build/pc-release/sdk-stage-pc-x86_64
+```
+
+Установка в произвольный prefix без архива:
+
+```sh
+cmake --install build/pc-release --prefix /opt/retro-engine-sdk
+```
+
+`find_package(RetroPolyEngine CONFIG REQUIRED)` и цели
+`RetroPolyEngine::{retro_engine,hal,log}` — см. [`SDK.md`](SDK.md).
+
 ## Сборка PC
 
 ```sh

@@ -127,3 +127,17 @@ python3 scripts/verify_release_contract.py
 - [x] host-тесты `saturn_hal_tests` — **112/112** в PC-debug
       (S27–28: VRAM/CLUT/triangle→quad/command list/overlay/fb-hash;
       S29–30: VDP2 init/upload/scroll/диагностика).
+
+## SDK consumer smoke (S33–34)
+
+- [x] `cmake --build build/pc-release --target sdk_package` — архив +
+      `sdk_manifest.json` + `checksums.sha256`;
+- [x] `python3 scripts/sdk_consumer_smoke.py --sdk-archive dist/retro-engine-sdk-*.tar.gz`
+      — `find_package`, сборка `sdk_probe`/`hello_triangle`/`rotating_cube`,
+      headless `--version`;
+- [x] PS1/Saturn: `--platform ps1|saturn` — сборка установленных примеров
+      из SDK-архива (PSn00bSDK v0.24 / Jo Engine v2026.2);
+- [x] `sha256sum -c checksums.sha256` в распакованном SDK;
+- [x] `python3 scripts/verify_release_contract.py --skip-build-checks`
+      — `sdk_archives`/`sdk_manifest`/`sdk_headers` зелёные;
+- [x] negative: отсутствующий manifest/архив → gate `all_ok: false`.

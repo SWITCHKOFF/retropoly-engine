@@ -6,7 +6,7 @@
 > 7 шагов), §4.5 (CMake-интеграция); [`plans/sprint_09_10.md`](plans/sprint_09_10.md),
 > [`plans/sprint_19_20.md`](plans/sprint_19_20.md) (финализация).
 > Этот документ фиксирует байтовые форматы, политику решений MVP и контракт CLI
-> конвертера. Единственный источник истины форматов в коде — [`../src/assets/assets.h`](../src/assets/assets.h).
+> конвертера. Единственный источник истины форматов в коде — [`../include/retro_engine/assets/assets.h`](../include/retro_engine/assets/assets.h).
 
 ## 1. Общие правила сериализации
 
@@ -164,7 +164,7 @@ assets/source/texture.png ──asset_converter──▶ assets/build/texture.te
 - `src/assets/mesh_loader.cpp` — `mesh_validate_and_load(data, size, alloc, out, out_error_code)`
 - `src/assets/texture_loader.cpp` — `texture_validate_and_load(data, size, alloc, out, out_error_code)`
 
-Диагностические коды `AssetDiag` (`src/assets/assets.h`; порядок — контракт):
+Диагностические коды `AssetDiag` (`include/retro_engine/assets/assets.h`; порядок — контракт):
 
 | Код | Имя                     | Шаг §1.2.7 |
 |-----|-------------------------|------------|

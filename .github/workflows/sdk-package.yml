@@ -1,0 +1,175 @@
+# ============================================================================
+# SDK packaging CI — Спринт 33–34 (недели 65–68).
+#
+# Матрица:
+#   - PC: Ubuntu/Windows/macOS, pc-release → sdk_package → clean consumer;
+#   - PS1: pinned PSn00bSDK v0.24 → ps1-release → sdk_package → consumer;
+#   - Saturn: pinned Jo Engine v2026.2 → saturn-release → sdk_package → consumer.
+#
+# Артефакты скачиваются/проверяются release gate v2 (S37–38).
+# ============================================================================
+name: sdk-package
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  sdk-pc:
+    name: SDK PC (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: "Checkout (submodules: SDL3, GoogleTest)"
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Host toolchain
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y ninja-build libgl1-mesa-dev \
+              libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+              libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            brew install ninja
+          fi
+
+      - name: Verify vendored dependencies
+        shell: bash
+        run: sh ci/verify_vendored.sh
+
+      - name: Configure/Build (pc-release)
+        shell: bash
+        run: |
+          cmake --preset pc-release
+          cmake --build --preset pc-release
+
+      - name: Package SDK
+        shell: bash
+        run: cmake --build build/pc-release --target sdk_package
+
+      - name: Clean consumer smoke (unpacked SDK)
+        shell: bash
+        run: |
+          set -euo pipefail
+          archive="$(ls dist/retro-engine-sdk-*-pc-*.tar.gz | head -n 1)"
+          PY=python3; [ "$RUNNER_OS" = "Windows" ] && PY=python
+          "$PY" scripts/sdk_consumer_smoke.py --sdk-archive "$archive"
+
+      - name: Upload SDK artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-engine-sdk-pc-${{ runner.os }}
+          path: |
+            dist/retro-engine-sdk-*-pc-*.tar.gz
+            dist/retro-engine-sdk-*-pc-*.tar.gz.sha256
+            dist/retro-engine-sdk-*-pc-*.zip
+            dist/retro-engine-sdk-*-pc-*.zip.sha256
+          if-no-files-found: error
+
+  sdk-ps1:
+    name: SDK PS1 (ubuntu-latest, PSn00bSDK v0.24)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout (без submodules: PS1 не тянет SDL3)"
+        uses: actions/checkout@v4
+
+      - name: Host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build unzip
+
+      - name: PSn00bSDK v0.24 (pinned zip + sha256)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/psn00bsdk"
+          cd "$RUNNER_TEMP/psn00bsdk"
+          curl -fSL --retry 2 -o PSn00bSDK-0.24-Linux.zip \
+            https://github.com/Lameguy64/PSn00bSDK/releases/download/v0.24/PSn00bSDK-0.24-Linux.zip
+          sha256sum -c "$GITHUB_WORKSPACE/ci/psn00bsdk-v0.24-linux.sha256"
+          unzip -q PSn00bSDK-0.24-Linux.zip -d "$HOME"
+          mv "$HOME/PSn00bSDK-0.24-Linux" "$HOME/PSn00bSDK"
+          echo "PSN00BSDK_LIBS=$HOME/PSn00bSDK/lib/libpsn00b" >> "$GITHUB_ENV"
+
+      - name: Build + package PS1 SDK
+        run: |
+          cmake --preset ps1-release
+          cmake --build --preset ps1-release
+          cmake --build build/ps1-release --target sdk_package
+
+      - name: Clean consumer smoke (PS1)
+        run: |
+          set -euo pipefail
+          archive="$(ls dist/retro-engine-sdk-*-ps1-*.tar.gz | head -n 1)"
+          python3 scripts/sdk_consumer_smoke.py --sdk-archive "$archive" --platform ps1
+
+      - name: Upload PS1 SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-engine-sdk-ps1
+          path: |
+            dist/retro-engine-sdk-*-ps1-*.tar.gz
+            dist/retro-engine-sdk-*-ps1-*.tar.gz.sha256
+            dist/retro-engine-sdk-*-ps1-*.zip
+            dist/retro-engine-sdk-*-ps1-*.zip.sha256
+          if-no-files-found: error
+
+  sdk-saturn:
+    name: SDK Saturn (ubuntu-latest, Jo Engine v2026.2)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout (без submodules: Saturn не тянет SDL3)"
+        uses: actions/checkout@v4
+
+      - name: Host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build genisoimage
+
+      - name: Jo Engine v2026.2 (pinned)
+        run: |
+          set -euo pipefail
+          git config --global advice.detachedHead false
+          git clone --depth 1 --branch v2026.2 --filter=blob:none --sparse \
+            https://github.com/johannes-fetz/joengine.git "$RUNNER_TEMP/joengine"
+          cd "$RUNNER_TEMP/joengine"
+          git sparse-checkout set \
+            Compiler/COMMON Compiler/LINUX \
+            Compiler/WINDOWS/sh-elf/include jo_engine
+          test "$(git rev-parse HEAD)" = "5e99944238030821a48e17a40abefd77e81953c2"
+          sha256sum -c "$GITHUB_WORKSPACE/ci/joengine-v2026.2.sha256"
+          echo "JO_ENGINE_ROOT=$RUNNER_TEMP/joengine" >> "$GITHUB_ENV"
+
+      - name: Build + package Saturn SDK
+        run: |
+          cmake --preset saturn-release
+          cmake --build --preset saturn-release
+          cmake --build build/saturn-release --target sdk_package
+
+      - name: Clean consumer smoke (Saturn)
+        run: |
+          set -euo pipefail
+          archive="$(ls dist/retro-engine-sdk-*-saturn-*.tar.gz | head -n 1)"
+          python3 scripts/sdk_consumer_smoke.py --sdk-archive "$archive" --platform saturn
+
+      - name: Upload Saturn SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-engine-sdk-saturn
+          path: |
+            dist/retro-engine-sdk-*-saturn-*.tar.gz
+            dist/retro-engine-sdk-*-saturn-*.tar.gz.sha256
+            dist/retro-engine-sdk-*-saturn-*.zip
+            dist/retro-engine-sdk-*-saturn-*.zip.sha256
+          if-no-files-found: error

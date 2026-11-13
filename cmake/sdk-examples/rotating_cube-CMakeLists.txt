@@ -1,0 +1,19 @@
+# ============================================================================
+# rotating_cube — standalone SDK example (S33–34).
+# Собирается ТОЛЬКО против установленного SDK: find_package(RetroPolyEngine).
+# ============================================================================
+cmake_minimum_required(VERSION 3.25)
+project(rotating_cube_sdk LANGUAGES CXX)
+
+if(NOT TARGET RetroPolyEngine::retro_engine)
+    find_package(RetroPolyEngine CONFIG REQUIRED)
+endif()
+
+add_executable(rotating_cube main.cpp)
+target_compile_features(rotating_cube PRIVATE cxx_std_14)
+target_link_libraries(rotating_cube PRIVATE RetroPolyEngine::retro_engine)
+target_compile_definitions(rotating_cube PRIVATE
+    PLATFORM_PC=1
+    RC_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
+# Пример включает "examples/rotating_cube/scene.h" (стиль SDK-дерева).
+target_include_directories(rotating_cube PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../..")

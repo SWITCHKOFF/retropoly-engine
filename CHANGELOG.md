@@ -4,6 +4,35 @@
 
 ## [Unreleased]
 
+### Added
+
+- Спринт 33–34 — SDK packaging: install/export и consumer smoke (недели 65–68):
+  (1) публичный API вынесен в `include/retro_engine/` (umbrella
+  `retro_engine.h`, `core/`, `hal/platform.h`, `assets/`, `game/`),
+  internal-заголовки (`render/*`, `hal/*/*`) в SDK не устанавливаются;
+  ADR-011.
+  (2) CMake install/export: `RetroPolyEngineTargets` с целями
+  `RetroPolyEngine::{retro_engine,hal,log}`, `RetroPolyEngineConfig.cmake` +
+  `ConfigVersion` (build-tree и install-tree), `GNUInstallDirs`,
+  `retro_engine.pc`; PC SDK несёт static SDL3/glad.
+  (3) `scripts/package_sdk.py` + target `sdk_package`: детерминированные
+  архивы `retro-engine-sdk-0.2.1-{pc,ps1,saturn}-<os>-<arch>.{tar.gz,zip}`,
+  `sdk_manifest.json` (version/git commit/platform/ABI/targets/artifacts) и
+  `checksums.sha256`; layout `lib/<platform>/<arch>`, examples, templates,
+  toolchain wrappers, `VERSION.txt`, LEGAL.
+  (4) Consumer smoke `tests/sdk/consumer` + `scripts/sdk_consumer_smoke.py`:
+  `find_package(RetroPolyEngine CONFIG REQUIRED)`, сборка установленных
+  `hello_triangle`/`rotating_cube`, headless `--version`; PS1/Saturn —
+  сборка `hello_triangle_ps1|saturn` из SDK (локально проверено).
+  (5) `ci/normative_contracts.yaml` — секция `sdk`; release gate
+  `verify_release_contract.py` — `sdk_archives`, `sdk_manifest`,
+  `sdk_headers`, `sdk_consumer`; без SDK релиз недействителен.
+  (6) CI `sdk-package.yml`: PC matrix (Linux/Windows/macOS), PS1
+  (PSn00bSDK v0.24), Saturn (Jo Engine v2026.2), clean consumer smoke;
+  документация `docs/SDK.md`, `docs/benchmarks/sdk_sizes.md`, обновления
+  BUILDING/API/README/LEGAL/RELEASING.
+  (7) Версия проекта/SDK — `0.2.1`.
+
 ### Changed
 
 - **GitHub Release v0.2.0 отозван.** Payload содержал исходники,

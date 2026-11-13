@@ -79,7 +79,16 @@ foreach(_jo_src IN LISTS JO_ENGINE_SOURCES)
 endforeach()
 
 add_library(jo_engine STATIC ${JO_ENGINE_SOURCES})
-target_include_directories(jo_engine SYSTEM PUBLIC "${JO_ENGINE_INCLUDE_DIR}")
+set_target_properties(jo_engine PROPERTIES EXPORT_NO_SYSTEM ON)
+target_include_directories(jo_engine SYSTEM PUBLIC
+    "$<BUILD_INTERFACE:${JO_ENGINE_INCLUDE_DIR}>"
+    "$<INSTALL_INTERFACE:${CMAKE_INSTALL_INCLUDEDIR}/retro_engine/saturn/jo_engine>")
+install(TARGETS jo_engine EXPORT RetroPolyEngineTargets
+        ARCHIVE DESTINATION "${RPE_SDK_LIBDIR}")
+# Публичные заголовки Jo Engine (internal/* не нужны потребителю SDK).
+install(DIRECTORY "${JO_ENGINE_INCLUDE_DIR}/"
+        DESTINATION "${CMAKE_INSTALL_INCLUDEDIR}/retro_engine/saturn/jo_engine"
+        FILES_MATCHING PATTERN "*.h" PATTERN "internal" EXCLUDE)
 set(JO_ENGINE_DEFINES
     JO_MINIMAL=1
     JO_NTSC_VERSION=1
@@ -134,6 +143,8 @@ add_library(retro_engine_hal STATIC
 retro_engine_apply_flags(retro_engine_hal)
 target_include_directories(retro_engine_hal PRIVATE
     "${CMAKE_SOURCE_DIR}/src"
+    "${RPE_PUBLIC_INCLUDE_DIR}"
+    "${RPE_PUBLIC_API_INCLUDE_DIR}"
     "${JO_ENGINE_INCLUDE_DIR}")
 target_compile_definitions(retro_engine_hal PRIVATE
     PLATFORM_SATURN=1
@@ -145,7 +156,10 @@ target_link_libraries(retro_engine_hal PRIVATE retro_engine_log jo_engine)
 # --- Bootable ELF -----------------------------------------------------------
 add_executable(retro_saturn main_saturn.cpp)
 retro_engine_apply_flags(retro_saturn)
-target_include_directories(retro_saturn PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_include_directories(retro_saturn PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${RPE_PUBLIC_INCLUDE_DIR}"
+    "${RPE_PUBLIC_API_INCLUDE_DIR}")
 target_compile_definitions(retro_saturn PRIVATE
     PLATFORM_SATURN=1
     RPE_SATURN_FAULT_HANG=${RPE_SATURN_FAULT_HANG}

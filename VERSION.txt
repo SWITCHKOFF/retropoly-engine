@@ -8,6 +8,14 @@
 # Дата вендоринга: 2026-10-28
 # ============================================================================
 
+[engine]
+name        = RetroPolyEngine
+version     = 0.2.1
+sdk_schema  = 1
+note        = версия SDK задаётся CMake project(VERSION) и попадает в
+              include/retro_engine/version.h, sdk_manifest.json и VERSION.txt
+              внутри SDK-архива (S33–34)
+
 [sdl3]
 repo        = https://github.com/libsdl-org/SDL.git
 tag         = release-3.4.18

@@ -492,6 +492,12 @@ demo-архив. Нумерация S33–38 продолжает план; фа
 120–180 ч: план сходится у верхней границы; 95%-сценарий (≈ 206.6 ч)
 требует recovery-недели или scope reduction.
 
+**Статус (2026-11-13):** S33–34 закрыты: публичный API `include/retro_engine/`,
+CMake install/export, `find_package` из build/install tree, SDK-архивы
+PC/PS1/Saturn, `sdk_manifest.json`/checksums, consumer smoke и
+[`SDK.md`](SDK.md); release gate получил SDK-asserts. Следующий — S35–36
+(UI client).
+
 **Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
 создаёт проект, импортирует ассет, собирает и запускает target; payload
 содержит `sdk/` + `ui/` + `checksums.sha256`; `verify_release_contract.py`

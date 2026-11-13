@@ -16,3 +16,21 @@
 | Mednafen | env-install (ручная приёмка) | GPL-2.0-or-later | В релизы/CI/репозиторий не входит; BIOS не вендорится |
 
 Правило распространения: проект распространяется под MIT (см. LICENSE); при включении компонентов под GPL (mkpsxiso, GCC toolchain при распространении, Mednafen при распространении) в распространяемые пакеты соблюдаются их лицензии и обязательные attributions. BIOS Sega Saturn в проект не входит и не распространяется.
+
+## SDK-пакеты (S33–34)
+
+- `retro-engine-sdk-*-pc-*`: содержит static SDL3 (zlib) и glad (MIT) —
+  их лицензии/уведомления сохраняются в `include/SDL3`, `lib/cmake/SDL3` и
+  `LEGAL.md`; исходники SDL3 доступны в upstream-репозитории и поставляются
+  без изменений лицензионных файлов.
+- `retro-engine-sdk-*-ps1-*`: библиотеки движка под MIT; PSn00bSDK
+  (MPL-2.0) и mkpsxiso (GPL-2.0-or-later) **не** входят в архив — SDK
+  требует внешней установки pinned PSn00bSDK, пользователь принимает его
+  лицензии отдельно.
+- `retro-engine-sdk-*-saturn-*`: библиотека Jo Engine v2026.2 (MIT) и её
+  публичные заголовки входят в пакет с сохранением copyright/notice;
+  bundled `sh-none-elf-gcc` (GPL-3.0-or-later + GCC Runtime Exception,
+  newlib BSD-style) в SDK **не** входит — используется внешний
+  `JO_ENGINE_ROOT`.
+- BIOS/ROM/ключи и build-каталоги запрещены в любом SDK-архиве; проверка —
+  `scripts/package_sdk.py` + `scripts/verify_release_contract.py`.

@@ -38,12 +38,15 @@ sdk/
     pc/<arch>/...                   # static/shared libs, debug+release
     ps1/...                         # кросс-библиотеки (если входят в релиз)
     saturn/...                      # SH-2 библиотеки (если входят в релиз)
-  cmake/RetroPolyEngineConfig.cmake # find_package(RetroPolyEngine)
-  cmake/RetroPolyEngineTargets.cmake
+  lib/cmake/RetroPolyEngine/        # find_package(RetroPolyEngine)
+    RetroPolyEngineConfig.cmake
+    RetroPolyEngineTargets.cmake
+  cmake/                            # ps1/saturn toolchain wrappers
   tools/                            # asset_converter, утилиты сборки
   examples/                         # hello_triangle, rotating_cube (исходники)
   templates/                        # шаблон нового проекта
   VERSION.txt
+  sdk_manifest.json                 # версия/commit/targets/checksums
   LEGAL.md
   checksums.sha256
 ```
@@ -100,9 +103,9 @@ withdrawn / SDK+UI pending».
 
 | Пробел | Статус | Блокирует релиз |
 |---|---|---|
-| SDK package (install/export/CMake config) | не реализован | Да |
+| SDK package (install/export/CMake config) | реализован в S33–34 (`docs/SDK.md`, `sdk_package`) | Да (до опубликованного v0.2.1) |
 | UI client (editor/launcher) | не реализован | Да |
-| `verify_release_contract.py` SDK/UI asserts | не реализованы | Да |
+| `verify_release_contract.py` SDK/UI asserts | SDK-asserts готовы (S33–34); UI — S35–38 | Да |
 | Release payload SDK+UI | не реализован | Да |
 | Demo-образы PC/PS1/Saturn | есть | Нет (optional) |
 

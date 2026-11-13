@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # RetroPolyEngine — ci/normative_contracts.yaml
 #
-# Машинно-читаемый манифест нормативных контрактов MVP v0.1.0.
+# Машинно-читаемый манифест нормативных контрактов v0.2.1 (SDK + UI gate v2).
 # CI и scripts/verify_release_contract.py сверяют фактические значения
 # против этого файла. Изменение любого значения = обновление этого файла,
 # соответствующего ADR и теста в одном изменении
@@ -9,7 +9,7 @@
 
 project:
   name: RetroPolyEngine
-  version: 0.2.0
+  version: 0.2.1
 
 presets:
   canonical:
@@ -81,6 +81,67 @@ assets:
   tex_palette_entries: 256
   tex_palette_bytes: 512
   allowed_texture_dims: [64, 128, 256]
+
+sdk:
+  # Спринт 33–34: устанавливаемый SDK + CMake package + consumer smoke.
+  # Проверяется scripts/verify_release_contract.py и CI-джобой sdk-package.
+  schema_version: 1
+  package_name: retro-engine-sdk
+  archive_naming: "retro-engine-sdk-<version>-<platform>[-<os>]-<arch>.{tar.gz,zip}"
+  umbrella_header: include/retro_engine/retro_engine.h
+  public_include_dir: include/retro_engine
+  platforms: [pc, ps1, saturn]
+  targets:
+    - RetroPolyEngine::retro_engine
+    - RetroPolyEngine::hal
+    - RetroPolyEngine::log
+  required_targets:
+    - RetroPolyEngine::retro_engine
+    - RetroPolyEngine::hal
+    - RetroPolyEngine::log
+  required_components:
+    - public_headers
+    - libraries
+    - cmake_package
+    - asset_converter
+    - examples
+    - templates
+    - legal_notices
+    - version
+    - checksums
+    - manifest
+  required_archive_entries:
+    - sdk/include/retro_engine/retro_engine.h
+    - sdk/include/retro_engine/version.h
+    - sdk/lib/cmake/RetroPolyEngine/RetroPolyEngineConfig.cmake
+    - sdk/lib/cmake/RetroPolyEngine/RetroPolyEngineTargets.cmake
+    - sdk/sdk_manifest.json
+    - sdk/checksums.sha256
+    - sdk/VERSION.txt
+    - sdk/LEGAL.md
+  forbidden_header_dirs:
+    - include/retro_engine/render
+    - include/retro_engine/hal/pc
+    - include/retro_engine/hal/ps1
+    - include/retro_engine/hal/saturn
+  consumer:
+    project: tests/sdk/consumer
+    cmake_package: RetroPolyEngine
+    run_headless: true
+  package_files:
+    - include/retro_engine
+    - lib
+    - lib/cmake/RetroPolyEngine
+    - lib/pkgconfig/retro_engine.pc
+    - cmake
+    - tools/asset_converter
+    - examples
+    - templates/project
+    - VERSION.txt
+    - LEGAL.md
+    - LICENSE
+    - sdk_manifest.json
+    - checksums.sha256
 
 release:
   # Политика с v0.2.0: публичный релиз = готовый SDK + UI client.

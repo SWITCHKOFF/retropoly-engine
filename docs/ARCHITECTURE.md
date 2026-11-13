@@ -29,8 +29,9 @@
 
 Правила зависимостей:
 
-- `examples/` и `game/` ссылаются только на `src/core/*`, `src/assets/*`,
-  `src/render/*` и `src/hal/platform.h`. Прямых вызовов SDL3/OpenGL/PSn00bSDK
+- `examples/` и `include/retro_engine/game/` ссылаются только на публичные
+  заголовки `include/retro_engine/{core,assets,hal}`; `src/render/*` —
+  внутренний слой, примеры его не используют. Прямых вызовов SDL3/OpenGL/PSn00bSDK
   в прикладном коде нет.
 - `src/render/` и `src/assets/` не знают о бэкенде: они используют
   `hal/render_backend.h` и `hal/platform.h`.
@@ -46,7 +47,7 @@ backend selection** через CMake:
   (guard в корневом `CMakeLists.txt`).
 - `src/CMakeLists.txt` подключает `src/hal/pc/`, `src/hal/ps1/` или
   `src/hal/saturn/` (v0.2.0; ADR-008).
-- Единый публичный заголовок [`src/hal/platform.h`](../src/hal/platform.h)
+- Единый публичный заголовок [`include/retro_engine/hal/platform.h`](../include/retro_engine/hal/platform.h)
   объявляет весь наружный API; реализации — в `.cpp` бэкенда. Saturn не
   протаскивает SH-2/Jo Engine в публичный заголовок: контакт с SDK
   изолирован в `src/hal/saturn/jo_saturn_bridge.c`.
@@ -60,7 +61,7 @@ backend selection** через CMake:
 
 ## 3. Слой Core
 
-### 3.1 Fixed-point математика (`src/core/math/`)
+### 3.1 Fixed-point математика (`include/retro_engine/core/math/`)
 
 - `fixed_t` = `int32_t`, формат Q16.16.
 - saturating add/sub/mul/div; `fixed_div(0)` — детерминированный контракт.
@@ -78,7 +79,7 @@ backend selection** через CMake:
 В runtime запрещены `new`/`delete`/`malloc`/`free`; все аллокации — через
 ядро.
 
-### 3.3 ECS (`src/core/ecs/`)
+### 3.3 ECS (`include/retro_engine/core/ecs/`)
 
 - `Entity` — 24-bit index + 8-bit generation; `INVALID_ENTITY = 0`.
 - `Registry` — 7 MVP-пулов с фиксированными ёмкостями (Position/Rotation/
@@ -160,10 +161,10 @@ glTF/PNG (source) ──asset_converter──▶ .mesh/.tex v1 ──▶ заг�
 - CD-ROM ФС: `CdSearchFile` → `CdRead`/`CdReadSync`.
 - Двойной framebuffer 320×240 16bpp.
 
-## 7. Слой игры (`game/`)
+## 7. Слой игры (`include/retro_engine/game/`)
 
 - `components.h` — единая точка включения компонентов.
-- `game/systems/` — header-only системы: Camera, Input, Movement, Render,
+- `include/retro_engine/game/systems/` — header-only системы: Camera, Input, Movement, Render,
   Collision, Rotation, Lighting.
 - Примеры `examples/hello_triangle/` и `examples/rotating_cube/` показывают
   полный цикл: инициализация → загрузка ассетов → ECS-сцена → кадр.

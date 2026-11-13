@@ -15,7 +15,15 @@
 # Логгер — независимый слой (render_opengl.cpp пишет через core/log;
 # ядро рендера — тоже: единая точка диагностики STyle guide §3).
 add_library(retro_engine_log STATIC core/log/log.cpp)
-target_include_directories(retro_engine_log PUBLIC "${CMAKE_SOURCE_DIR}/src")
+# Публичный SDK-интерфейс (ADR-011): <retro_engine/...> + source-style
+# "core/..." для внутренних .cpp; internal-заголовки остаются в src/.
+target_include_directories(retro_engine_log PUBLIC
+    "$<BUILD_INTERFACE:${RPE_PUBLIC_INCLUDE_DIR}>"
+    "$<BUILD_INTERFACE:${RPE_PUBLIC_API_INCLUDE_DIR}>"
+    "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated/include>"
+    "$<INSTALL_INTERFACE:${RPE_INSTALL_INCLUDEDIR}>"
+    "$<INSTALL_INTERFACE:${RPE_INSTALL_INCLUDEDIR}/retro_engine>")
+target_include_directories(retro_engine_log PRIVATE "${CMAKE_SOURCE_DIR}/src")
 # Compile-time специализация формата файлов (log.cpp: FILE-sink на PC,
 # no-op на PS1 — см. заголовок log.h). Значение задаётся выбором бэкенда
 # без создания platform-ifdef'ов в заголовках ядра.
@@ -61,11 +69,18 @@ elseif(PLATFORM_SATURN)
     target_compile_definitions(retro_engine PRIVATE PLATFORM_SATURN=1)
 endif()
 
-# Публичные заголовки ядра включаются как "core/math/fixed.h" (корень include — src/).
-target_include_directories(retro_engine PUBLIC "${CMAKE_SOURCE_DIR}/src")
-
-# Сгенерированный каталог (shaders_embedded.h) — приватные детали ядра и HAL.
-target_include_directories(retro_engine PRIVATE "${RPE_GENERATED_INCLUDE_DIR}")
+# Публичные заголовки SDK: <retro_engine/...> из include/ + source-style
+# "core/..." из include/retro_engine (тот же public-набор, ADR-011).
+target_include_directories(retro_engine PUBLIC
+    "$<BUILD_INTERFACE:${RPE_PUBLIC_INCLUDE_DIR}>"
+    "$<BUILD_INTERFACE:${RPE_PUBLIC_API_INCLUDE_DIR}>"
+    "$<BUILD_INTERFACE:${CMAKE_BINARY_DIR}/generated/include>"
+    "$<INSTALL_INTERFACE:${RPE_INSTALL_INCLUDEDIR}>"
+    "$<INSTALL_INTERFACE:${RPE_INSTALL_INCLUDEDIR}/retro_engine>")
+# Внутренние заголовки (render/*, hal/*/*) и generated — только build-tree.
+target_include_directories(retro_engine PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${RPE_GENERATED_INCLUDE_DIR}")
 
 target_link_libraries(retro_engine PUBLIC retro_engine_hal retro_engine_log)
 retro_engine_apply_flags(retro_engine)
@@ -80,3 +95,26 @@ if(PLATFORM_PS1)
     set_target_properties(retro_engine_log retro_engine_hal retro_engine
         PROPERTIES PSN00BSDK_TARGET_TYPE EXECUTABLE_NOGPREL)
 endif()
+
+# --- SDK export: RetroPolyEngine::{retro_engine,hal,log} (S33–34) ----------
+set_target_properties(retro_engine_hal PROPERTIES
+    EXPORT_NAME hal
+    EXPORT_NO_SYSTEM ON)
+set_target_properties(retro_engine_log PROPERTIES
+    EXPORT_NAME log
+    EXPORT_NO_SYSTEM ON)
+# Импортированный SDK-таргет не должен превращать public headers в -isystem:
+# GCC 8.2 sh-elf (Saturn) ломает C++ linkage на системных заголовках.
+set_target_properties(retro_engine PROPERTIES EXPORT_NO_SYSTEM ON)
+if(TARGET glad)
+    set_target_properties(glad PROPERTIES EXPORT_NO_SYSTEM ON)
+endif()
+add_library(RetroPolyEngine::retro_engine ALIAS retro_engine)
+add_library(RetroPolyEngine::hal ALIAS retro_engine_hal)
+add_library(RetroPolyEngine::log ALIAS retro_engine_log)
+
+install(TARGETS retro_engine retro_engine_hal retro_engine_log
+        EXPORT RetroPolyEngineTargets
+        ARCHIVE DESTINATION "${RPE_SDK_LIBDIR}"
+        LIBRARY DESTINATION "${RPE_SDK_LIBDIR}"
+        RUNTIME DESTINATION "${CMAKE_INSTALL_BINDIR}")

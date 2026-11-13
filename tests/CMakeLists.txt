@@ -45,8 +45,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)
     # Канонические флаги применяются только к коду тестов движка.
     retro_engine_apply_flags(retro_engine_tests)
-    # game/* и examples/* — include от КОРНЯ репозитория (mirrors примеры).
-    target_include_directories(retro_engine_tests PRIVATE "${CMAKE_SOURCE_DIR}")
+    # game/* и examples/* — include от КОРНЯ репозитория (mirrors примеры);
+    # src/ — внутренние заголовки ядра (SDK их не экспортирует).
+    target_include_directories(retro_engine_tests PRIVATE
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/src")
     # Путь к пайплайн-артефактам (assets/build/*) — compile-time, CWD-независимо.
     # PLATFORM_PC — специализация платформы для тестов HAL (tests/ добавляются
     # только при PLATFORM_PC; mirrors retro_engine / retro_engine_log).
@@ -109,7 +112,9 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     target_compile_features(saturn_hal_tests PRIVATE cxx_std_14)
     target_include_directories(saturn_hal_tests PRIVATE
         "${CMAKE_SOURCE_DIR}"
-        "${CMAKE_SOURCE_DIR}/src")
+        "${CMAKE_SOURCE_DIR}/src"
+        "${RPE_PUBLIC_INCLUDE_DIR}"
+        "${RPE_PUBLIC_API_INCLUDE_DIR}")
     target_link_libraries(saturn_hal_tests PRIVATE GTest::gtest_main)
     target_compile_definitions(saturn_hal_tests PRIVATE
         PLATFORM_SATURN=1
@@ -131,7 +136,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         )
         target_compile_features(retro_engine_visual_tests PRIVATE cxx_std_14)
         target_include_directories(retro_engine_visual_tests PRIVATE
-            "${CMAKE_SOURCE_DIR}")
+            "${CMAKE_SOURCE_DIR}"
+            "${CMAKE_SOURCE_DIR}/src")
         target_link_libraries(retro_engine_visual_tests PRIVATE
             retro_engine GTest::gtest_main)
         retro_engine_apply_flags(retro_engine_visual_tests)

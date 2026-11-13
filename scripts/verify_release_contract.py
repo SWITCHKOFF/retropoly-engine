@@ -2,29 +2,38 @@
 # SPDX-License-Identifier: MIT
 # RetroPolyEngine — scripts/verify_release_contract.py
 #
-# Release gate: 9 assert-ов для тега v0.1.0.
-#   1. presets == {pc-debug, pc-release, pc-debug-render, ps1-release}
+# Release gate v2: legacy-контракты + SDK (Спринт 33–34).
+#   1. presets == {pc-debug, pc-release, pc-debug-render, ps1-release, ...}
 #   2. ps1_executable_size <= 512000
 #   3. ps1_peak_main_ram <= 1572864; ps1_peak_vram <= 819200
 #   4. w0_framebuffer_hash == canonical_w0_hash
 #   5. w1_pc_fps >= 60; w1_ps1_emulator_fps >= 30
 #   6. all_asset_validation_cases_pass; no_renderer_overflow_is_silent
-#   7. Публикация результата как CI-artifact (release_contract_report.json)
+#   7. Saturn artifacts/map/golden
+#   8. SDK: архивы + sidecar SHA-256, sdk_manifest.json, public headers,
+#      checksums.sha256 и clean consumer smoke (find_package RetroPolyEngine)
+#   9. Публикация результата как CI-artifact (release_contract_report.json)
 #
 # Вызов:
-#   python3 scripts/verify_release_contract.py [--w1-seconds 60]
+#   python3 scripts/verify_release_contract.py [--w1-seconds 60] \
+#       [--sdk-archive dist/...tar.gz | --sdk-dir path]
 #
 # Требования: собранные пресеты pc-debug, pc-debug-render, pc-release,
-# ps1-release в канонических каталогах build/<preset>.
+# ps1-release, saturn-release в канонических каталогах build/<preset>
+# и SDK-архивы в dist/.
 
 import argparse
+import glob
 import hashlib
 import json
 import os
 import re
+import shutil
 import subprocess
 import sys
+import tarfile
 import tempfile
+import zipfile
 
 import yaml
 
@@ -48,6 +57,9 @@ SATURN_DIR = os.path.join(REPO_ROOT, "build", "saturn-release", "src",
 SATURN_REQUIRED = ["hello_triangle.elf", "hello_triangle.bin",
                    "hello_triangle.iso", "hello_triangle.cue",
                    "hello_triangle.map"]
+DIST_DIR = os.path.join(REPO_ROOT, "dist")
+SDK_CONSUMER_SCRIPT = os.path.join(REPO_ROOT, "scripts",
+                                   "sdk_consumer_smoke.py")
 
 
 def load_contract():
@@ -280,6 +292,269 @@ def assert_renderer_overflow():
                 "tail": (err if err else out)[-600:]}
 
 
+# ---------------------------------------------------------------------------
+# SDK (Спринт 33–34): архив, manifest, public headers, clean consumer smoke.
+# ---------------------------------------------------------------------------
+
+def _extract_sdk(archive, dest):
+    if archive.endswith(".zip"):
+        with zipfile.ZipFile(archive) as zf:
+            zf.extractall(dest)
+    else:
+        with tarfile.open(archive) as tf:
+            try:
+                tf.extractall(dest, filter="data")
+            except TypeError:  # Python < 3.12
+                tf.extractall(dest)
+    root = os.path.join(dest, "sdk")
+    return root if os.path.isdir(root) else dest
+
+
+def _sdk_platform(path, sdk_dir=None):
+    manifest = os.path.join(sdk_dir or "", "sdk_manifest.json")
+    if os.path.isfile(manifest):
+        try:
+            with open(manifest, "r", encoding="utf-8") as f:
+                return json.load(f).get("platform", "pc")
+        except (OSError, ValueError):
+            pass
+    base = os.path.basename(path or "")
+    for platform in ("ps1", "saturn", "pc"):
+        if "-%s-" % platform in base:
+            return platform
+    return "pc"
+
+
+def _find_sdk(args, tempdir):
+    if args.sdk_dir:
+        sdk_dir = os.path.abspath(args.sdk_dir)
+        return sdk_dir, None, _sdk_platform(sdk_dir, sdk_dir)
+    if args.sdk_archive:
+        archive = os.path.abspath(args.sdk_archive)
+        return _extract_sdk(archive, tempdir), archive, \
+            _sdk_platform(archive)
+    candidates = sorted(glob.glob(os.path.join(DIST_DIR,
+                                               "retro-engine-sdk-*.tar.gz")))
+    pc_candidates = [c for c in candidates if "-pc-" in os.path.basename(c)]
+    if pc_candidates:
+        return _extract_sdk(pc_candidates[-1], tempdir), pc_candidates[-1], \
+            "pc"
+    if candidates:
+        return _extract_sdk(candidates[-1], tempdir), candidates[-1], \
+            _sdk_platform(candidates[-1])
+    direct = os.path.join(DIST_DIR, "sdk")
+    if os.path.isdir(direct):
+        return direct, None, _sdk_platform(direct, direct)
+    return None, None, "pc"
+
+
+def _sha256(path):
+    digest = hashlib.sha256()
+    with open(path, "rb") as f:
+        for chunk in iter(lambda: f.read(1024 * 1024), b""):
+            digest.update(chunk)
+    return digest.hexdigest()
+
+
+def _assert_sdk_archive(contract, archive):
+    required = contract.get("sdk", {}).get("required_archive_entries", [
+        "sdk/include/retro_engine/retro_engine.h",
+        "sdk/lib/cmake/RetroPolyEngine/RetroPolyEngineConfig.cmake",
+        "sdk/sdk_manifest.json",
+        "sdk/checksums.sha256",
+    ])
+    if not os.path.isfile(archive):
+        return False, {"error": "SDK archive missing", "path": archive}
+    sidecar = archive + ".sha256"
+    if not os.path.isfile(sidecar):
+        return False, {"error": "SDK archive checksum sidecar missing",
+                       "path": sidecar}
+    expected = open(sidecar, "r", encoding="utf-8").read().split()[0]
+    actual = _sha256(archive)
+    names = []
+    if archive.endswith(".zip"):
+        with zipfile.ZipFile(archive) as zf:
+            names = zf.namelist()
+    else:
+        with tarfile.open(archive) as tf:
+            names = tf.getnames()
+    missing = [name for name in required if name not in names]
+    forbidden = []
+    for name in names:
+        low = name.lower()
+        parts = set(low.split("/"))
+        if (".git" in parts or "bios" in parts or "roms" in parts or
+                "secrets" in parts or "cmakefiles" in parts):
+            forbidden.append(name)
+        if low.endswith((".rom", ".bios", ".iso", ".cue", ".elf", ".bin")):
+            forbidden.append(name)
+    ok = (expected == actual and not missing and not forbidden)
+    return ok, {"path": archive, "sha256": actual, "expected": expected,
+                "missing": missing, "forbidden": forbidden[:20],
+                "entries": len(names)}
+
+
+def assert_sdk_archives(contract, archives):
+    if not archives:
+        return False, {"error": "SDK archives not found "
+                               "(build sdk_package first)"}
+    details = []
+    ok = True
+    for archive in archives:
+        archive_ok, archive_details = _assert_sdk_archive(contract, archive)
+        archive_details["ok"] = archive_ok
+        details.append(archive_details)
+        ok = ok and archive_ok
+    return ok, {"archives": details}
+
+
+def assert_sdk_manifest(contract, sdk_dir):
+    if sdk_dir is None:
+        return False, {"error": "SDK directory not found"}
+    manifest_path = os.path.join(sdk_dir, "sdk_manifest.json")
+    if not os.path.isfile(manifest_path):
+        return False, {"error": "sdk_manifest.json not found",
+                       "path": manifest_path}
+    try:
+        with open(manifest_path, "r", encoding="utf-8") as f:
+            manifest = json.load(f)
+    except (OSError, ValueError) as exc:
+        return False, {"error": "sdk_manifest.json invalid: %s" % exc}
+
+    sdk_contract = contract.get("sdk", {})
+    expected_version = contract["project"]["version"]
+    required_targets = sdk_contract.get("required_targets", [
+        "RetroPolyEngine::retro_engine", "RetroPolyEngine::hal",
+        "RetroPolyEngine::log"])
+    required_components = sdk_contract.get("required_components", [
+        "public_headers", "libraries", "cmake_package", "asset_converter",
+        "examples", "templates", "legal_notices", "version", "checksums",
+        "manifest"])
+    required_platforms = sdk_contract.get("platforms", ["pc", "ps1", "saturn"])
+
+    checks = []
+    checks.append(("schema", manifest.get("schema") == 1))
+    checks.append(("version", manifest.get("version") == expected_version))
+    checks.append(("platform", manifest.get("platform") in required_platforms))
+    checks.append(("targets", set(required_targets).issubset(
+        set(manifest.get("targets", [])))))
+    components = manifest.get("components", {})
+    platform = manifest.get("platform")
+    # asset_converter — host-only инструмент PC SDK; в PS1/Saturn пакетах
+    # его нет by design.
+    expected_components = [
+        c for c in required_components
+        if not (c == "asset_converter" and platform != "pc")
+    ]
+    checks.append(("components", all(components.get(c) is True
+                                     for c in expected_components)))
+    public_header = os.path.join(sdk_dir,
+                                 manifest.get("public_header", ""))
+    checks.append(("public_header", os.path.isfile(public_header)))
+
+    artifacts = manifest.get("artifacts", [])
+    missing = []
+    bad_hashes = []
+    for item in artifacts:
+        path = os.path.join(sdk_dir, item.get("path", ""))
+        if not os.path.isfile(path):
+            missing.append(item.get("path"))
+            continue
+        if os.path.getsize(path) != item.get("size"):
+            bad_hashes.append(item.get("path"))
+            continue
+        if _sha256(path) != item.get("sha256"):
+            bad_hashes.append(item.get("path"))
+    checks.append(("artifacts_present", not missing))
+    checks.append(("artifact_hashes", not bad_hashes))
+
+    checksums_path = os.path.join(sdk_dir, "checksums.sha256")
+    checksum_ok = False
+    checksum_errors = []
+    if os.path.isfile(checksums_path):
+        checksum_ok = True
+        for line in open(checksums_path, "r", encoding="utf-8"):
+            line = line.strip()
+            if not line:
+                continue
+            digest, _, rel = line.partition("  ")
+            path = os.path.join(sdk_dir, rel)
+            if not os.path.isfile(path):
+                checksum_ok = False
+                checksum_errors.append("missing: " + rel)
+            elif _sha256(path) != digest:
+                checksum_ok = False
+                checksum_errors.append("bad: " + rel)
+    checks.append(("checksums", checksum_ok))
+
+    ok = all(value for _, value in checks)
+    return ok, {"version": manifest.get("version"),
+                "platform": manifest.get("platform"),
+                "arch": manifest.get("arch"),
+                "git_commit": manifest.get("git_commit"),
+                "artifacts": len(artifacts),
+                "failed_checks": [name for name, value in checks if not value],
+                "missing": missing[:20], "bad_hashes": bad_hashes[:20],
+                "checksum_errors": checksum_errors[:20]}
+
+
+def assert_sdk_headers(contract, sdk_dir):
+    if sdk_dir is None:
+        return False, {"error": "SDK directory not found"}
+    sdk_contract = contract.get("sdk", {})
+    umbrella = os.path.join(sdk_dir, sdk_contract.get(
+        "umbrella_header", "include/retro_engine/retro_engine.h"))
+    if not os.path.isfile(umbrella):
+        return False, {"error": "umbrella header missing", "path": umbrella}
+
+    internal_dirs = sdk_contract.get("forbidden_header_dirs", [
+        "include/retro_engine/render",
+        "include/retro_engine/hal/pc",
+        "include/retro_engine/hal/ps1",
+        "include/retro_engine/hal/saturn",
+    ])
+    present_internal = [d for d in internal_dirs
+                        if os.path.exists(os.path.join(sdk_dir, d))]
+
+    include_root = os.path.join(sdk_dir, "include", "retro_engine")
+    forbidden_patterns = ("SDL", "glad/", "psx", "jo/jo.h", "internal/",
+                          "windows.h", "GL/")
+    violations = []
+    header_count = 0
+    for dirpath, _, filenames in os.walk(include_root):
+        for name in filenames:
+            if not name.endswith((".h", ".hpp")):
+                continue
+            header_count += 1
+            path = os.path.join(dirpath, name)
+            rel = os.path.relpath(path, sdk_dir)
+            for line in open(path, "r", encoding="utf-8", errors="replace"):
+                stripped = line.strip()
+                if not stripped.startswith("#include"):
+                    continue
+                for pattern in forbidden_patterns:
+                    if pattern in stripped:
+                        violations.append("%s: %s" % (rel, stripped))
+    ok = not present_internal and not violations and header_count > 0
+    return ok, {"headers": header_count,
+                "internal_dirs": present_internal,
+                "third_party_includes": violations[:20]}
+
+
+def assert_sdk_consumer(contract, sdk_dir, skip, platform):
+    if sdk_dir is None:
+        return False, {"error": "SDK directory not found"}
+    if skip:
+        return True, {"skipped": True}
+    cmd = [sys.executable, SDK_CONSUMER_SCRIPT, "--sdk-dir", sdk_dir,
+           "--platform", platform,
+           "--expected-version", contract["project"]["version"]]
+    rc, out, err = run(cmd, timeout=900)
+    ok = rc == 0
+    return ok, {"exit_code": rc, "platform": platform, "ok": ok,
+                "tail": (err if err else out)[-1200:]}
+
+
 def main():
     parser = argparse.ArgumentParser(description="Release contract verifier")
     parser.add_argument("--w1-seconds", type=int, default=60,
@@ -288,10 +563,29 @@ def main():
                         help="Report JSON path")
     parser.add_argument("--skip-build-checks", action="store_true",
                         help="Skip ctest/bench execution (validate manifest only)")
+    parser.add_argument("--sdk-dir", default=os.environ.get("RPE_SDK_DIR"),
+                        help="Путь к распакованному SDK (default: dist/sdk)")
+    parser.add_argument("--sdk-archive", default=None,
+                        help="Путь к retro-engine-sdk-*.tar.gz/.zip")
+    parser.add_argument("--skip-sdk-consumer", action="store_true",
+                        help="Не собирать clean consumer (только manifest)")
     args = parser.parse_args()
 
     contract = load_contract()
     results = {}
+    sdk_temp = tempfile.mkdtemp(prefix="rpe_sdk_gate_")
+    sdk_dir, sdk_archive, sdk_platform = _find_sdk(args, sdk_temp)
+    if args.sdk_archive:
+        sdk_archives = [os.path.abspath(args.sdk_archive)]
+    else:
+        sdk_archives = sorted(glob.glob(os.path.join(
+            DIST_DIR, "retro-engine-sdk-*.tar.gz")))
+    results["sdk_archives"] = assert_sdk_archives(contract, sdk_archives)
+    results["sdk_manifest"] = assert_sdk_manifest(contract, sdk_dir)
+    results["sdk_headers"] = assert_sdk_headers(contract, sdk_dir)
+    results["sdk_consumer"] = assert_sdk_consumer(
+        contract, sdk_dir, args.skip_build_checks or args.skip_sdk_consumer,
+        sdk_platform)
 
     results["presets"] = assert_presets(contract)
     results["ps1_exe_size"] = assert_ps1_exe_size(contract)
@@ -312,6 +606,8 @@ def main():
         results["w1_ps1_fps"] = (True, {"skipped": True})
         results["asset_validation"] = (True, {"skipped": True})
         results["renderer_overflow"] = (True, {"skipped": True})
+
+    shutil.rmtree(sdk_temp, ignore_errors=True)
 
     all_ok = all(ok for ok, _ in results.values())
     report = {
