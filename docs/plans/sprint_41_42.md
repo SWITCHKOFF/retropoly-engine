@@ -44,7 +44,7 @@
 | Host-тесты | `n64_hal_tests` 46/46; PC regression 335/335 |
 | Эмулятор | gopher64 1.2.1: 60-с gate (3600 кадров / 60.8 с), 10-мин stress (602 391 мс / 36 000 кадров), input-лог `[n64_input] pad0 press …` |
 | Скриншот | `screenshots/n64_boot_s41_42.png` (clear + DFS/memory/pad overlay) |
-| CI | `build-n64.yml`: ROM/DFS/heap structural checks; remote run — после push |
+| CI | `build-n64.yml`: ROM/DFS/heap structural checks; remote push run `43601517181` и PR run `43601522296` — **success** |
 
 ## Задачи
 

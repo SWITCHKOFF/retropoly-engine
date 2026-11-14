@@ -100,7 +100,11 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ра
 > libdragon `e356bf3`, `hello_n64.z64` с `CUBE.MSH`/`TEX0.TEX` в
 > read-only DFS, ROM verifier PASS, 60-с gate и 10-минутный stress в
 > gopher64 1.2.1, N64 host-тесты 46/46 (+ASan), PC regression 335/335.
-> Remote CI — после push. Baseline эмулятора — **gopher64 1.2.1**
+> Remote CI green: `build-n64` push `43601517181` / PR `43601522296`,
+> `tests` `43601517320`, `build-pc` `43601517203`, `build-ps1`
+> `43601517201`, `build-saturn` `43601517188`, `sdk-package`
+> `43601517177`, `ui-client` `43601517161` (commit `4882e1d`).
+> Baseline эмулятора — **gopher64 1.2.1**
 > (mupen64plus не грузит libdragon IPL3 r5+, mupen64plus-core#1185; ares
 > без Linux-бинаря). S43–44 — RSP/RDP, Z-буфер, TMEM/текстуры; S45–46 —
 > hello_triangle/rotating_cube, W0/W1-бюджеты, N64 SDK/UI и draft

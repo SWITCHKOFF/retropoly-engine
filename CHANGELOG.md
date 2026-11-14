@@ -31,7 +31,9 @@
   bounded RDP command arena 128 KiB, `n64_hal_tests` 46/46 (+ASan),
   PC regression 335/335, `build-n64.yml` DFS/heap checks, 60-с gate и
   10-минутный stress в gopher64 1.2.1, `docs/N64.md`, ADR-014 revision 2,
-  скриншот `screenshots/n64_boot_s41_42.png`.
+  скриншот `screenshots/n64_boot_s41_42.png`. Remote CI на `4882e1d` —
+  green: `build-n64` (push/PR), `tests`, `build-pc/ps1/saturn`,
+  `sdk-package`, `ui-client`.
 
 ## [0.2.1] — не опубликовано (release withdrawn; deferred to v0.9.x)
 

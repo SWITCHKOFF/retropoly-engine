@@ -585,7 +585,10 @@ N64 S39–46 — следующий этап разработки (§13.3).
 libdragon `e356bf3`, `n64-release`, bootable `hello_n64.z64` с read-only
 DFS (`CUBE.MSH`/`TEX0.TEX`), ROM verifier PASS, 60-с gate и 10-минутный
 stress в gopher64 1.2.1, N64 host-тесты 46/46 (+ASan), PC regression
-335/335. Remote CI `build-n64` — после push. Baseline эмулятора —
+335/335. Remote CI green: `build-n64` push `43601517181` / PR
+`43601522296`, `tests` `43601517320`, `build-pc` `43601517203`,
+`build-ps1` `43601517201`, `build-saturn` `43601517188`,
+`sdk-package` `43601517177`, `ui-client` `43601517161`. Baseline эмулятора —
 gopher64 1.2.1 (mupen64plus не грузит libdragon IPL3 r5+,
 mupen64plus-core#1185). S43–44 — RSP/RDP, Z-буфер, TMEM/текстуры;
 S45–46 — демо, бюджеты, N64 SDK/UI и draft v0.3.0.

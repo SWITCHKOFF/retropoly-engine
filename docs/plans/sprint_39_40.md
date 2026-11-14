@@ -12,8 +12,8 @@
 > libdragon/toolchain подняты, `n64-release` собирает bootable `.z64`,
 > ROM проходит `scripts/verify_n64_rom.py`, boot-demo 60 с работает в
 > gopher64 1.2.1, host-тесты N64 6/6. `build-n64.yml` готов; remote CI
-> будет подтверждён после push (в этом окружении GitHub Actions не
-> запускается). Публикация v0.3.0 — только draft, release freeze.
+> подтверждён remote CI: `build-n64` push `43601517181` / PR
+> `43601522296` — success. Публикация v0.3.0 — только draft, release freeze.
 
 ## Карточка спринта
 
@@ -47,7 +47,7 @@
 | N64 host-тесты | 6/6 (`n64_hal_tests`) |
 | PC regression | `ctest --preset pc-debug` 295/295 |
 | Скриншот | `screenshots/hello_n64_boot_s39_40.png` |
-| CI | `.github/workflows/build-n64.yml` + negative-checks готовы; remote run — после push |
+| CI | `.github/workflows/build-n64.yml` + negative-checks; remote push `43601517181` / PR `43601522296` — success |
 
 **Отклонение от плана:** baseline эмулятора — **gopher64 1.2.1**, не
 `ares`/`mupen64plus`: mupen64plus не загружает libdragon IPL3 r5+
@@ -97,7 +97,7 @@ ADR-014.
 ## Критерии приёмки спринта 39–40
 
 - [x] `cmake --preset n64-release` собирается с pinned libdragon/toolchain; guard «ровно один backend» включает N64
-- [x] CI `build-n64` workflow готов (pinned toolchain, artifacts; локальный эквивалентный прогон — PASS); remote green — после push
+- [x] CI `build-n64` workflow готов (pinned toolchain, artifacts; локальный эквивалентный прогон — PASS); remote green (`43601517181`/`43601522296`)
 - [x] ROM-заголовок/checksum валидны (libdragon IPL3 policy); boot-demo стабильно работает 60 с в pinned эмуляторе
 - [x] `Platform_Init`/`Shutdown` идемпотентны; stub renderer явно возвращает ошибку, без silent drop
 - [x] ADR-014, `docs/N64.md`, `VERSION.txt`, `LEGAL.md`, `ci/normative_contracts.yaml` согласованы
