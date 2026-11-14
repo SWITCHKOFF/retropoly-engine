@@ -55,7 +55,7 @@ jobs:
 
       - name: libdragon-toolchain (pinned deb + SHA-256)
         run: |
-          set -euo pipefail
+          set -euxo pipefail
           mkdir -p "$N64_SDK"
           cd "$N64_SDK"
           if [ ! -x "$N64_INST/bin/n64tool" ]; then
@@ -64,6 +64,7 @@ jobs:
             sha256sum -c "$GITHUB_WORKSPACE/ci/n64-toolchain.sha256"
             rm -rf toolchain
             dpkg-deb -x gcc-toolchain-mips64-x86_64.deb toolchain
+            ls -l "$N64_INST/bin" | head -20
           else
             echo "toolchain cache hit: $N64_INST"
           fi
