@@ -5,15 +5,15 @@
 > Источник требований: [`RELEASING.md`](../RELEASING.md) — SDK + UI client,
 > checksums, consumer smoke.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-14):** S37–38 реализован: release gate v2
+> **Статус (2026-11-14):** S37–38 завершён: release gate v2
 > (`release_payload`, `build_release_bundle.py`, negative-tests, verifier
 > `--payload-only`), payload `sdk/`+`ui/`+optional `demos/`,
 > `create_release_archive.sh` v2, reusable SDK/UI workflows и `release.yml`
-> «gate → publish only if all_ok», документация/RELEASING checklist/release
-> notes. Локальный полный gate пройден (`all_ok: true`, W1 225 FPS,
-> clean consumer PC/PS1/Saturn, UI headless smoke и clean E2E, 13
-> negative-кейсов). Осталось: remote CI на release-коммите, тег `v0.2.1`
-> и GitHub Release.
+> «gate → publish only if all_ok». Remote CI на `3e816d1` — 12/12 green;
+> release workflow 43577691540 — success; annotated-тег `v0.2.1` и
+> GitHub Release опубликованы. Скачанные assets прошли checksums и
+> проверку BIOS/ROM; статус переключён на `released`. Осталось только
+> [M] метрики через 1–2 недели и анонс.
 
 ## Карточка спринта
 
@@ -58,20 +58,20 @@
 
 **Неделя 75 — полный release gate:**
 
-- [ ] [B] `build-pc`, `build-ps1`, `build-saturn`, `tests`, `sdk-package`, `ui-client` — success на release-коммите
+- [x] [B] `build-pc`, `build-ps1`, `build-saturn`, `tests`, `sdk-package`, `ui-client` — success на release-коммите (3e816d1, 12/12 push+PR)
 - [x] [B] `verify_release_contract.py --w1-seconds 60` — `all_ok: true`, включая SDK/UI asserts (локально 2026-11-14; W1 225 FPS)
 - [x] [B] Clean-room: распаковать `retro-engine-v0.2.1` в пустой каталог; consumer hello_triangle собирается через `find_package`
 - [x] [B] Clean-room UI: создать проект, импортировать ассет, собрать PC target, запустить (`ui_e2e.py` PASS)
 - [x] [B] PS1/Saturn SDK examples собираются из пакета; ручной запуск `.cue` в pinned эмуляторе (consumer smoke PS1/Saturn PASS; ручной gate — S35–36)
 - [x] [B] Negative-tests: отсутствующий SDK/UI/checksum → gate fail; BIOS в payload → gate fail (13/13 PASS)
-- [ ] [B] Подготовить `v0.2.1` release branch/tag; v0.2.0 tag оставить историческим
+- [x] [B] Подготовить `v0.2.1` release branch/tag; v0.2.0 tag оставить историческим
 
 **Неделя 76 — публикация:**
 
-- [ ] [B] Тег `v0.2.1` (annotated) только после зелёного gate
-- [ ] [B] GitHub Release: `retro-engine-v0.2.1.tar.gz`, `retro-engine-sdk-*.tar.gz/zip`, `retro-engine-ui-*`, `checksums.sha256`, `release_contract_report.json`
-- [ ] [B] Проверить скачанные assets: checksums, размеры, отсутствие BIOS/ROM
-- [ ] [B] Обновить README/CHANGELOG/RELEASING статус «v0.2.1 released»
+- [x] [B] Тег `v0.2.1` (annotated) только после зелёного gate
+- [x] [B] GitHub Release: `retro-engine-v0.2.1.tar.gz`, `retro-engine-sdk-*.tar.gz/zip`, `retro-engine-ui-*`, `checksums.sha256`, `release_contract_report.json`
+- [x] [B] Проверить скачанные assets: checksums, размеры, отсутствие BIOS/ROM
+- [x] [B] Обновить README/CHANGELOG/RELEASING статус «v0.2.1 released»
 - [ ] [B] Анонс (по возможности) с честной формулировкой: SDK+UI, emulator validation
 - [ ] [M] Собрать метрики релиза (downloads/issues) через 1–2 недели
 
@@ -81,12 +81,12 @@
 - [x] `verify_release_contract.py` падает без SDK/UI и проходит на v0.2.1 (negative-tests 13/13 PASS)
 - [x] Clean consumer строит hello_triangle через `find_package`; UI создаёт проект/собирает/запускает
 - [x] Checksums проверяются; нет BIOS/ROM/секретов/build-каталогов
-- [ ] GitHub Release v0.2.1 опубликован; README/CHANGELOG/RELEASING согласованы
+- [x] GitHub Release v0.2.1 опубликован; README/CHANGELOG/RELEASING согласованы
 - [x] v0.2.0 остаётся отозванным; ссылки на него не выдаются за SDK-релиз
 
 ## Ручной чек-лист приёмки
 
-- [ ] Скачать release assets с GitHub, распаковать в чистые каталоги
+- [x] Скачать release assets с GitHub, распаковать в чистые каталоги
 - [x] Проверить `sha256sum -c checksums.sha256` (локальный payload)
 - [x] Собрать hello_triangle из SDK; запустить UI client (clean consumer + ui_e2e)
 - [x] Создать проект, импортировать `cube.gltf`/`texture_0.png`, Build PC, Run

@@ -46,7 +46,7 @@ Release assets: `retro-engine-sdk-0.2.1-*` (отдельно) или
 |---|---|---|
 | Linux x86_64 | `retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz` | PC |
 | Windows x86_64 | `retro-engine-sdk-0.2.1-pc-windows-x86_64.zip` | PC |
-| macOS x86_64/arm64 | `retro-engine-sdk-0.2.1-pc-macos-<arch>.tar.gz` | PC |
+| macOS arm64 | `retro-engine-sdk-0.2.1-pc-macos-arm64.tar.gz` | PC |
 | Linux (cross) | `retro-engine-sdk-0.2.1-ps1-mips.tar.gz` | PS1 (PSn00bSDK v0.24) |
 | Linux (cross) | `retro-engine-sdk-0.2.1-saturn-sh2.tar.gz` | Saturn (Jo Engine v2026.2) |
 

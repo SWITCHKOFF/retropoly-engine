@@ -15,15 +15,16 @@ demo-образы, но не готовый SDK и UI-клиент — см.
 **v0.2.1 — первый действующий публичный релиз: SDK + UI client.**
 Комбинированный payload `retro-engine-v0.2.1.tar.gz` содержит `sdk/`
 (headers/libs/CMake package/toolchain/examples) и `ui/` (launcher/editor),
-плюс optional `demos/`; release gate v2 проверяет clean consumer, UI E2E,
-checksums и отсутствие BIOS/ROM. Статус — [docs/RELEASING.md](docs/RELEASING.md).
+плюс optional `demos/`; release gate v2 проверил clean consumer, UI E2E,
+checksums и отсутствие BIOS/ROM. Релиз —
+[GitHub Release v0.2.1](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1).
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
 ## Скачать и запустить (v0.2.1)
 
-Готовые архивы — в GitHub Release `v0.2.1` (публикация выполняется
-workflow `release` после зелёного gate; статус — [docs/RELEASING.md](docs/RELEASING.md)):
+Готовые архивы — в
+[GitHub Release `v0.2.1`](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1):
 
 | Asset | Для чего |
 |---|---|
@@ -48,8 +49,9 @@ tar -xzf retro-engine-ui-0.2.1-linux-x86_64.tar.gz
 ./ui/retro-engine-ui    # New Project → SDK path → import → Build → Run
 ```
 
-Поддерживаемые hosts/targets: SDK — Linux/Windows/macOS x86_64 (macOS также
-arm64), target PC/PS1/Saturn; UI — те же hosts. Полный гайд:
+Поддерживаемые hosts/targets v0.2.1: SDK — Linux x86_64, Windows x86_64,
+macOS arm64; target PC/PS1/Saturn. UI — те же hosts. Сборка macOS x86_64
+возможна из исходников, но в v0.2.1 assets её нет. Полный гайд:
 [docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
 
 ## Сборка из исходников
@@ -220,7 +222,7 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] SDK packaging: install/export, CMake package, consumer smoke (S33–34)
 - [x] UI client MVP: project/target/import/build/run, package, smoke/E2E (S35–36)
 - [x] Release gate v2: payload `sdk/`+`ui/`, checksums, negative-tests (S37–38)
-- [ ] Публикация v0.2.1: remote CI на release-коммите, тег, GitHub Release
+- [x] Публикация v0.2.1: remote CI, тег, GitHub Release
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
 [docs/RELEASING.md](docs/RELEASING.md). Следующий этап — публикация

@@ -39,7 +39,10 @@
   (9) Локальная приёмка 2026-11-14: `ctest` 289/289, render 305/305,
   UI 47/47; полный gate `all_ok: true` (W1 225 FPS, UI headless smoke);
   clean consumer PC/PS1/Saturn и UI E2E PASS; payload negative-tests
-  13/13. Публикация v0.2.1 — после remote CI на release-коммите и тега.
+  13/13. Remote CI на `3e816d1` — 12/12 green (push+PR), release workflow
+  43577691540 — success; GitHub Release
+  [v0.2.1](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1)
+  опубликован, assets прошли checksums и проверку BIOS/ROM.
 
 - Спринт 35–36 — UI client MVP: project/target/import/build/run (недели 69–72):
   (1) ADR-012: SDL3 + Dear ImGui v1.93.0 (MIT, pinned в `VERSION.txt`),

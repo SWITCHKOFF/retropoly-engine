@@ -179,12 +179,10 @@ release:
   payload: sdk+ui
   sdk_required: true
   ui_client_required: true
-  v0_2_0_release_withdrawn: true
-  v0_2_1_release_status: gate_pending   # released — только после тега/GitHub Release
+  v0_2_1_release_status: released
   supported_hosts:
     - linux-x86_64
     - windows-x86_64
-    - macos-x86_64
     - macos-arm64
   supported_targets:
     - pc

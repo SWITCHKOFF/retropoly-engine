@@ -67,13 +67,15 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ст
 > `docs/UI_CLIENT.md`, ADR-012. Ручной PS1/Saturn gate пройден
 > (DuckStation/Mednafen, `.cue` из UI-проекта); первый полный зелёный CI
 > push `79ce6f4` (`build-pc/ps1/saturn`, `tests`, `sdk-package`,
-> `ui-client`). S37–38 (release gate v2) реализован: payload
+> `ui-client`). S37–38 (release gate v2) завершён: payload
 > `sdk/`+`ui/`, `scripts/build_release_bundle.py`, verifier
 > `release_payload`, negative-tests, `create_release_archive.sh` v2 и
-> `release.yml` (reusable SDK/UI → gate → publish). Осталось: полный gate
-> на release-коммите, тег и GitHub Release v0.2.1. v0.2.0 GitHub Release
-> отозван; demo-архив не является релизом. Первый валидный публичный
-> релиз — **v0.2.1** после приёмки gate.
+> `release.yml` (reusable SDK/UI → gate → publish). Remote CI `3e816d1` —
+> 12/12 green; release workflow 43577691540 — success; annotated-тег
+> **v0.2.1** и GitHub Release опубликованы; скачанные assets прошли
+> checksums и проверку BIOS/ROM. v0.2.0 остаётся отозванным историческим
+> тегом. Следующий этап — N64 **v0.3.0** (S39+); метрики релиза — через
+> 1–2 недели.
 
 Следующие итерации (N64 v0.3.0, Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 6–8 / 4–6 / 4–6 / 8–12 спринтов. N64 начинается с S39 после приёмки v0.2.1 (SDK+UI release gate v2), когда будут известны фактические темп и ограничения Saturn-toolchain.
 

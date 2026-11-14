@@ -417,7 +417,7 @@ v0.2.1 (SDK + UI client): детальные планы S33–38 — §13.2.
 ## 13. Post-MVP roadmap (после v0.1.0 — справочно)
 
 - **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn. Детальные планы S21–32 — §13.1. GitHub Release отозван (demo-only payload).
-- **v0.2.1 — SDK + UI client (3 пары спринтов, S33–38):** install/export CMake package, SDK-архивы PC/PS1/Saturn, consumer smoke; UI client (project/target/import/build/run); release gate v2 и payload `sdk/`+`ui/` реализованы, публикация v0.2.1 — после зелёного gate на release-коммите. Детальные планы — §13.2.
+- **v0.2.1 — SDK + UI client (3 пары спринтов, S33–38):** install/export CMake package, SDK-архивы PC/PS1/Saturn, consumer smoke; UI client (project/target/import/build/run); release gate v2 и payload `sdk/`+`ui/` опубликованы как **v0.2.1** (2026-11-14). Детальные планы — §13.2.
 - **v0.3.0 — N64 (6–8 спринтов, S39+):** микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, libdragon.
 - **v0.4.0 — Jaguar (4–6 спринтов):** blitter-программирование (Tom), Jerry-DSP; 68000 host.
 - **v0.5.0 — 3DO (4–6 спринтов):** CEL/MADAM-композитинг; отдельная юридическая проверка SDK перед любым vendoring/перераспределением.
@@ -507,15 +507,18 @@ push `79ce6f4`. S37–38 (release gate v2) реализован: `release_payloa
 `build_release_bundle.py`, payload `sdk/`+`ui/`+optional `demos/`,
 negative-tests, `create_release_archive.sh` v2, `release.yml`
 (reusable SDK/UI workflows → gate → publish), RELEASING checklist и
-release notes. Осталось: полный gate на release-коммите, тег `v0.2.1`
-и GitHub Release.
+release notes. Remote CI `3e816d1` — 12/12 green; release workflow
+43577691540 — success; annotated-тег `v0.2.1` и GitHub Release
+опубликованы 2026-11-14; скачанные assets прошли checksums и проверку
+BIOS/ROM. `v0_2_1_release_status: released`; `v0_2_0_release_withdrawn`
+снят.
 
 **Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
 создаёт проект, импортирует ассет, собирает и запускает target; payload
 содержит `sdk/` + `ui/` + `checksums.sha256`; `verify_release_contract.py`
 `all_ok: true`; negative-tests падают без SDK/UI/checksums и при
-BIOS/ROM/build-каталогах в payload; v0.2.0 остаётся отозванным. Только
-после этого — N64 S39+.
+BIOS/ROM/build-каталогах в payload; v0.2.0 остаётся отозванным. Гейт
+пройден; N64 S39+ — следующий этап.
 
 ## 14. Реестр рисков (операционный)
 

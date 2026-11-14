@@ -1,5 +1,8 @@
 # RetroPolyEngine v0.2.1 — SDK + UI client
 
+Дата: 2026-11-14 ·
+[GitHub Release](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1)
+
 Первый действующий публичный релиз RetroPolyEngine: устанавливаемый SDK
 (PC/PS1/Saturn) и UI client для создания, сборки и запуска проектов.
 GitHub Release v0.2.0 отозван и не является SDK-релизом.
@@ -58,8 +61,10 @@ tar -xzf retro-engine-ui-0.2.1-linux-x86_64.tar.gz
 
 | Компонент | Hosts | Targets |
 |---|---|---|
-| SDK | Linux x86_64, Windows x86_64, macOS x86_64/arm64 | PC, PS1, Saturn |
-| UI client | Linux x86_64, Windows x86_64, macOS x86_64/arm64 | PC/PS1/Saturn build & run |
+| SDK | Linux x86_64, Windows x86_64, macOS arm64 | PC, PS1, Saturn |
+| UI client | Linux x86_64, Windows x86_64, macOS arm64 | PC/PS1/Saturn build & run |
+
+macOS x86_64 собирается из исходников, но не входит в assets v0.2.1.
 
 PS1 требует PSn00bSDK v0.24, Saturn — Jo Engine v2026.2 (pinned в
 `VERSION.txt`); toolchains не входят в SDK-архивы.

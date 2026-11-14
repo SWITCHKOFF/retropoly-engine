@@ -16,12 +16,13 @@
 **не является действующим публичным релизом**. Не ссылаться на него как
 на «релиз SDK» и не публиковать анонс до прохождения нового release gate.
 
-**v0.2.1 (S33–38):** SDK и UI client реализованы, release gate v2 и
-payload `sdk/` + `ui/` собраны. Статус в
+**v0.2.1 (S33–38):** опубликован
+[GitHub Release v0.2.1](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1)
+— готовый SDK + UI client, release gate v2 `all_ok: true`. Статус в
 [`ci/normative_contracts.yaml`](../ci/normative_contracts.yaml):
-`v0_2_1_release_status: gate_pending` — GitHub Release создаётся только
-после зелёного gate на release-коммите. До публикации v0.2.1 ветка/тег
-считаются кандидатом, а не действующим релизом.
+`v0_2_1_release_status: released`; `v0_2_0_release_withdrawn` снят.
+v0.2.1 — первый действующий публичный релиз; v0.2.0 остаётся исторической
+технической меткой.
 
 ## 2. Что считается публичным релизом
 
@@ -202,8 +203,10 @@ withdrawn / SDK+UI pending».
 
 | Компонент | Хосты | Таргеты |
 |---|---|---|
-| SDK | Linux x86_64, Windows x86_64, macOS x86_64/arm64 | PC, PS1, Saturn |
-| UI client | Linux x86_64, Windows x86_64, macOS x86_64/arm64 | host UI; сборка проектов PC/PS1/Saturn |
+| SDK | Linux x86_64, Windows x86_64, macOS arm64 | PC, PS1, Saturn |
+| UI client | Linux x86_64, Windows x86_64, macOS arm64 | host UI; сборка проектов PC/PS1/Saturn |
+
+macOS x86_64 собирается из исходников, но не входит в assets v0.2.1.
 
 Следующий этап — **S33–38** (v0.2.1):
 
@@ -226,12 +229,15 @@ withdrawn / SDK+UI pending».
 - [x] Локальный полный gate 2026-11-14 (`--w1-seconds 60`, `all_ok: true`,
       UI headless smoke, consumer PC/PS1/Saturn)
 - [x] Clean-room consumer PC и clean-room UI E2E на локальных ассетах
-- [ ] Remote CI на release-коммите (`build-pc/ps1/saturn`, `tests`,
-      `sdk-package`, `ui-client`) — success
-- [ ] Тег `v0.2.1` (annotated) и GitHub Release
-- [ ] Проверка скачанных assets (`sha256sum -c checksums.sha256`)
-- [ ] Обновить статус на `v0_2_1_release_status: released`; убрать
-      `v0_2_0_release_withdrawn`
+- [x] Remote CI на release-коммите (`build-pc/ps1/saturn`, `tests`,
+      `sdk-package`, `ui-client`) — success (push/PR run 3e816d1)
+- [x] Release workflow v0.2.1: SDK/UI matrix → gate → publish — success
+      (run 43577691540)
+- [x] Тег `v0.2.1` (annotated) и GitHub Release
+- [x] Проверка скачанных assets (`sha256sum -c checksums.sha256`), отчёты
+      `all_ok: true`, BIOS/ROM отсутствуют
+- [x] Статус `v0_2_1_release_status: released`; `v0_2_0_release_withdrawn`
+      снят
 
-Только после успешного gate v0.2.1 считается первым действующим публичным
-релизом; v0.2.0 остаётся отозванным. N64 (v0.3.0) стартует с S39.
+v0.2.1 — первый действующий публичный релиз; v0.2.0 остаётся отозванным.
+N64 (v0.3.0) стартует с S39.
