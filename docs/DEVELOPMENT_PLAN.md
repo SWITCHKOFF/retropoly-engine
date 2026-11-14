@@ -510,10 +510,11 @@ negative-tests, `create_release_archive.sh` v2, `release.yml`
 release notes. Remote CI `3e816d1` — 12/12 green; release workflow
 43577691540 создал GitHub Release, но он **удалён/отозван** 2026-11-14:
 публикация отложена до ~v0.9.x (`release freeze`), а `release.yml`
-переведён на **draft-only**. Тег `v0.2.1` остаётся технической меткой;
+переведён на **draft-only**. GitHub Release и тег `v0.2.1` удалены/отозваны;
 статус `v0_2_1_release_status: withdrawn`, `v0_2_0_release_withdrawn: true`.
-Перед будущей публикацией — ручная приёмка maintainer + агент; решение
-зафиксировано в [`adr/ADR-013-release-freeze.md`](adr/ADR-013-release-freeze.md).
+Версия 0.2.1 остаётся development-версией. Перед будущей публикацией —
+ручная приёмка maintainer + агент; решение зафиксировано в
+[`adr/ADR-013-release-freeze.md`](adr/ADR-013-release-freeze.md).
 
 **Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
 создаёт проект, импортирует ассет, собирает и запускает target; payload

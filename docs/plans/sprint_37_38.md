@@ -10,10 +10,10 @@
 > `--payload-only`), payload `sdk/`+`ui/`+optional `demos/`,
 > `create_release_archive.sh` v2, reusable SDK/UI workflows и `release.yml`
 > «gate → **draft** only». Remote CI на `3e816d1` — 12/12 green; release
-> workflow 43577691540 создал GitHub Release, но он **удалён/отозван**:
-> публичные релизы заморожены до **~v0.9.x** (`release freeze`). Тег
-> `v0.2.1` — техническая метка; публикация — вручную после совместной
-> приёмки maintainer + агент.
+> workflow 43577691540 создал GitHub Release, но он **удалён/отозван**
+> вместе с тегом `v0.2.1`: публичные релизы заморожены до **~v0.9.x**
+> (`release freeze`). Версия 0.2.1 остаётся development-версией;
+> публикация — вручную после совместной приёмки maintainer + агент.
 
 ## Карточка спринта
 
@@ -25,7 +25,7 @@
 | Цель | Собрать SDK+UI payload и release gate v2; публикация отложена/заморожена |
 | Входные критерии | S33–34 (SDK) и S35–36 (UI) закрыты; v0.2.0 отозван |
 | На критическом пути | Да (release gate v2) |
-| Выходные артефакты | `sdk/` + `ui/` + `checksums.sha256` + `release_contract_report.json` + `payload_verification_report.json`; технический тег `v0.2.1`; публикация — после ~v0.9.x |
+| Выходные артефакты | `sdk/` + `ui/` + `checksums.sha256` + `release_contract_report.json` + `payload_verification_report.json`; тег/релиз v0.2.1 удалены; публикация — после ~v0.9.x |
 | Следующий спринт | v0.3.0 N64 (S39+) — разработка; public release заморожен до ~v0.9.x |
 
 ## PERT-оценка
@@ -68,7 +68,7 @@
 
 **Неделя 76 — публикация (заморожена):**
 
-- [x] [B] Тег `v0.2.1` (annotated) — создан как техническая метка
+- [x] [B] Тег `v0.2.1` (annotated) — создан, затем удалён вместе с Release
 - [ ] [B] GitHub Release — **удалён/отозван**; публикация отложена до ~v0.9.x
 - [x] [B] Проверить скачанные assets: checksums, размеры, отсутствие BIOS/ROM (до отзыва)
 - [x] [B] Обновить README/CHANGELOG/RELEASING статус «withdrawn / release freeze»

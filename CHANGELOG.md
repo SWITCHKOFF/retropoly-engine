@@ -11,10 +11,10 @@
 
 ## [0.2.1] — не опубликовано (release withdrawn; deferred to ~v0.9.x)
 
-> GitHub Release v0.2.1 удалён/отозван 2026-11-14. SDK+UI payload и
-> release gate v2 готовы, но публикация отложена до ~v0.9.x: перед
-> выпуском maintainer тестирует draft совместно с агентом. Тег `v0.2.1`
-> остаётся технической меткой.
+> GitHub Release и тег `v0.2.1` удалены/отозваны 2026-11-14. SDK+UI payload
+> и release gate v2 готовы, но публикация отложена до ~v0.9.x: перед
+> выпуском maintainer тестирует draft совместно с агентом. Версия 0.2.1
+> остаётся development-версией.
 
 ### Added
 
@@ -46,9 +46,9 @@
   UI 47/47; полный gate `all_ok: true` (W1 225 FPS, UI headless smoke);
   clean consumer PC/PS1/Saturn и UI E2E PASS; payload negative-tests
   13/13. Remote CI на `3e816d1` — 12/12 green (push+PR). Release workflow
-  43577691540 создал GitHub Release, но он **удалён/отозван**:
-  публикация отложена до ~v0.9.x, `release.yml` переведён на draft-only;
-  тег `v0.2.1` остаётся технической меткой.
+  43577691540 создал GitHub Release, но он **удалён/отозван** вместе с
+  тегом `v0.2.1`: публикация отложена до ~v0.9.x, `release.yml` переведён
+  на draft-only; версия 0.2.1 остаётся development-версией.
 
 - Спринт 35–36 — UI client MVP: project/target/import/build/run (недели 69–72):
   (1) ADR-012: SDL3 + Dear ImGui v1.93.0 (MIT, pinned в `VERSION.txt`),

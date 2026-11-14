@@ -177,7 +177,7 @@ release:
   # Demo-образы/source-only архив НЕ являются релизом; см. docs/RELEASING.md.
   #
   # RELEASE FREEZE (2026-11-14): публичные релизы приостановлены до ~v0.9.x.
-  # v0.2.1 GitHub Release удалён/отозван; тег остаётся технической меткой.
+  # v0.2.1 GitHub Release и тег удалены/отозваны; версия остаётся development.
   # release.yml создаёт только draft; публикация — вручную после приёмки
   # maintainer'ом совместно с агентом.
   payload_policy: sdk_plus_ui_client

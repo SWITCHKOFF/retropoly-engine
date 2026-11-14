@@ -27,8 +27,8 @@ maintainer вместе с агентом вручную протестируе�
 3. Перед публикацией обязательна ручная приёмка maintainer + агент:
    скачивание draft-assets, checksums, clean unpack, SDK consumer,
    UI New Project → import → Build → Run, PS1/Saturn `.cue`-проверки.
-4. Тег `v0.2.1` остаётся технической меткой; GitHub Release v0.2.1
-   удалён/отозван и не считается публичным релизом.
+4. GitHub Release и тег `v0.2.1` удалены/отозваны; версия 0.2.1
+   остаётся development-версией и не считается публичным релизом.
 5. В `ci/normative_contracts.yaml` фиксируется:
    `release_freeze.active: true`, `until: "~v0.9.x"`,
    `v0_2_1_release_status: withdrawn`, `auto_publish: false`.
