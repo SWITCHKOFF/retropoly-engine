@@ -1,0 +1,128 @@
+# SPDX-License-Identifier: MIT
+# RetroPolyEngine — docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml
+#
+# S31–32 / v0.2.0: hello_triangle на Saturn (VDP1+VDP2, Master+Slave,
+# 6-button pad) — бюджеты и baseline. Числа сравнимы только внутри
+# этого снапшота (Mednafen 1.32.1, BIOS Japanese 1.01, softfb).
+
+schema: saturn-reference-v1
+date: 2026-11-13
+sprint: S31–32
+release: v0.2.0
+
+emulator:
+  name: Mednafen
+  version: 1.32.1
+  build: >-
+    source tarball mednafen-1.32.1.tar.xz, GCC 13.3.0; SDL2 2.30.0;
+    video.driver=softfb; window 906x720
+  bios: "Sega Saturn BIOS (J) 1.01 (local only; not vendored)"
+  settings:
+    ss.bios_sanity: 1
+    ss.region_autodetect: 0
+    ss.region_default: jp
+    ss.correct_aspect: 1
+    ss.h_overscan: 1
+    ss.h_blend: 0
+    ss.cart: none
+    ss.input.port1: gamepad
+    sound: disabled
+  command: >-
+    mednafen -video.driver softfb -sound 0 -video.fs 0 -ss.bios_jp "<bios>"
+    -ss.region_autodetect 0 -ss.region_default jp hello_triangle.cue
+
+build:
+  preset: saturn-release
+  target: hello_triangle_saturn
+  platform: PLATFORM_SATURN
+  dual_cpu: true
+  toolchain: >-
+    Jo Engine v2026.2 (5e99944238030821a48e17a40abefd77e81953c2),
+    sh-none-elf-gcc 8.2.0; JO_FRAMERATE=1, NTSC 320x224
+  artifacts:
+    hello_triangle.elf: 264480
+    hello_triangle.bin: 132392
+    hello_triangle.iso: 837632
+    hello_triangle.cue: 77
+  map:
+    __jo_work_start: "0x060E0000"
+    __jo_work_end: "0x060F63F8"
+    master_stack_top: "0x060FBC00"
+    headroom_bytes: 22536
+  static:
+    text_bytes: 132196
+    data_bytes: 156
+    bss_bytes: 855700
+    jo_work_bytes: 91128
+
+memory:
+  work_ram_total_bytes: 2097152
+  engine_static_bss_bytes: 855700
+  jo_work_bytes: 91128
+  asset_heap_bytes: 954368          # 932 KiB
+  frame_scratch_bytes: 49152        # 48 KiB
+  command_buffer_bytes: 16384       # 16 KiB
+  parallel_work_bytes: 28672        # 28 KiB
+  master_stack_reserve_bytes: 524288
+  vdp1_vram_bytes: 524288
+  vdp1_texture_area_bytes: 451832
+  vdp1_texture_used_bytes: 65280    # TEX0 256x255 CI8
+  vdp1_clut_bytes: 512
+  vdp1_framebuffer_bytes: 524288    # 2 x 256 KiB (A/B)
+  vdp2_vram_bytes: 524288
+  vdp2_nbg1_bitmap_bytes: 262144    # 1024x256 8bpp
+  vdp2_background_palette_bytes: 512
+
+workload:
+  name: hello_triangle
+  screen: 320x224
+  background: TEX1.TEX 256x256 -> NBG1 1024x256, palette 7
+  object: CUBE.MSH + TEX0.TEX (24 vertices, 12 triangles)
+  visible_vdp1_triangles: 6
+  vdp1_overdraw_permille: 40
+  parallel_frame:
+    triangles_master: 16
+    triangles_slave: 16
+    timeout_ms: 20
+    fallback: saturn-single
+  boot_benchmark:
+    triangles_total: 256
+    iterations: 3
+    expected_speedup_pct_min: 15
+
+results:
+  frame_pacing:
+    measured_frames: 360
+    measured_seconds: 6
+    approx_fps: 60
+    vblank_hz: 60
+  input:
+    object: "D-pad: yaw/pitch"
+    camera: "A/B distance, C/X height, Y/Z orbit, Start reset"
+    deterministic_no_input: true
+  golden:
+    screenshot: screenshots/hello_triangle_saturn.png
+    scene_crop: screenshots/hello_triangle_saturn_scene.png
+    scene_crop_sha256: "b51b8847e5061a671cf17fec033e993e6a6daa4388412c2730620259b601ec24"
+  stress_600s:
+    status: PASS
+    command: "timeout 640 mednafen -video.driver softfb ... hello_triangle.cue"
+    exit_code: 124
+    final_frames: 27240
+    approx_fps: 42.6
+    standalone_steady_fps: 60
+    hang_or_tearing: false
+    screenshots:
+      - screenshots/hello_triangle_saturn_stress.png
+      - screenshots/hello_triangle_saturn_stress_mid.png
+    note: >-
+      Процесс дожил до SIGTERM; длинный прогон шёл параллельно с CI/сборками,
+      поэтому средний FPS ниже standalone-замера 60 FPS. Эмуляторный gate,
+      не real-hardware performance.
+
+notes: |-
+  Hello_triangle использует лёгкий Master+Slave workload (16 треугольников
+  на CPU) каждый кадр, поэтому оба SH-2 задействованы, а кадровый бюджет
+  остаётся 60 Гц; saturn-single демонстрирует fallback. VDP1 framebuffer
+  стирается в transparent, фон — NBG1. Числа — emulator validation gate,
+  не real-hardware performance.

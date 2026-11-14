@@ -4,6 +4,330 @@
 
 ## [Unreleased]
 
+### Added
+
+- N64 (v0.3.0, S39–46) — детальные планы: toolchain/libdragon, HAL,
+  RSP/RDP, hello_triangle и draft-релиз; любая публикация релизов
+  отложена до v0.9.x.
+- Спринт 39–40 — N64 bring-up: pinned mips64-elf-gcc 16.2.0 +
+  libdragon `e356bf3` (MIT), `cmake/n64-toolchain.cmake` + пресет
+  `n64-release`, `PLATFORM_N64` в guard «ровно один backend», imported
+  libdragon/libdragonsys, bootable `hello_n64.z64` (VI 320×240 16-bit +
+  RDPQ clear + debug-текст), `.map` + `.sha256`, `n64_hal_tests` 6/6,
+  `scripts/verify_n64_rom.py` (header/ELF/CRC-policy/sha256),
+  `.github/workflows/build-n64.yml` (pinned toolchain, artifacts,
+  negative-checks; эмулятор не запускается), `scripts/run_n64.sh/.bat`,
+  `docs/N64.md`, ADR-014, пины `ci/n64-{toolchain,libdragon,gopher64}`.
+  Ручной gate 60 с — gopher64 1.2.1 (mupen64plus не грузит libdragon
+  IPL3 r5+, mupen64plus-core#1185); PC regression 295/295. Remote CI —
+  после push; релизы по-прежнему draft-only до v0.9.x.
+- Спринт 41–42 — N64 HAL: VI 320×240 16-bit NTSC + идемпотентный
+  lifecycle, ровно один `joypad_poll`/кадр с полным маппингом
+  A/B/Z/Start/D-pad/C/L/R и deadzone, монотонное время, read-only DFS
+  (`mkdfs` + `n64tool --align 16`) с `CUBE.MSH`/`TEX0.TEX` и safe
+  `.mesh`/`.tex` загрузкой, memory ledger 4 MiB (engine arenas 2 MiB,
+  stack 64 KiB, framebuffers 300 KiB, reserve 1 724 416 B), запрет heap
+  (`scripts/verify_n64_no_heap.py`), render skeleton (Begin/Clear/End) +
+  bounded RDP command arena 128 KiB, `n64_hal_tests` 46/46 (+ASan),
+  PC regression 335/335, `build-n64.yml` DFS/heap checks, 60-с gate и
+  10-минутный stress в gopher64 1.2.1, `docs/N64.md`, ADR-014 revision 2,
+  скриншот `screenshots/n64_boot_s41_42.png`. Remote CI на `4882e1d` —
+  green: `build-n64` (push/PR), `tests`, `build-pc/ps1/saturn`,
+  `sdk-package`, `ui-client`.
+
+## [0.2.1] — не опубликовано (release withdrawn; deferred to v0.9.x)
+
+> GitHub Release и тег `v0.2.1` удалены/отозваны 2026-11-14. SDK+UI payload
+> и release gate v2 готовы, но любая публикация релизов отложена до v0.9.x:
+> перед выпуском maintainer тестирует draft совместно с агентом. Версия 0.2.1
+> остаётся development-версией.
+
+### Added
+
+- Спринт 37–38 — release gate v2 и публикация SDK+UI (недели 73–76):
+  (1) `scripts/release_payload.py` — единые правила layout
+  `dist/retro-engine-v<ver>/`: обязательные `sdk/` + `ui/`, optional
+  `demos/`, полный `checksums.sha256`, `release_contract_report.json`,
+  README/LICENSE/LEGAL; запрет BIOS/ROM/секретов/build-каталогов и
+  demo-образов вне `demos/`.
+  (2) `scripts/build_release_bundle.py` — сборка payload из SDK/UI-архивов
+  и отчёта gate, детерминированный `retro-engine-v<ver>.tar.gz` (+ sidecar);
+  без SDK/UI сборка падает, demo не подменяет релиз.
+  (3) `scripts/create_release_archive.sh` v2 — обёртка над bundle builder
+  (legacy demo-only путь удалён).
+  (4) `verify_release_contract.py` — assert `release_payload`, `--payload-only`,
+  `--payload-dir`, `--ui-archive`; проверка sidecar UI-архивов.
+  (5) `scripts/release_gate_negative_tests.py` — 13 negative-кейсов:
+  отсутствие SDK/UI/checksums/report, повреждённые checksums, BIOS/ROM/
+  секреты/build-каталоги, demo вне `demos/`, `all_ok: false`.
+  (6) `ci/normative_contracts.yaml` — `release.payload = sdk+ui`,
+  supported hosts/targets, обязательные checksums, статус v0.2.1.
+  (7) `release.yml` — reusable `sdk-package`/`ui-client` workflows → gate
+  на чистой распаковке (consumer/UI E2E, negative-tests) → публикация
+  только при `all_ok: true`; `docs/RELEASE_NOTES_v0.2.1.md`.
+  (8) `docs/RELEASING.md` (checklist v0.2.1), `docs/SDK.md`,
+  `docs/UI_CLIENT.md`, README — установка из релиза, supported matrix,
+  quickstart SDK+UI; v0.2.0 остаётся отозванным.
+  (9) Локальная приёмка 2026-11-14: `ctest` 289/289, render 305/305,
+  UI 47/47; полный gate `all_ok: true` (W1 225 FPS, UI headless smoke);
+  clean consumer PC/PS1/Saturn и UI E2E PASS; payload negative-tests
+  13/13. Remote CI на `3e816d1` — 12/12 green (push+PR). Release workflow
+  43577691540 создал GitHub Release, но он **удалён/отозван** вместе с
+  тегом `v0.2.1`: любая публикация релизов отложена до v0.9.x,
+  `release.yml` переведён на draft-only; версия 0.2.1 остаётся
+  development-версией.
+
+- Спринт 35–36 — UI client MVP: project/target/import/build/run (недели 69–72):
+  (1) ADR-012: SDL3 + Dear ImGui v1.93.0 (MIT, pinned в `VERSION.txt`),
+  отдельный host-target `retro_engine_ui`, пресеты `ui-debug`/`ui-release`;
+  UI не линкует движок/demo и работает с установленным SDK.
+  (2) `tools/ui_client/core/`: JSON, `.rpeproject` (schema 1) с
+  детерминированной валидацией неизвестных полей/путей/версий, settings и
+  recent projects вне репозитория, SDK discovery по `sdk_manifest.json`,
+  command builder CMake/Ninja, process runner (streaming stdout/stderr,
+  cancel, exit code), asset import через `asset_converter` с проверкой
+  `.mesh`/`.tex`, diagnostics, semver-совместимость, RU/EN i18n.
+  (3) GUI: welcome/recent, project wizard (`hello_triangle`/`empty`),
+  target PC/PS1/Saturn с disabled-состояниями, asset list (вершины/
+  треугольники/размеры/слоты), build/run с логами, версия/ABI/commit,
+  диагностика CMake/Ninja/SDK/эмулятора, темы dark/light, SDL3 file dialogs.
+  (4) `tools/ui_client/tests/` — 47 unit-тестов без GUI; headless smoke
+  `scripts/ui_smoke.py` (xvfb-run: new project → import → build PC → run);
+  clean E2E `scripts/ui_e2e.py` (SDK archive + UI package, checksums,
+  запрет BIOS/ROM/секретов); скриншоты `screenshots/ui_*.png`.
+  (5) `scripts/package_ui.py`: детерминированный `retro-engine-ui-<ver>-
+  <os>-<arch>.{tar.gz,zip}` (+ macOS `.dmg` при `hdiutil`),
+  `ui_manifest.json`/`checksums.sha256`, samples и DejaVuSans (RU/EN).
+  (6) CI `ui-client.yml`: matrix Ubuntu/Windows/macOS (ui-debug тесты,
+  ui-release package, artifacts); Linux — SDK `pc-release` + clean E2E.
+  (7) `ci/normative_contracts.yaml` — секция `ui`; release gate —
+  `ui_archives`/`ui_manifest`; документация `docs/UI_CLIENT.md`, ADR-012,
+  README/BUILDING/TESTING/LEGAL/RELEASING обновлены.
+  (8) Ручной gate: PS1 `.cue` из UI-проекта в DuckStation
+  (`screenshots/ui_gate_ps1.png`), Saturn — в Mednafen 1.32.1
+  (`screenshots/ui_gate_saturn.png`); первый полный зелёный CI push
+  `79ce6f4` (`build-pc/ps1/saturn`, `tests`, `sdk-package`, `ui-client`).
+
+- Спринт 33–34 — SDK packaging: install/export и consumer smoke (недели 65–68):
+  (1) публичный API вынесен в `include/retro_engine/` (umbrella
+  `retro_engine.h`, `core/`, `hal/platform.h`, `assets/`, `game/`),
+  internal-заголовки (`render/*`, `hal/*/*`) в SDK не устанавливаются;
+  ADR-011.
+  (2) CMake install/export: `RetroPolyEngineTargets` с целями
+  `RetroPolyEngine::{retro_engine,hal,log}`, `RetroPolyEngineConfig.cmake` +
+  `ConfigVersion` (build-tree и install-tree), `GNUInstallDirs`,
+  `retro_engine.pc`; PC SDK несёт static SDL3/glad.
+  (3) `scripts/package_sdk.py` + target `sdk_package`: детерминированные
+  архивы `retro-engine-sdk-0.2.1-{pc,ps1,saturn}-<os>-<arch>.{tar.gz,zip}`,
+  `sdk_manifest.json` (version/git commit/platform/ABI/targets/artifacts) и
+  `checksums.sha256`; layout `lib/<platform>/<arch>`, examples, templates,
+  toolchain wrappers, `VERSION.txt`, LEGAL.
+  (4) Consumer smoke `tests/sdk/consumer` + `scripts/sdk_consumer_smoke.py`:
+  `find_package(RetroPolyEngine CONFIG REQUIRED)`, сборка установленных
+  `hello_triangle`/`rotating_cube`, headless `--version`; PS1/Saturn —
+  сборка `hello_triangle_ps1|saturn` из SDK (локально проверено).
+  (5) `ci/normative_contracts.yaml` — секция `sdk`; release gate
+  `verify_release_contract.py` — `sdk_archives`, `sdk_manifest`,
+  `sdk_headers`, `sdk_consumer`; без SDK релиз недействителен.
+  (6) CI `sdk-package.yml`: PC matrix (Linux/Windows/macOS), PS1
+  (PSn00bSDK v0.24), Saturn (Jo Engine v2026.2), clean consumer smoke;
+  документация `docs/SDK.md`, `docs/benchmarks/sdk_sizes.md`, обновления
+  BUILDING/API/README/LEGAL/RELEASING.
+  (7) Версия проекта/SDK — `0.2.1`.
+
+### Changed
+
+- **GitHub Release v0.2.0 отозван.** Payload содержал исходники,
+  `release_contract_report.json` и demo-образы `pc/` + `ps1/` + `saturn/`,
+  но не готовый SDK и не UI-клиент движка. Новый обязательный release gate
+  v2 (SDK: headers/libs/CMake package/toolchain/examples; UI client;
+  checksums) — [`docs/RELEASING.md`](docs/RELEASING.md). Тег `v0.2.0`
+  остаётся технической меткой и не считается действующим публичным релизом.
+
+## [0.2.0] — 2026-11-13
+
+### Added
+
+- Спринт 31–32 — hello_triangle на Saturn и релиз v0.2.0 (недели 61–64):
+  (1) цель `hello_triangle_saturn` + байт-идентичные артефакты
+  `hello_triangle.{elf,bin,iso,cue,map}` (legacy `retro_saturn.*`
+  сохранены); IP.BIN `HELLO TRIANGLE`, `RPE-0002`.
+  (2) 6-button pad: D-pad — yaw/pitch объекта, A/B — дистанция камеры,
+  C/X — высота, Y/Z — орбита, Start — сброс; сцена без ввода
+  детерминирована (golden).
+  (3) Master+Slave работают каждый кадр (16 треугольников на CPU,
+  `parallel_workload_run_frame_n`), кадровый цикл 60 Гц; `saturn-single`
+  — fallback. VDP1+VDP2 композитинг сохранён.
+  (4) Релизный контур: Saturn-секция `ci/normative_contracts.yaml`
+  (toolchain, бюджеты, golden), `verify_release_contract.py` —
+  `saturn_artifacts`/`saturn_map_budget`/`saturn_golden`;
+  `release.yml` собирает Saturn и кладёт `saturn/` в payload;
+  `create_release_archive.sh` обновлён.
+  (5) Бюджеты/метрики: `docs/benchmarks/saturn_hello_triangle_v0_2_0.yaml`
+  (ELF 264 480 B, raw 132 392 B, ISO 837 632 B, `__jo_work_end`
+  0x060F63F8, headroom ≈22 KiB, 60 FPS), скриншоты
+  `screenshots/hello_triangle_saturn*.png`, CHANGELOG [0.2.0].
+  (6) remote CI: build-saturn/build-pc/build-ps1/tests — success.
+
+- Спринт 29–30 — VDP2: NBG1 bitmap background + композитинг (недели 57–60):
+  (1) `src/hal/saturn/vdp2_backend.*` — NBG1 8bpp bitmap 1024×256
+  (256 KiB VDP2 VRAM), палитра 7 (VDP1 CLUT 1..6), тайлинг `TEX1.TEX`
+  256×256 через `jo_vdp2_draw_bitmap_nbg1_8bits_image`, VBlank-коммит
+  fixed 16.16 scroll, диагностика размеров/инициализации; host-тесты.
+  (2) Композитинг: порядок `NBG0 (VDP2 log) → VDP1 → NBG1 → RBG0 → NBG2 →
+  NBG3`; при активном фоне VDP1 framebuffer стирается в transparent
+  (`EWDR=0`), поэтому фон виден сквозь прозрачные пиксели, куб — поверх.
+  Пад ←/→/↑/↓ панорамирует фон в пределах bitmap.
+  (3) `docs/SATURN.md` §13, benchmark
+  `docs/benchmarks/saturn_vdp2_s29_30.yaml`, скриншоты
+  `screenshots/saturn_vdp2_s29_30.png` / `saturn_vdp2_scroll_s29_30.png`.
+  (4) Host `saturn_hal_tests` — 112/112; VDP1 `c=6`, overdraw 40‰;
+  эмуляторный composite gate — Mednafen 1.32.1 (BIOS не вендорится).
+- Спринт 27–28 — VDP1: полигоны и текстуры (недели 53–56):
+  (1) `src/hal/saturn/vdp1_backend.*` — fixed 16.16 проекция view-space →
+  320×224 (crop 8), flat-Gouraud polygon и textured distorted sprite
+  (8bpp CI8 + 256-цветный CLUT), Painter's порядок через pinned Jo Engine
+  pipeline (`__jo_vdp1_add_command`, ключ `count−1−index`, tie-breaker
+  submission ASC), overlay `Render_OverlayText` тем же путём.
+  (2) `vdp1_vram.*` — нормативная карта VDP1 VRAM 512 KiB (jump/command
+  tables/451 832 B texture area/Gouraud/Jo Engine light tables,
+  `static_assert`), first-fit texture allocator с 32-байтовым
+  выравниванием, coalescing и явными overflow/foreign/double-free;
+  `vdp1_texture.*` — реестр CI8-текстур, CLUT 1..7 в CRAM, CPU-копия текстуры в VDP1 VRAM, rollback
+  VRAM+CLUT при ошибке (0 persistent-байт), height 256 → 255 с
+  `height_clamped`; `triangle_to_quad.*` — политика UV-углов (допуск
+  2 текселя), source rect X/8, вырожденный quad, screen-bound/degenerate/
+  unsupported-UV диагностика; ADR-010.
+  (3) `vdp1_command_list.*` — 32-байтовые команды, link/END, capacity 511,
+  переполнение — явный `false` + ERROR. Gouraud: 2×32 таблицы по чётности
+  кадра, дедупликация по 4 цветам, flat-fallback при исчерпании.
+  (4) Golden без 307 KiB RGBA: `rpe_saturn_vdp1_fb_hash(A/B)` — FNV-1a по
+  320×224 словам VDP1 framebuffer; демо рисует текстурированный
+  Gouraud-куб `CUBE.MSH` + `TEX0.TEX` с CD, логирует
+  `[INFO][vdp1] f=… c=… t=… h=…`; overlay `VDP1 S27-28`.
+  (5) Host-тесты `saturn_hal_tests` расширены до **106 кейсов** (VRAM,
+  texture/CLUT/rollback, triangle→quad, command list, render/overlay/
+  fb-hash); PC-debug **283/283** (1 skip); `saturn-release` собирается,
+  `__jo_work_end = 0x060F63F8` (запас ≈22 KiB до master stack).
+  Документация: ADR-010, `docs/SATURN.md` §12, `docs/ASSETS.md` §7,
+  план S27–28. Визуальный gate в Mednafen 1.32.1 — ручной (эмулятор/BIOS
+  не входят в CI); до прогона чек-листа `docs/SATURN.md` §12.5 пункты
+  «эмулятор/gate» открыты.
+- Спринт 25–26 — Параллелизм Master + Slave SH-2 (недели 49–52):
+  (1) `src/hal/saturn/scu_sync.*` — acquire/release доступ к shared-памяти,
+  cache-through alias, purge кэша, FRT-профилирование и bounded wait без
+  бесконечного busy-wait; `src/hal/saturn/slave_worker.*` — SPSC-очередь на
+  8 job'ов, handshake PING (200 мс), dispatch/wait (20 мс), STOP/restart,
+  метрики (submitted/completed, overflows, timeouts, fallback, wait/slave
+  busy), явный `FAILED` и single-CPU fallback. Slave не пишет в
+  VDP1/VDP2/VRAM; `jo_core_wait_for_slave()` не используется (нет таймаута).
+  (2) Dual-CPU build: Jo Engine `slave.c` + `JO_COMPILE_WITH_DUAL_CPU_SUPPORT`;
+  новый shared-регион 28 KiB в Work RAM-L (asset heap уменьшен до 932 KiB,
+  ledger 932+48+16+28 = 1024 KiB, static_assert); терминология Work RAM-H/L
+  исправлена (H=`0x06000000`, L=`0x00200000`, ADR-008 errata).
+  (3) Параллельный workload: clip-space подготовка 256 треугольников
+  (128/CPU) по `CUBE.MSH` с CD, fixed 16.16, `dmulu.l` без делений,
+  8-байтовый `PreparedTriangle`, детерминированный split; single/dual
+  FNV-hash совпадает. Boot benchmark: **23838 µs → 16113 µs (+32%)**,
+  hash match, кадровый wait ≈4007 µs, ~50–60 FPS в Mednafen 1.32.1.
+  (4) Fault injection: `RPE_SATURN_DUAL_CPU=OFF` (single fallback),
+  `RPE_SATURN_FAULT_MODE=hang` (timeout/fallback), `flood` (queue overflow,
+  worker READY); пресеты `saturn-single`/`saturn-hang`/`saturn-flood`;
+  host-тесты `saturn_hal_tests` расширены до 63 кейсов (SCU sync, worker,
+  workload determinism/fallback).
+  (5) Docs/CI: ADR-009 (partitioning, SPSC-протокол, порог ≥15%),
+  `docs/SATURN.md` §11 (карта shared-памяти, метрики, ручной чек-лист),
+  `docs/benchmarks/saturn_reference_environment.yaml`,
+  `docs/BUILDING.md`/`docs/TESTING.md`/`docs/ASSETS.md`/`README.md`,
+  `build-saturn.yml` собирает single/hang/flood варианты. 10-минутный
+  stress (exit 124) без deadlock; hash `af890f` стабилен, середина
+  прогона `f=12300c=12303w=4035h=af890f`; скриншоты
+  `screenshots/saturn_stress_s25_26.png`,
+  `screenshots/saturn_dual_cpu_s25_26.png`,
+  `screenshots/saturn_dual_metrics_s25_26.png`,
+  `screenshots/saturn_single_cpu_s25_26.png`,
+  `screenshots/saturn_fault_hang_s25_26.png`. PC-debug 176/177 (1 skip),
+  PC-release/PS1 не регрессировали.
+
+- Спринт 23–24 — HAL Saturn на Master SH-2 (недели 45–48):
+  (1) `Platform_Init/Shutdown` идемпотентны; C-мост проверяет после
+  `jo_core_init` разрешение 320×224, NTSC `VDP2_TVSTAT` и наличие `0.BIN`,
+  при сбое маскирует SCU-прерывания; `Platform_PumpEvents` опрашивает
+  6-button pad ровно один раз за кадр, active-low raw → `INPUT_PAD_*`
+  (D-pad, A/B/C, X/Y/Z, L/R, Start), disconnect/non-regular → все кнопки
+  отпущены;
+  (2) read-only ISO9660 FS: bare 8.3-имена без `;1`, отказ host-путей/`..`/
+  wildcard'ов, проверка размера, точное чтение секторами 2048 Б через
+  `__jo_fs_read_sectors` (без однобайтового overflow `jo_fs_read_file`),
+  first-fit `AssetHeap` 960 KiB с coalescing/double-free/foreign/OOM
+  diagnostics, frame scratch 48 KiB (`StackAllocator`) и command arena
+  16 KiB (`LinearAllocator`) в WRAM-H, регистрация в MemoryProfiler;
+  (3) render skeleton: VDP2 backdrop/clear golden `(0,0,32)` → `0x9000`,
+  FNV-1a 32 `0xC4AE5DC5`, double-init/platform guard, VDP1 draw/texture/
+  readback честно возвращают `false` + диагностику; command buffer overflow
+  — явный `false`, не silent drop;
+  (4) логгер Saturn → VDP2-строка 27 (`jo_vsnprintf` в C-мосте, без newlib
+  `vsnprintf`/malloc/sbrk в runtime); boot self-test читает
+  `CUBE.MSH`/`TEX0.TEX` с CD, валидирует
+  загрузчиками ядра и освобождает временную арену;
+  (5) `saturn_disc` копирует `CUBE.MSH`, `TRIANGLE.MSH`, `TEXTURE.TEX`,
+  `TEX0..3.TEX` и включает их в ISO; `build-saturn.yml` проверяет наличие и
+  байтовое совпадение; host-тесты `saturn_hal_tests` (40 кейсов, fake
+  C-мост, без BIOS/SH-2) в `tests.yml`;
+  (6) docs: `docs/SATURN.md`, `docs/BUILDING.md`, `docs/ASSETS.md`,
+  `docs/API.md`, `docs/DEVELOPMENT_PLAN.md`, план S23–24. Проверено:
+  `saturn-release` (ELF/raw/ISO/CUE), 5-минутный smoke в Mednafen 1.32.1
+  (Japanese BIOS 1.01) без краша, PC-debug 217/217, PC-release и
+  `ps1-release` собираются.
+- Пост-MVP v0.2.0 (Sega Saturn): детальные планы спринтов 21–32
+  (`docs/plans/sprint_21_22.md` … `sprint_31_32.md`) — toolchain/SDK,
+  HAL Master SH-2, параллелизм Master+Slave, VDP1, VDP2, hello_triangle
+  и релиз v0.2.0; обновлён указатель `docs/plans/README.md` и §13.1
+  `docs/DEVELOPMENT_PLAN.md`.
+- Спринт 21–22 — Saturn research/toolchain/skeleton (недели 41–44):
+  (1) перепроверены reference-факты Saturn по первоисточникам Sega/Hitachi
+  (`docs/SATURN.md`): 2×SH-2 (26.8741 MHz в 320-режиме / 28.6364 MHz в
+  352-режиме — уточнение к «28.6 MHz»), 2 MiB WRAM (1+1), 512 KiB sound
+  RAM, VDP1 512 KiB VRAM + 2×256 KiB FB, VDP2 512 KiB VRAM + 4 KiB CRAM,
+  320×224/320×240, отсутствие Z-буфера, quad-oriented VDP1; отмечено, что
+  «256×256 max texture» — engine policy, а не hardware maximum;
+  (2) ADR-008 (`docs/adr/ADR-008-saturn-backend.md`): compile-time HAL,
+  pinned Jo Engine v2026.2 (`5e99944`) + bundled sh-none-elf-gcc 8.2.0,
+  Mednafen 1.32.1 (BIOS не вендорится), native 320×224 + crop из reference
+  320×240, бюджет памяти, triangle→quad policy, границы v0.2.0;
+  (3) build: `PLATFORM_SATURN`, preset `saturn-release`,
+  `cmake/saturn-toolchain.cmake`, `src/hal/saturn/` (platform/input/render/FS
+  stubs + C-мост к Jo Engine), bootable `retro_saturn.iso`/`.cue` +
+  `IP.BIN`/ELF/raw/map; PC/PS1 цели не изменены; добавлен fallback
+  `tools/saturn_mkiso.py` (pycdlib) для создания ISO в системах без
+  `genisoimage`;
+  (4) CI: `.github/workflows/build-saturn.yml` — pinned commit + sha256
+  bundled toolchain (`ci/joengine-v2026.2.sha256`), configure/build,
+  structural checks, artifact `retro-saturn-disc`; эмулятор не запускается
+  без BIOS;
+  (5) docs: `docs/SATURN.md`, `docs/adr/`, `docs/BUILDING.md` (Saturn +
+  fallback ISO), `docs/LEGAL.md`/`LEGAL.md` (Jo Engine/GCC/newlib/Mednafen),
+  `docs/API.md` (раскладка 6-button pad), `docs/ARCHITECTURE.md`,
+  `VERSION.txt` (пины Jo Engine/Mednafen). Локальная сборка
+  `saturn-release` проходит структурные проверки (ELF entry `0x06004000`,
+  IP.BIN, ISO/CUE, 0.BIN ≈ raw); PC-debug: 177/177 passed, PC-release и
+  `ps1-release` (PSn00bSDK v0.24: PS-EXE 110 592 Б, ISO 533 904 Б)
+  собираются. Ручной 60-секундный smoke в Mednafen 1.32.1 с легальным
+  Japanese BIOS 1.01 пройден: VDP2 backdrop 320×224 виден, краша нет;
+  скриншот `screenshots/saturn_backdrop.png`. CI `build-saturn.yml`
+  зелёный (run 42794098944); `build-pc`, `build-ps1`, `tests` — success.
+
+### Fixed
+
+- Спринт 27–28 — визуальный gate: (1) texture upload использовал
+  относительное смещение как абсолютное (текстура попадала в command
+  table, `SRCA` — в пустую область); теперь `VDP1_TEXTURE_BASE+offset` и
+  `jo_dma_copy`. (2) Gouraud-таблица VDP1 — аддитивные offsets с нейтралью
+  16 (`0x4210`), а не абсолютные RGB555; flat — база первой вершины,
+  textured — белая база. (3) VDP1 erase при VDP2-фоне — transparent.
+  Подтверждено 5-минутным прогоном и детерминированным скриншотом
+  `screenshots/saturn_vdp1_s27_28.png`.
+
 ## [0.1.0] — 2026-11-09
 
 ### Added
@@ -252,4 +576,6 @@
 - Спринт 3–4, Неделя 7 (M1): `src/core/memory/stack_allocator.h` — `push/mark/pop/reset_frame` с overflow-safe проверками, owner/bounds-check marker и выравниванием адреса; тесты `tests/memory/stack_allocator_test.cpp` (nested frames, foreign/future markers, unaligned base); интеграционный сценарий загрузки уровня тремя аллокаторами `tests/memory/allocator_integration_test.cpp` (static-арены 448 KiB/64 KiB, не на CPU-стеке).
 - Спринт 3–4, Неделя 8 (M1): ECS — `src/core/ecs/entity.h` (24-bit index + 8-bit generation, `INVALID_ENTITY=0`), `src/core/ecs/registry.h/.cpp`: 7 MVP-пулов (Position/Rotation/Velocity 1024, MeshRenderer/Collider 256, Camera/PlayerControl 8), dense ComponentPool с swap-back, generation-increment и retirement слота при 255, `Registry::view<...>()` с кэшированием прямых dense-указателей; `sizeof(Registry)=239 648 B` (≤ 256 KiB budget). Тесты `tests/ecs/entity_test.cpp`, `tests/ecs/registry_test.cpp` (stale handle, generation wrap, dense order, 10 000 сущностей) — итого 88 юнит-тестов, 100% pass (pc-debug, pc-release, pc-asan); `ps1-release` ELF собирается.
 
-[0.1.0]: https://github.com/RetroPolyEngine/retro-engine/releases/tag/v0.1.0
+[0.1.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.1.0
+[0.2.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.0
+[0.2.1]: https://github.com/SWITCHKOFF/retropoly-engine/tree/v0.2.1

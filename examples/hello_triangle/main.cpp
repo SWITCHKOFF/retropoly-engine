@@ -32,11 +32,14 @@ int main()
 #include "game/systems/movement_system.h"
 #include "game/systems/render_system.h"
 #include "core/log/log.h"      // Log_Message (репортинг сессии/замера)
-#include "render/renderer.h"   // RENDER_FB_WIDTH/HEIGHT, RENDER_CLEAR_DEFAULT_*
+#include "hal/platform.h"      // RENDER_FB_WIDTH/HEIGHT, RENDER_CLEAR_DEFAULT_*
 #include "core/memory/stack_allocator.h" // StackAllocator (арена кадра)
 
-#include <stdio.h>  // fprintf
+#include <stdio.h>  // fprintf, printf
 #include <stdlib.h> // strtoul
+#include <string.h> // strcmp
+
+#include <retro_engine/version.h>
 
 // ---------------------------------------------------------------------------
 // Static storage: реестр сцены и аллокаторы (§5.4)
@@ -148,6 +151,13 @@ void engine_shutdown(bool mouse_was_grabbed)
 
 int main(int argc, char** argv)
 {
+    // Headless-проверка SDK/consumer smoke: не требует дисплея.
+    if (argc > 1 && strcmp(argv[1], "--version") == 0) {
+        printf("RetroPolyEngine %s (%s) hello_triangle\n", RETRO_ENGINE_VERSION_STRING,
+               RETRO_ENGINE_PLATFORM_NAME);
+        return 0;
+    }
+
     // Режим запуска: N секунд bench либо интерактив.
     uint32_t bench_seconds = 0u;
     if (argc > 1) {

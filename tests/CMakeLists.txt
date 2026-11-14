@@ -45,8 +45,11 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     target_link_libraries(retro_engine_tests PRIVATE retro_engine GTest::gtest_main)
     # Канонические флаги применяются только к коду тестов движка.
     retro_engine_apply_flags(retro_engine_tests)
-    # game/* и examples/* — include от КОРНЯ репозитория (mirrors примеры).
-    target_include_directories(retro_engine_tests PRIVATE "${CMAKE_SOURCE_DIR}")
+    # game/* и examples/* — include от КОРНЯ репозитория (mirrors примеры);
+    # src/ — внутренние заголовки ядра (SDK их не экспортирует).
+    target_include_directories(retro_engine_tests PRIVATE
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/src")
     # Путь к пайплайн-артефактам (assets/build/*) — compile-time, CWD-независимо.
     # PLATFORM_PC — специализация платформы для тестов HAL (tests/ добавляются
     # только при PLATFORM_PC; mirrors retro_engine / retro_engine_log).
@@ -56,6 +59,112 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
 
     include(GoogleTest)
     gtest_discover_tests(retro_engine_tests DISCOVERY_TIMEOUT 60)
+
+    # -----------------------------------------------------------------------
+    # Saturn HAL host-tests (S23–26). Собираются host-компилятором в PC-
+    # пресете с PLATFORM_SATURN=1, но БЕЗ SH-2/Jo Engine: C-мост заменён
+    # fake_saturn_bridge.cpp, а HAL-модули (memory/input/FS/command/render/
+    # scu_sync/slave_worker/parallel_workload) линкуются напрямую.
+    # retro_engine не линкуется, чтобы не дублировать platform-специфичные
+    # HAL-символы.
+    # -----------------------------------------------------------------------
+    add_executable(saturn_hal_tests
+        saturn/fake_saturn_bridge.cpp
+        saturn/saturn_command_buffer_test.cpp
+        saturn/saturn_fs_path_test.cpp
+        saturn/saturn_fs_test.cpp
+        saturn/saturn_input_test.cpp
+        saturn/saturn_log_test.cpp
+        saturn/saturn_memory_test.cpp
+        saturn/saturn_parallel_workload_test.cpp
+        saturn/saturn_render_test.cpp
+        saturn/saturn_scu_sync_test.cpp
+        saturn/saturn_slave_worker_test.cpp
+        saturn/triangle_to_quad_test.cpp
+        saturn/vdp1_command_list_test.cpp
+        saturn/vdp1_texture_test.cpp
+        saturn/vdp1_vram_test.cpp
+        saturn/vdp2_backend_test.cpp
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/platform_saturn.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/filesystem_saturn.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/render_saturn.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_command_buffer.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_fs.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_fs_path.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_input.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_memory.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_parallel_workload.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/saturn_render_utils.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/scu_sync.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/slave_worker.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/triangle_to_quad.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_backend.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp2_backend.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_command_list.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_texture.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/saturn/vdp1_vram.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/log/log.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/math/fixed.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/math/math.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/memory/memory_profiler.cpp"
+        "${CMAKE_SOURCE_DIR}/src/render/renderer.cpp"
+        "${CMAKE_SOURCE_DIR}/src/render/texture.cpp")
+    target_compile_features(saturn_hal_tests PRIVATE cxx_std_14)
+    target_include_directories(saturn_hal_tests PRIVATE
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/src"
+        "${RPE_PUBLIC_INCLUDE_DIR}"
+        "${RPE_PUBLIC_API_INCLUDE_DIR}")
+    target_link_libraries(saturn_hal_tests PRIVATE GTest::gtest_main)
+    target_compile_definitions(saturn_hal_tests PRIVATE
+        PLATFORM_SATURN=1
+        RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    retro_engine_apply_flags(saturn_hal_tests)
+    gtest_discover_tests(saturn_hal_tests DISCOVERY_TIMEOUT 60)
+
+    # -----------------------------------------------------------------------
+    # N64 HAL host-tests (S39–42). Host-компилятор с PLATFORM_N64=1, без
+    # libdragon: C-мост заменён fake_n64_bridge.cpp. Проверяются lifecycle/
+    # idempotence/time, input mapping, DFS/asset loading, memory ledger,
+    # RDP command arena и render skeleton (ADR-014).
+    # -----------------------------------------------------------------------
+    add_executable(n64_hal_tests
+        n64/fake_n64_bridge.cpp
+        n64/n64_hal_test.cpp
+        n64/n64_assets_test.cpp
+        n64/n64_command_buffer_test.cpp
+        n64/n64_fs_test.cpp
+        n64/n64_input_test.cpp
+        n64/n64_log_rate_test.cpp
+        n64/n64_memory_test.cpp
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/platform_n64.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/render_n64.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_assets.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_fs.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_input.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_log_rate.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_memory.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/rdp_command.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/log/log.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/memory/memory_profiler.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/math/fixed.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/math/math.cpp"
+        "${CMAKE_SOURCE_DIR}/src/render/renderer.cpp"
+        "${CMAKE_SOURCE_DIR}/src/render/texture.cpp"
+        "${CMAKE_SOURCE_DIR}/src/assets/mesh_loader.cpp"
+        "${CMAKE_SOURCE_DIR}/src/assets/texture_loader.cpp")
+    target_compile_features(n64_hal_tests PRIVATE cxx_std_14)
+    target_include_directories(n64_hal_tests PRIVATE
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/src"
+        "${RPE_PUBLIC_INCLUDE_DIR}"
+        "${RPE_PUBLIC_API_INCLUDE_DIR}")
+    target_link_libraries(n64_hal_tests PRIVATE GTest::gtest_main)
+    target_compile_definitions(n64_hal_tests PRIVATE
+        PLATFORM_N64=1
+        RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    retro_engine_apply_flags(n64_hal_tests)
+    gtest_discover_tests(n64_hal_tests DISCOVERY_TIMEOUT 60)
 
     # Рендер-интеграционные (W0-golden, неделя 16) — пресет pc-debug-render
     # (BUILD_RENDER_INTEGRATION_TESTS=ON). Требуют дисплей/GL: headless-CI
@@ -71,7 +180,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         )
         target_compile_features(retro_engine_visual_tests PRIVATE cxx_std_14)
         target_include_directories(retro_engine_visual_tests PRIVATE
-            "${CMAKE_SOURCE_DIR}")
+            "${CMAKE_SOURCE_DIR}"
+            "${CMAKE_SOURCE_DIR}/src")
         target_link_libraries(retro_engine_visual_tests PRIVATE
             retro_engine GTest::gtest_main)
         retro_engine_apply_flags(retro_engine_visual_tests)

@@ -22,7 +22,26 @@ Copyright (c) 2026 RetroPolyEngine contributors
 | cgltf | v1.15 | MIT | `src/third_party/cgltf/cgltf.h` |
 | stb | `003501f` | PD/MIT (dual) | `src/third_party/stb/stb_image.h`, `stb_image_write.h` |
 | glad (glad2) | OpenGL 3.3 Core | MIT | `src/third_party/glad/` |
+| Dear ImGui | v1.93.0 (`c1aaac65`) | MIT | `src/third_party/imgui` (UI client, S35–36) |
+| DejaVuSans | 2.37 | Bitstream Vera Fonts license | `tools/ui_client/assets/DejaVuSans.ttf` (UI client) |
 | OpenGL | runtime | от драйвера | загружается glad2 |
+| Jo Engine | v2026.2 (`5e99944`) | MIT | `JO_ENGINE_ROOT` (env-install; `src/hal/saturn/` использует SDK) |
+| sh-none-elf-gcc | GNU GCC 8.2.0 + newlib | GPL-3.0-or-later + GCC Runtime Library Exception; newlib BSD-style | bundled в Jo Engine `Compiler/LINUX` |
+| Mednafen | 1.32.1 | GPL-2.0-or-later | только локальная ручная приёмка; не вендорится и не распространяется |
+
+### Sega Saturn
+
+- **Jo Engine** распространяется под MIT; при сборке `saturn-release`
+  используются его исходники/компилятор, но бинарники Jo Engine в
+  репозиторий не вендорятся.
+- **GCC 8.2.0** — GPL-3.0-or-later с GCC Runtime Library Exception;
+  скомпилированный код движка не становится GPL. **newlib** — BSD-style
+  лицензии (сохранять notices при распространении toolchain).
+- **BIOS Saturn** (`mpr-17933.bin`, `sega_101.bin`) не входит в проект,
+  не вендорится, не публикуется в CI/артефактах; пользователь
+  предоставляет его локально.
+- **Mednafen** (GPL-2.0-or-later) — только dev-инструмент ручной приёмки;
+  в релизные архивы не входит.
 
 ## Правила сохранения notices
 

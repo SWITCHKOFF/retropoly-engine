@@ -1,0 +1,19 @@
+# ============================================================================
+# hello_triangle — standalone SDK example (S33–34).
+# Собирается ТОЛЬКО против установленного SDK: find_package(RetroPolyEngine).
+# ============================================================================
+cmake_minimum_required(VERSION 3.25)
+project(hello_triangle_sdk LANGUAGES CXX)
+
+if(NOT TARGET RetroPolyEngine::retro_engine)
+    find_package(RetroPolyEngine CONFIG REQUIRED)
+endif()
+
+add_executable(hello_triangle main.cpp)
+target_compile_features(hello_triangle PRIVATE cxx_std_14)
+target_link_libraries(hello_triangle PRIVATE RetroPolyEngine::retro_engine)
+target_compile_definitions(hello_triangle PRIVATE
+    PLATFORM_PC=1
+    HT_ASSET_DIR="${CMAKE_CURRENT_SOURCE_DIR}/assets")
+# Пример включает "examples/hello_triangle/scene.h" (стиль SDK-дерева).
+target_include_directories(hello_triangle PRIVATE "${CMAKE_CURRENT_SOURCE_DIR}/../..")

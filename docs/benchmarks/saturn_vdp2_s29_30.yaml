@@ -1,0 +1,120 @@
+# SPDX-License-Identifier: MIT
+# RetroPolyEngine — docs/benchmarks/saturn_vdp2_s29_30.yaml
+#
+# Снапшот S29–30: NBG1 8bpp bitmap background + VDP1 compositing.
+# Числа сравнимы только внутри этого снапшота (Mednafen/BIOS/host).
+#
+# Нормативные документы:
+#   - docs/plans/sprint_29_30.md;
+#   - docs/SATURN.md §13;
+#   - docs/adr/ADR-010-vdp1-polygons.md.
+
+schema: saturn-reference-v1
+date: 2026-11-11
+sprint: S29–30
+
+scope_note: >-
+  Эмулятор запускается вручную; BIOS не вендорится. Числа — Mednafen,
+  не real-hardware performance.
+
+emulator:
+  name: Mednafen
+  version: 1.32.1
+  build: >-
+    source tarball mednafen-1.32.1.tar.xz, собран локально GCC 13.3.0;
+    SDL2 2.30.0 (локальная сборка), video.driver=softfb, window 906x720
+  bios: >-
+    Sega Saturn BIOS (J) 1.01, локальный файл 524288 bytes; BIOS не входит
+    в репозиторий/CI/артефакты
+  settings:
+    ss.bios_jp: "<user-provided sega_101.bin>"
+    ss.bios_sanity: 1
+    ss.region_autodetect: 0
+    ss.region_default: jp
+    ss.correct_aspect: 1
+    ss.h_overscan: 1
+    ss.h_blend: 0
+    ss.cart: none
+    ss.input.port1: gamepad
+    sound: disabled (-sound 0)
+  command: >-
+    mednafen -video.driver softfb -sound 0 -video.fs 0 -ss.bios_jp "<bios>"
+    -ss.region_autodetect 0 -ss.region_default jp
+    build/saturn-release/src/hal/saturn/retro_saturn.cue
+
+build:
+  preset: saturn-release
+  platform: PLATFORM_SATURN
+  dual_cpu: true
+  toolchain: >-
+    Jo Engine v2026.2 (commit 5e99944238030821a48e17a40abefd77e81953c2),
+    bundled sh-none-elf-gcc 8.2.0; JO_COMPILE_WITH_DUAL_CPU_SUPPORT=1
+  git_revision: "develop + локальные изменения S27–30 (2026-11-11)"
+  map: >-
+    см. retro_saturn.map; __jo_work_end < 0x060FBC00 (master stack)
+
+workload:
+  name: NBG1 bitmap background + VDP1 textured Gouraud cube
+  background:
+    source_asset: TEX1.TEX (256×256, CI8 + 256-color CLUT)
+    vdp2_bitmap: 1024×256, 8bpp (256 KiB VDP2 VRAM)
+    tiling: 4× по X (256×256 → 1024×256)
+    palette: 7 (512 B CRAM; VDP1 CLUT — 1..6)
+    priority: "NBG0 text > VDP1 > NBG1 > RBG0 > NBG2 > NBG3"
+    scroll: "fixed 16.16 → px; base (32,16); pad ←/→/↑/↓"
+    vblank: "jo_core_add_vblank_callback → jo_vdp2_move_nbg1"
+  foreground:
+    source_mesh: CUBE.MSH (CD, ISO9660)
+    source_texture: TEX0.TEX
+    triangles_visible: 6 (backface culled)
+    renderer: VDP1 distorted sprite + Gouraud offsets + CI8 CLUT
+    framebuffer_erase: transparent (VDP2 background visible)
+  screen: 320×224 NTSC
+
+results:
+  workload:
+    vdp1_commands: 6
+    vdp1_overdraw_permille: 40
+    vdp1_pixels_estimate: 2867
+    vdp1_texture_count: 1
+    vdp2_scroll_commits_per_frame: 2
+    vdp2_bitmap_bytes: 262144
+    vdp2_palette_bytes: 512
+    observed_fps_approx: "28–30 (S25–26 parallel workload + VDP1 cube; VBlank 60 Hz)"
+  determinism:
+    static_scene: true
+    screenshot_scene_crop_sha256: "776b439a45c1eb0894133967c11f49f190894b905058681cee07dcac651bd0ba"
+    note: >-
+      crop 320×200 кадров f=240 и f=1440 (разные прогоны/сборки S29–30)
+      побайтно совпал; S27–28 crop: df55cda9… (60 s/300 s).
+  screenshots:
+    composite: screenshots/saturn_vdp2_s29_30.png
+    scroll: screenshots/saturn_vdp2_scroll_s29_30.png
+    s27_cube: screenshots/saturn_vdp1_s27_28.png
+  stress_600s:
+    status: PASS
+    command: "timeout 640 mednafen -video.driver softfb ... retro_saturn.cue"
+    exit_code: 124
+    hang_or_tearing: false
+    final_frames: 17760
+    approx_fps: 29.6
+    final_vdp1_commands: 6
+    final_overdraw_permille: 40
+    screenshot: screenshots/saturn_vdp2_stress_s29_30.png
+    note: >-
+      Процесс дожил до SIGTERM; VDP2-фон и куб стабильны, hash/crop
+      детерминирован. Эмуляторный gate, не real-hardware.
+
+host:
+  os: "Linux Mint 22.3 (Ubuntu 24.04 base)"
+  cpu: "Intel Core i5-11300H (4C/8T)"
+  cmake: "3.28.3"
+  ninja: "1.11.1"
+  gcc_host: "13.3.0"
+
+notes: |-
+  VDP1 framebuffer при активном NBG1 стирается в transparent; иначе
+  непрозрачный clear закрывает VDP2. VDP2 bitmap — 256 KiB VRAM (50%
+  VDP2 VRAM), палитра 7; VDP1 CLUT 1..6. VDP1-overlay (Render_OverlayText)
+  в demo не включён: ~156 команд на строку → ~20 FPS; QA-строка идёт
+  через VDP2 log. Числа действительны только для этого снапшота.

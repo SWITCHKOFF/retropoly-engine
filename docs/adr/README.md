@@ -1,0 +1,16 @@
+# Architecture Decision Records (ADR)
+
+ADR-001…ADR-007 зафиксированы в
+[`../RetroEngine_Engineering_Documentation_v1.43.md`](../RetroEngine_Engineering_Documentation_v1.43.md)
+§12 «Критические архитектурные решения». Отдельные файлы появляются для
+решений пост-MVP, которые не должны раздувать нормативный документ.
+
+| ADR | Тема | Статус | Файл |
+|---|---|---|---|
+| 008 | Saturn backend: toolchain, разрешение, память, triangle→quad | Accepted (2026-11-09) | [ADR-008-saturn-backend.md](ADR-008-saturn-backend.md) |
+| 009 | Master+Slave SH-2: partitioning, SPSC-синхронизация, fallback | Accepted (2026-11-10) | [ADR-009-master-slave.md](ADR-009-master-slave.md) |
+| 010 | VDP1: полигоны, texture/CLUT, triangle→quad, Painter's порядок | Accepted (2026-11-10) | [ADR-010-vdp1-polygons.md](ADR-010-vdp1-polygons.md) |
+| 011 | Публичный SDK API: `include/retro_engine/`, install/export, consumer smoke | Accepted (2026-11-13) | [ADR-011-public-sdk-api.md](ADR-011-public-sdk-api.md) |
+| 012 | UI client: SDL3 + Dear ImGui, `.rpeproject`, границы UI/SDK, упаковка | Accepted (2026-11-13) | [ADR-012-ui-client.md](ADR-012-ui-client.md) |
+| 013 | Release freeze: любая публикация релизов отложена до v0.9.x, draft-only workflow и ручная приёмка | Accepted (2026-11-14) | [ADR-013-release-freeze.md](ADR-013-release-freeze.md) |
+| 014 | N64 backend: toolchain/libdragon, `.z64`, ROM header/CRC policy, memory/DFS/input, gopher64, границы v0.3.0 | Accepted, rev2 (2026-11-14) | [ADR-014-n64-backend.md](ADR-014-n64-backend.md) |

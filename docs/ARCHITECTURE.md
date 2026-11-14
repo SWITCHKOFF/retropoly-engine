@@ -21,6 +21,7 @@
 │  src/hal/         Hardware Abstraction Layer  │
 │    pc/            SDL3 + OpenGL 3.3           │
 │    ps1/           PSn00bSDK + GTE + GPU + OT  │
+│    saturn/        Jo Engine + VDP (v0.2.0)    │
 ├─────────────────────────────────────────────┤
 │  src/core/        математика, память, ECS, log│
 └─────────────────────────────────────────────┘
@@ -28,8 +29,9 @@
 
 Правила зависимостей:
 
-- `examples/` и `game/` ссылаются только на `src/core/*`, `src/assets/*`,
-  `src/render/*` и `src/hal/platform.h`. Прямых вызовов SDL3/OpenGL/PSn00bSDK
+- `examples/` и `include/retro_engine/game/` ссылаются только на публичные
+  заголовки `include/retro_engine/{core,assets,hal}`; `src/render/*` —
+  внутренний слой, примеры его не используют. Прямых вызовов SDL3/OpenGL/PSn00bSDK
   в прикладном коде нет.
 - `src/render/` и `src/assets/` не знают о бэкенде: они используют
   `hal/render_backend.h` и `hal/platform.h`.
@@ -41,18 +43,25 @@
 Вместо runtime virtual dispatch в горячих путях используется **compile-time
 backend selection** через CMake:
 
-- Ровно один из `PLATFORM_PC` / `PLATFORM_PS1` включён (guard в корневом
-  `CMakeLists.txt`).
-- `src/CMakeLists.txt` подключает либо `src/hal/pc/`, либо `src/hal/ps1/`.
-- Единый публичный заголовок [`src/hal/platform.h`](../src/hal/platform.h)
-  объявляет весь наружный API; реализации — в `.cpp` бэкенда.
+- Ровно один из `PLATFORM_PC` / `PLATFORM_PS1` / `PLATFORM_SATURN` включён
+  (guard в корневом `CMakeLists.txt`).
+- `src/CMakeLists.txt` подключает `src/hal/pc/`, `src/hal/ps1/` или
+  `src/hal/saturn/` (v0.2.0; ADR-008).
+- Единый публичный заголовок [`include/retro_engine/hal/platform.h`](../include/retro_engine/hal/platform.h)
+  объявляет весь наружный API; реализации — в `.cpp` бэкенда. Saturn не
+  протаскивает SH-2/Jo Engine в публичный заголовок: контакт с SDK
+  изолирован в `src/hal/saturn/jo_saturn_bridge.c`.
+- Saturn S25–26: Master + Slave SH-2 взаимодействуют через внутренние
+  `scu_sync`/`slave_worker` (SPSC-очередь, cache-through shared Work RAM-L).
+  Slave выполняет только compute-job'ы и не трогает VDP/VRAM/периферию;
+  отказ Slave → single-CPU fallback (ADR-009).
 
 Это исключает виртуальные вызовы в кадре и даёт компилятору полную
 видимость для inline/оптимизаций.
 
 ## 3. Слой Core
 
-### 3.1 Fixed-point математика (`src/core/math/`)
+### 3.1 Fixed-point математика (`include/retro_engine/core/math/`)
 
 - `fixed_t` = `int32_t`, формат Q16.16.
 - saturating add/sub/mul/div; `fixed_div(0)` — детерминированный контракт.
@@ -70,7 +79,7 @@ backend selection** через CMake:
 В runtime запрещены `new`/`delete`/`malloc`/`free`; все аллокации — через
 ядро.
 
-### 3.3 ECS (`src/core/ecs/`)
+### 3.3 ECS (`include/retro_engine/core/ecs/`)
 
 - `Entity` — 24-bit index + 8-bit generation; `INVALID_ENTITY = 0`.
 - `Registry` — 7 MVP-пулов с фиксированными ёмкостями (Position/Rotation/
@@ -103,7 +112,12 @@ TRANSFORM → CLIP → CULL → SORT → PACK → SUBMIT
 
 ### 4.2 Контракты рендера
 
-- Reference resolution: 320×240 (PC и PS1).
+- Reference resolution: 320×240 (PC и PS1). Saturn v0.2.0 отображает
+  центральные 224 строки (native 320×224, policy crop; ADR-008 §4).
+  `hello_triangle` (S31–32) совмещает VDP1-полигоны/текстуры с VDP2 NBG1
+  bitmap-фоном; VDP1 framebuffer стирается в transparent, scroll VDP2
+  коммитится в VBlank, Master+Slave получают лёгкий workload каждый кадр
+  (60 Гц).
 - Цвет: RGB555+STP для текстур, Gouraud-интерполяция вершинного цвета.
 - Depth: `depth_key_from_camera_z` без modulo-aliasing; `DEPTH_REJECT`
   за пределами `[depth_min..depth_max]`.
@@ -147,10 +161,10 @@ glTF/PNG (source) ──asset_converter──▶ .mesh/.tex v1 ──▶ заг�
 - CD-ROM ФС: `CdSearchFile` → `CdRead`/`CdReadSync`.
 - Двойной framebuffer 320×240 16bpp.
 
-## 7. Слой игры (`game/`)
+## 7. Слой игры (`include/retro_engine/game/`)
 
 - `components.h` — единая точка включения компонентов.
-- `game/systems/` — header-only системы: Camera, Input, Movement, Render,
+- `include/retro_engine/game/systems/` — header-only системы: Camera, Input, Movement, Render,
   Collision, Rotation, Lighting.
 - Примеры `examples/hello_triangle/` и `examples/rotating_cube/` показывают
   полный цикл: инициализация → загрузка ассетов → ECS-сцена → кадр.
@@ -165,3 +179,23 @@ ctest --preset pc-debug --output-on-failure
 ```
 
 Подробнее — [`BUILDING.md`](BUILDING.md) и [`TESTING.md`](TESTING.md).
+
+## 9. UI client (`tools/ui_client/`)
+
+UI client — отдельный host-процесс (SDL3 + Dear ImGui), не входящий в
+runtime движка. Он не линкует `retro_engine`/примеры, а работает с
+установленным SDK:
+
+```
+tools/ui_client/
+  core/   # без GUI: JSON, .rpeproject, settings, SDK discovery,
+          # command builder, process runner, asset import, diagnostics, i18n
+  gui/    # SDL3 + Dear ImGui: welcome/project/wizard/settings, tabs, log
+  tests/  # unit-тесты core (не требуют дисплея)
+```
+
+Поток: `.rpeproject` (schema 1) → SDK `sdk_manifest.json` → CMake/Ninja
+configure+build → target/эмулятор. Ассеты конвертируются внешним
+`asset_converter`; процессы запускаются без shell, со streaming
+stdout/stderr и отменой. Архитектурное решение — ADR-012; руководство —
+[`UI_CLIENT.md`](UI_CLIENT.md).

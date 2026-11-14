@@ -27,7 +27,7 @@ die() {
 }
 
 # --- 1) Submodules: pin по commit из VERSION.txt -----------------------------
-for _s in sdl3 googletest psn00bsdk; do
+for _s in sdl3 googletest psn00bsdk imgui; do
     _expected=$(field "$_s" commit)
     [ -n "$_expected" ] || die "нет 'commit' в секции [$_s] VERSION.txt"
     _actual=$(git -C "src/third_party/$_s" rev-parse HEAD 2>/dev/null) \
@@ -57,5 +57,20 @@ check_file stb    path_image_write sha256_image_write
 check_file glad   path_gl_h        sha256_gl_h
 check_file glad   path_gl_c        sha256_gl_c
 check_file glad   path_khrplatform_h sha256_khrplatform_h
+
+# --- 3) N64 env-install пины: VERSION.txt ↔ ci/ манифесты (ADR-014) ---------
+check_pin_string() {
+    _section="$1"; _key="$2"; _file="$3"
+    _expected=$(field "$_section" "$_key")
+    [ -n "$_expected" ] || die "[$_section]: нет '$_key' в VERSION.txt"
+    [ -f "$_file" ] || die "$_file: манифест отсутствует"
+    grep -q "$_expected" "$_file" \
+        || die "$_file: pin не совпадает с VERSION.txt [$_section] $_key=$_expected"
+    printf 'verify_vendored: OK  %s  %s\n' "$_file" "$_key"
+}
+
+check_pin_string libdragon commit ci/n64-libdragon.commit
+check_pin_string n64-toolchain-linux sha256 ci/n64-toolchain.sha256
+check_pin_string gopher64 sha256 ci/n64-gopher64.sha256
 
 printf 'verify_vendored: все пины и хэши совпадают с VERSION.txt\n'

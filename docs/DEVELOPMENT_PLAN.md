@@ -1,8 +1,12 @@
 # RetroPolyEngine — Детальный план разработки (Development Plan)
 
 > **Источник:** `RetroEngine_Engineering_Documentation_v1.43.md` (каноническая инженерная спецификация MVP, дата 2026-09-07).
+> **Релизная политика:** публичный релиз = готовый **SDK + UI client**;
+> demo-образы и source-only архив релизом не считаются. v0.2.0 GitHub
+> Release отозван; см. [`RELEASING.md`](RELEASING.md).
+>
 > **Статус:** операционный план работ. Детальные чек-боксы спринтов разложены на атомарные действия в `plans/sprint_NN.md` (указатель — §2.5); этот файл содержит своды, вехи, PERT-оценки, сквозные треки и нормативные приложения.
-> **Скоуп:** MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) + Sony PlayStation 1 (PSn00bSDK v0.24, target `mipsel-none-elf`).
+> **Скоуп:** MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) + Sony PlayStation 1 (PSn00bSDK v0.24, target `mipsel-none-elf`); §13 — пост-MVP roadmap (v0.2.0+), включая детальные планы Saturn S21–32, SDK+UI S33–38 и N64 S39–46.
 > **Сроки:** 20 спринтов × 2 недели = 40 недель (~10 месяцев) при 10–15 ч/нед. Recovery/buffer-недели учитываются отдельно и не входят в 40 недель. Ориентир календаря: старт Спринта 0 — 02.11.2026, релиз — 15.08.2027 (см. §2.3).
 
 ---
@@ -16,7 +20,7 @@
    - Каждые 2 спринта — «работающий результат» (демо/артефакт, который можно показать).
 3. Scope reduction: если спринт затягивается — отсекать фичи, а не двигать границу MVP.
 4. Ветвление git: `develop` — основная, `feature/*`, `fix/*`, `release/*`, `hotfix/*`. Merge в `develop` через squash-PR; релизы — merge в `main` + тег `v*`.
-5. Все сборки — только через канонические пресеты: `pc-debug`, `pc-release`, `pc-debug-render`, `ps1-release` (+ опциональные `pc-asan`, `pc-bench`, `pc-coverage`). Никаких ручных `cmake -B` с нестандартными путями.
+5. Все сборки — только через канонические пресеты: `pc-debug`, `pc-release`, `pc-debug-render`, `ui-debug`, `ui-release`, `ps1-release` (+ опциональные `pc-asan`, `pc-bench`, `pc-coverage`). Никаких ручных `cmake -B` с нестандартными путями.
 6. Изменение любого нормативного значения (бюджеты, форматы, пресеты) = обновление `ci/normative_contracts.yaml` + соответствующего ADR/теста **в одном изменении**.
 7. Структура файлов: детальные чек-боксы спринтов живут в `plans/sprint_NN.md` (указатель — §2.5, сводка — `plans/README.md`); чек-боксы обновляются только там. Этот файл — вехи, критический путь, PERT-сводка, треки и нормативные приложения; при расхождении файл спринта первичен для задач, этот — для контрактов.
 
@@ -174,6 +178,14 @@ gantt
 | [sprint_15_16.md](plans/sprint_15_16.md) | 15–16 | 29–32 | M6 | hello_triangle на PS1: CD-ассеты, бюджеты RAM/VRAM/EXE |
 | [sprint_17_18.md](plans/sprint_17_18.md) | 17–18 | 33–36 | M7 | rotating_cube: W1-сцена, коллизии, Gouraud, overlay |
 | [sprint_19_20.md](plans/sprint_19_20.md) | 19–20 | 37–40 | M8 | Документация, release gate, GitHub Release, анонс |
+| [sprint_39_40.md](plans/sprint_39_40.md) | 39–40 | 77–80 | v0.3.0 | N64: исследование, toolchain/libdragon, backend skeleton, CI |
+| [sprint_41_42.md](plans/sprint_41_42.md) | 41–42 | 81–84 | v0.3.0 | HAL N64: VI, input, ROM/DFS, память |
+| [sprint_43_44.md](plans/sprint_43_44.md) | 43–44 | 85–88 | v0.3.0 | RSP-микрокод, RDP, аппаратный Z-буфер, текстуры/TMEM |
+| [sprint_45_46.md](plans/sprint_45_46.md) | 45–46 | 89–92 | v0.3.0 | hello_triangle/rotating_cube, бюджеты, SDK/UI, draft v0.3.0 |
+
+Пост-MVP v0.2.0 (Sega Saturn): детальные планы S21–32 — §13.1.
+v0.2.1 (SDK + UI client): детальные планы S33–38 — §13.2.
+v0.3.0 (Nintendo 64): детальные планы S39–46 — §13.3.
 
 ---
 
@@ -236,8 +248,12 @@ gantt
 | `build-pc.yml` | Спринт 5–6 | Матрица ubuntu/windows/macos, pc-release, ctest |
 | `regression.yml` | Спринт 7–8 | pc-debug unit + `pc-debug-render` под `xvfb-run` (renderer integration) |
 | `build-ps1.yml` | Спринт 13–14 | Pinned PSn00bSDK v0.24 + sha256; ps1-release; upload artifacts |
+| `build-saturn.yml` | Спринт 21–22 | Pinned Jo Engine v2026.2 + sha256; saturn-release; bootable ISO/CUE artifacts |
+| `build-n64.yml` | Спринт 39–42 | Pinned libdragon/toolchain + sha256; n64-release; `.z64` + DFS + map + sha256; проверка heap; эмулятор в CI не запускается |
 | `coverage.yml` | Спринт 15–16 | pc-coverage → lcov → Codecov (порог core/ > 70%) |
-| `release.yml` | Спринт 19–20 | Тег v*: PC+PS1 артефакты + валидация + GitHub Release (готов) |
+| `release.yml` | Спринт 37–38 | Тег v*: reusable SDK/UI workflows → gate v2 (consumer/UI E2E, negative-tests) → **draft** GitHub Release только при `all_ok: true`; public publish — вручную |
+| `sdk-package.yml` | Спринт 33–34 | SDK-архивы PC/PS1/Saturn + clean consumer smoke (готов); N64-пакет — S45–46 |
+| `ui-client.yml` | Спринт 35–36 | UI matrix: core-тесты, ui-release package, Linux clean E2E |
 | `docs.yml` | Спринт 19–20 | Doxygen → GitHub Pages (по тегу) (готов) |
 | `issue-triage.yml` | Спринт 19–20 | Автолейбл «needs-info» без шаблона (готов) |
 | `stale.yml` | После релиза | 30 дней stale → 7 дней close (готов) |
@@ -259,6 +275,7 @@ gantt
 - Спринт 11–12: README examples (hello_triangle)
 - Спринт 17–18: README rotating_cube
 - Спринт 19–20: README, ARCHITECTURE, BUILDING, API, LEGAL, CONTRIBUTING, CODE_OF_CONDUCT, TESTING, TROUBLESHOOTING, CHANGELOG v0.1.0, Doxyfile + GitHub Pages (готово)
+- Спринт 39–46: N64.md, BUILDING § N64, README supported matrix, ADR-014/015, release notes v0.3.0
 - Пост-релиз (первые 1–3 мес): туториалы `docs/tutorials/01..10` (getting started, hello triangle, blender export, textures, building for PS1, ECS basics, custom components, custom systems, optimization, debugging)
 
 ---
@@ -349,9 +366,21 @@ gantt
 
 ---
 
-## 11. Релиз v0.1.0 — финальный чек-лист (гейт)
+## 11. Релиз — финальный чек-лист (гейт)
+
+> **Политика с v0.2.0:** публичный релиз обязан содержать готовый **SDK**
+> (headers/libs/CMake package/toolchain/examples) и **UI-клиент** движка;
+> demo-образы и source-only архив — не релиз. Публикация v0.2.0 отозвана
+> как несоответствующая. Детали и payload — [`RELEASING.md`](RELEASING.md).
+>
+> **Release freeze:** любая публикация релизов проекта — v0.2.x, v0.3.0,
+> v0.4.0 и всех последующих — отложена до **v0.9.x**. До этого допускаются
+> только draft-релизы, CI-артефакты и локальные сборки; публичного
+> GitHub Release быть не должно.
 
 Каждый пункт обязателен:
+- [ ] 0a. SDK-архив: публичные заголовки, библиотеки, `find_package(RetroPolyEngine)`, toolchain, примеры, лицензии, checksums
+- [ ] 0b. UI client: editor/launcher (project/target/import/build), пакет под поддерживаемые ОС
 - [ ] 1. PC Release сборки зелёные на Windows/Linux/macOS CI
 - [ ] 2. PS1 Release сборка зелёная с pinned PSn00bSDK v0.24 (+sha256)
 - [ ] 3. Unit-тесты зелёные; sanitizer-прогоны без findings (поддерживаемые host-конфигурации)
@@ -400,14 +429,169 @@ gantt
 
 ## 13. Post-MVP roadmap (после v0.1.0 — справочно)
 
-- **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn.
-- **v0.3.0 — N64 (6–8 спринтов):** микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, libdragon.
+- **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn. Детальные планы S21–32 — §13.1. GitHub Release отозван (demo-only payload).
+- **v0.2.1 — SDK + UI client (3 пары спринтов, S33–38):** install/export CMake package, SDK-архивы PC/PS1/Saturn, consumer smoke; UI client (project/target/import/build/run); release gate v2 и payload `sdk/`+`ui/` готовы, но публикация **отозвана/отложена до v0.9.x** (release freeze, ручная приёмка). Детальные планы — §13.2.
+- **v0.3.0 — N64 (8 спринтов, S39–46):** libdragon/toolchain, HAL N64, микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, hello_triangle/rotating_cube, N64 SDK/UI. Детальные планы — §13.3.
 - **v0.4.0 — Jaguar (4–6 спринтов):** blitter-программирование (Tom), Jerry-DSP; 68000 host.
 - **v0.5.0 — 3DO (4–6 спринтов):** CEL/MADAM-композитинг; отдельная юридическая проверка SDK перед любым vendoring/перераспределением.
 - **v0.6.0–v0.8.0 — Аудио и ФС:** XA/PCM/ADPCM (SPU/SCSP/AI), расширенный ISO9660/CDFS, memory card save.
 - Перед любой Tier-2/3 реализацией: повторная сверка hardware-спецификаций против первоисточников (данные будущих платформ — reference material).
 
+### 13.1. v0.2.0 — Sega Saturn: детальные планы спринтов
+
+Источник разбиения — §4 «Будущие итерации» инженерной документации (Saturn: S21–32). Даты ориентировочные, recovery-недели в них не входят.
+
+| Файл | Спринты | Недели | Даты | Тема | PERT E |
+|---|---|---|---|---|---|
+| [plans/sprint_21_22.md](plans/sprint_21_22.md) | 21–22 | 41–44 | 16.08–12.09.2027 | Изучение Saturn, toolchain, skeleton, CI | 51.7 ч |
+| [plans/sprint_23_24.md](plans/sprint_23_24.md) | 23–24 | 45–48 | 13.09–10.10.2027 | HAL Saturn на Master SH-2 | 55.8 ч |
+| [plans/sprint_25_26.md](plans/sprint_25_26.md) | 25–26 | 49–52 | 11.10–07.11.2027 | Параллелизм Master + Slave SH-2 | 57.5 ч |
+| [plans/sprint_27_28.md](plans/sprint_27_28.md) | 27–28 | 53–56 | 08.11–05.12.2027 | VDP1: полигоны, текстуры, triangle→quad | 61.7 ч |
+| [plans/sprint_29_30.md](plans/sprint_29_30.md) | 29–30 | 57–60 | 06.12.2027–02.01.2028 | VDP2: фоны, композитинг, синхронизация | 55.8 ч |
+| [plans/sprint_31_32.md](plans/sprint_31_32.md) | 31–32 | 61–64 | 03.01–30.01.2028 | Hello Triangle на Saturn + релиз v0.2.0 | 52.5 ч |
+
+> Статус S21–28 (2026-11-10): S21–22 (toolchain/preset/HAL skeleton/CI/docs)
+> закрыт, ADR-008 — [`adr/ADR-008-saturn-backend.md`](adr/ADR-008-saturn-backend.md).
+> S23–24 — HAL Master SH-2: идемпотентный lifecycle/rollback, 6-button pad,
+> read-only ISO9660 FS (asset heap 932 KiB + frame/command/parallel арены),
+> VDP2 clear/log и CD-asset boot self-test. S25–26 — Master + Slave SH-2:
+> `scu_sync`/`slave_worker`, SPSC-очередь 8, bounded wait, single-CPU
+> fallback, fault injection, clip-space workload 256 треугольников;
+> ADR-009 — [`adr/ADR-009-master-slave.md`](adr/ADR-009-master-slave.md).
+> host-тесты `saturn_hal_tests` (63) в `tests.yml`; `build-saturn.yml`
+> проверяет `.mesh`/`.tex` в ISO и собирает `saturn-single/hang/flood`.
+> 5-минутный smoke S23–24 и 10-минутный stress S25–26 в Mednafen 1.32.1 с
+> легальным Japanese BIOS 1.01 пройдены; скриншоты
+> `screenshots/saturn_clear_s23_24.png`, `screenshots/saturn_dual_cpu_s25_26.png`.
+> S27–28 — VDP1 backend: flat/textured Gouraud (CI8+CLUT 1..6; 7 — VDP2),
+> triangle→quad, first-fit VRAM 451 832 B, Painter's порядок без Z-буфера,
+> fb-hash golden; ADR-010 —
+> [`adr/ADR-010-vdp1-polygons.md`](adr/ADR-010-vdp1-polygons.md);
+> host `saturn_hal_tests` — 112/112. Visual gate S27–28 выполнен в
+> Mednafen 1.32.1 (Japanese BIOS 1.01): текстурированный Gouraud-куб,
+> 5-минутный stress PASS, `screenshots/saturn_vdp1_s27_28.png`.
+> S29–30 — VDP2 NBG1 bitmap 1024×256 (256 KiB, палитра 7), тайлинг
+> `TEX1.TEX`, VDP1 поверх VDP2 (transparent erase), VBlank scroll;
+> `screenshots/saturn_vdp2_s29_30.png`; baseline
+> `benchmarks/saturn_vdp2_s29_30.yaml`. S31–32 — hello_triangle
+> (`hello_triangle.*`, 60 Гц, Master+Slave 16/16, VDP1+VDP2), Saturn-
+> секция `ci/normative_contracts.yaml`, `release.yml` payload `saturn/`;
+> бюджеты — `benchmarks/saturn_hello_triangle_v0_2_0.yaml`.
+
+Σ E ≈ 335 ч. При 10–15 ч/нед 24 недели дают 240–360 ч: план сходится только у верхней границы темпа; 95%-сценарий (≈ 425 ч) требует recovery-недель или scope reduction.
+
+Гейт v0.2.0 (**release gate v2**): Saturn-бинарник собирается pinned
+toolchain, hello_triangle работает в pinned-эмуляторе, Master + Slave SH-2
+задействованы, VDP1 + VDP2 синхронизированы; **дополнительно** обязательны
+готовый SDK (headers/libs/CMake package/toolchain/examples) и UI-клиент
+([`RELEASING.md`](RELEASING.md)). Demo-тег v0.2.0 без SDK+UI релизом не
+считается. Перед стартом S21–22 обязательна повторная сверка
+reference-фактов Saturn по первоисточникам (§2.2 инженерной документации).
+
 ---
+
+### 13.2. v0.2.1 — SDK + UI client: детальные планы спринтов
+
+Следующий этап после Saturn; обусловлен политикой
+[`RELEASING.md`](RELEASING.md): публичный релиз = SDK + UI client, а не
+demo-архив. Нумерация S33–38 продолжает план; фактические даты — от
+16.11.2026 (S31–32 выполнены досрочно).
+
+| Файл | Спринты | Недели | Даты | Тема | PERT E |
+|---|---|---|---|---|---|
+| [plans/sprint_33_34.md](plans/sprint_33_34.md) | 33–34 | 65–68 | 16.11–13.12.2026 | SDK: public API, install/export, CMake package, consumer smoke | 55.8 ч |
+| [plans/sprint_35_36.md](plans/sprint_35_36.md) | 35–36 | 69–72 | 14.12.2026–10.01.2027 | UI client MVP: project/target/import/build/run | 60.8 ч |
+| [plans/sprint_37_38.md](plans/sprint_37_38.md) | 37–38 | 73–76 | 11.01–07.02.2027 | Release gate v2, SDK+UI payload, v0.2.1 | 50.0 ч |
+
+Σ E ≈ 166.6 ч. При 10–15 ч/нед 24 недели (S33–38 = 12 недель) дают
+120–180 ч: план сходится у верхней границы; 95%-сценарий (≈ 206.6 ч)
+требует recovery-недели или scope reduction.
+
+**Статус (2026-11-14):** S33–34 закрыты: публичный API `include/retro_engine/`,
+CMake install/export, `find_package` из build/install tree, SDK-архивы
+PC/PS1/Saturn, `sdk_manifest.json`/checksums, consumer smoke и
+[`SDK.md`](SDK.md); release gate получил SDK-asserts. S35–36 (UI client MVP)
+реализован: `tools/ui_client/` (SDL3 + Dear ImGui), `.rpeproject`,
+target/import/build/run, 47 core-тестов, headless smoke и clean E2E PC,
+package/checksums, [`UI_CLIENT.md`](UI_CLIENT.md), ADR-012; release gate
+получил `ui_archives`/`ui_manifest`. Ручной PS1/Saturn gate пройден
+(DuckStation/Mednafen, `.cue` из UI-проекта), первый полный зелёный CI
+push `79ce6f4`. S37–38 (release gate v2) реализован: `release_payload` +
+`build_release_bundle.py`, payload `sdk/`+`ui/`+optional `demos/`,
+negative-tests, `create_release_archive.sh` v2, `release.yml`
+(reusable SDK/UI workflows → gate → publish), RELEASING checklist и
+release notes. Remote CI `3e816d1` — 12/12 green; release workflow
+43577691540 создал GitHub Release, но он **удалён/отозван** 2026-11-14:
+любая публикация релизов отложена до v0.9.x (`release freeze`), а
+`release.yml` переведён на **draft-only**. GitHub Release и тег `v0.2.1`
+удалены/отозваны; статус `v0_2_1_release_status: withdrawn`,
+`v0_2_0_release_withdrawn: true`. Версия 0.2.1 остаётся development-версией.
+Публикация — не ранее v0.9.x, после ручной приёмки maintainer + агент;
+решение зафиксировано в
+[`adr/ADR-013-release-freeze.md`](adr/ADR-013-release-freeze.md).
+
+**Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
+создаёт проект, импортирует ассет, собирает и запускает target; payload
+содержит `sdk/` + `ui/` + `checksums.sha256`; `verify_release_contract.py`
+`all_ok: true`; negative-tests падают без SDK/UI/checksums и при
+BIOS/ROM/build-каталогах в payload; v0.2.0 остаётся отозванным. Гейт
+технически пройден, но любая публикация релизов отложена до v0.9.x;
+N64 S39–46 — следующий этап разработки (§13.3).
+
+### 13.3. v0.3.0 — Nintendo 64: детальные планы спринтов
+
+Следующий этап после v0.2.1: N64 backend по §2.3 и §4 инженерной
+документации. Baseline SDK — **libdragon** (MIT); пины toolchain/SDK
+фиксируются ADR-014. Любая публикация релизов отложена до v0.9.x (ADR-013),
+поэтому v0.3.0 готовится как **draft**.
+
+| Файл | Спринты | Недели | Даты | Тема | PERT E |
+|---|---|---|---|---|---|
+| [plans/sprint_39_40.md](plans/sprint_39_40.md) | 39–40 | 77–80 | 08.02–07.03.2027 | Исследование, toolchain/libdragon, backend skeleton, CI | 56.7 ч |
+| [plans/sprint_41_42.md](plans/sprint_41_42.md) | 41–42 | 81–84 | 08.03–04.04.2027 | HAL N64: VI, input, ROM/DFS, память | 61.7 ч |
+| [plans/sprint_43_44.md](plans/sprint_43_44.md) | 43–44 | 85–88 | 05.04–02.05.2027 | RSP-микрокод, RDP, аппаратный Z-буфер, текстуры/TMEM | 67.5 ч |
+| [plans/sprint_45_46.md](plans/sprint_45_46.md) | 45–46 | 89–92 | 03.05–30.05.2027 | hello_triangle/rotating_cube, бюджеты, SDK/UI | 56.7 ч |
+
+Σ E ≈ **242.5 ч**. 8 спринтов = 16 недель; при 10–15 ч/нед доступно
+160–240 ч: план сходится только у верхней границы темпа; 95%-сценарий
+(≈ 310.8 ч) требует recovery-недель или scope reduction (S43–44 — первый
+кандидат: custom RSP-ucode → baseline libdragon).
+
+Бюджеты N64 (зафиксированы в S41–42 и `ci/normative_contracts.yaml`):
+- RDRAM: 4 MiB base; Expansion Pak (8 MiB) детектируется, но арены не
+  растут. Ledger: arenas 2 MiB (asset 1.5, frame 256K, command 128K,
+  FS staging 128K) + stack 64 KiB + framebuffers 300 KiB + reserve
+  1 724 416 B;
+- TMEM ≤ 4 KiB; текстуры — тайлы 64×64/32×64, CI8/RGBA16 (S43–44);
+- ROM/DFS ≤ 32 MiB; stack ≤ 64 KiB; heap запрещён (static check);
+- кадр: target 60 Hz (< 16.6 мс), gate ≥ 30 FPS (< 33 мс), 60 с;
+- W0: 5 кейсов + framebuffer-hash; W1: 4 куба / 48 треугольников.
+
+Гейт v0.3.0:
+- `n64-release` собирается pinned libdragon/toolchain; `.z64` проходит
+  header/checksum; CI `build-n64` зелёный.
+- `hello_triangle` и `rotating_cube` работают в pinned эмуляторе; 60 с и
+  10-минутный stress PASS.
+- RSP используется для трансформации/освещения, RDP — растеризация;
+  аппаратный Z-буфер и perspective-correct текстуры подтверждены.
+- Бюджеты RDRAM/TMEM/ROM соблюдены; W0/W1-метрики с environment-метаданными
+  (G12).
+- SDK N64 + UI target N64 в payload; `verify_release_contract.py` —
+  `all_ok: true`; negative-tests PASS; нет BIOS/ROM/ключей/build-каталогов.
+- Релиз — **draft-only**; любая публикация — не ранее **v0.9.x**
+  (ADR-013); v0.2.x остаются withdrawn.
+
+**Статус (2026-11-14):** S39–42 реализованы локально: pinned GCC 16.2.0 +
+libdragon `e356bf3`, `n64-release`, bootable `hello_n64.z64` с read-only
+DFS (`CUBE.MSH`/`TEX0.TEX`), ROM verifier PASS, 60-с gate и 10-минутный
+stress в gopher64 1.2.1, N64 host-тесты 46/46 (+ASan), PC regression
+335/335. Remote CI green: `build-n64` push `43601517181` / PR
+`43601522296`, `tests` `43601517320`, `build-pc` `43601517203`,
+`build-ps1` `43601517201`, `build-saturn` `43601517188`,
+`sdk-package` `43601517177`, `ui-client` `43601517161`. Baseline эмулятора —
+gopher64 1.2.1 (mupen64plus не грузит libdragon IPL3 r5+,
+mupen64plus-core#1185). S43–44 — RSP/RDP, Z-буфер, TMEM/текстуры;
+S45–46 — демо, бюджеты, N64 SDK/UI и draft v0.3.0.
 
 ## 14. Реестр рисков (операционный)
 

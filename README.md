@@ -4,11 +4,57 @@
 fixed-point математике (Q16.16, без плавающей запятой в игровой логике),
 HAL-архитектура с нулевым runtime-аллокатором в горячих путях. Целевые
 платформы MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) и Sony PlayStation 1
-(PSn00bSDK v0.24, pinned).
+(PSn00bSDK v0.24, pinned). v0.2.0 — Sega Saturn: pinned Jo Engine
+v2026.2, bootable **hello_triangle** 320×224; Master + Slave SH-2
+(SPSC-очередь, fallback), VDP1-полигоны/текстуры/CLUT/Gouraud (ADR-010) и
+VDP2 NBG1 bitmap-фон с VBlank-scroll (S27–30); 6-button pad и 60 Гц
+кадровый цикл (S31–32). **Публикация v0.2.0 отозвана:** payload содержал
+demo-образы, но не готовый SDK и UI-клиент — см.
+[docs/RELEASING.md](docs/RELEASING.md).
+
+v0.3.0 — Nintendo 64 (S39–46, development): pinned libdragon + GCC
+16.2.0 mips64-elf, bootable `.z64` (VI 320×240 + RDPQ clear) и CI без
+эмулятора — S39–40; HAL VI/input/read-only DFS/память + render skeleton
+— S41–42; RSP/RDP/Z/TMEM — S43–44; демо/SDK/UI — S45–46. N64 пока
+**development**; публикация отложена до v0.9.x (release freeze).
+
+**Любая публикация релизов проекта отложена до v0.9.x (release freeze).**
+v0.2.1 — release candidate: SDK+UI payload и release gate v2 готовы, но
+GitHub Release удалён/отозван. До v0.9.x публикация запрещена:
+`release.yml` создаёт только **draft**, который проходит ручную приёмку
+maintainer + агент. Подробности — [docs/RELEASING.md](docs/RELEASING.md).
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
-## Быстрый старт
+## Release candidate v0.2.1 (не опубликован)
+
+Публичного GitHub Release сейчас нет. Те же артефакты можно собрать
+локально/в CI:
+
+```sh
+# SDK + UI package
+cmake --preset pc-release && cmake --build --preset pc-release
+cmake --build build/pc-release --target sdk_package
+cmake --preset ui-release
+cmake --build build/ui-release --target retro_engine_ui
+python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
+
+# Проверить gate и собрать payload (см. docs/RELEASING.md)
+xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60 --skip-payload
+python3 scripts/build_release_bundle.py \
+  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+  --report release_contract_report.json
+python3 scripts/verify_release_contract.py --payload-only
+```
+
+Будущий payload: `retro-engine-v0.2.1.tar.gz` (`sdk/` + `ui/` + optional
+`demos/`) + отдельные SDK/UI-архивы PC/PS1/Saturn, checksums и отчёты gate.
+Поддерживаемые hosts/targets v0.2.1: SDK — Linux x86_64, Windows x86_64,
+macOS arm64; target PC/PS1/Saturn. Полный гайд:
+[docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
+
+## Сборка из исходников
 
 ```sh
 git clone --recursive https://github.com/RetroPolyEngine/retro-engine.git
@@ -19,11 +65,62 @@ cmake --preset pc-debug
 cmake --build --preset pc-debug
 ctest --preset pc-debug --output-on-failure
 
-# Запуск примера
+# Release-пример
+cmake --preset pc-release
+cmake --build --preset pc-release
 ./build/pc-release/game/rotating_cube
 ```
 
 > Без `--recursive` SDL3/googletest не подтянутся — см. [docs/BUILDING.md](docs/BUILDING.md).
+
+## SDK (v0.2.1)
+
+Движок собирается как устанавливаемый SDK с публичными заголовками,
+CMake package, примерами и checksums (S33–34):
+
+```sh
+cmake --preset pc-release
+cmake --build --preset pc-release
+cmake --build build/pc-release --target sdk_package
+```
+
+```cmake
+find_package(RetroPolyEngine CONFIG REQUIRED)
+target_link_libraries(game PRIVATE RetroPolyEngine::retro_engine)
+```
+
+```cpp
+#include <retro_engine/retro_engine.h>
+```
+
+Пакеты: `dist/retro-engine-sdk-<version>-{pc,ps1,saturn}-<arch>.{tar.gz,zip}`;
+consumer smoke — `scripts/sdk_consumer_smoke.py`; полное руководство —
+[docs/SDK.md](docs/SDK.md), границы API — [ADR-011](docs/adr/ADR-011-public-sdk-api.md).
+
+## UI client (v0.2.1)
+
+Отдельный launcher/editor (SDL3 + Dear ImGui, MIT): создание/открытие
+проекта, target PC/PS1/Saturn, импорт ассетов через SDK
+`asset_converter`, сборка CMake/Ninja и запуск target'а/эмулятора.
+
+![UI client: проект](screenshots/ui_project.png)
+
+```sh
+# сборка + unit-тесты ядра UI
+cmake --preset ui-debug
+cmake --build --preset ui-debug --target retro_engine_ui_tests
+./build/ui-debug/tools/ui_client/retro_engine_ui_tests
+
+# release-пакет
+cmake --preset ui-release
+cmake --build --preset ui-release --target retro_engine_ui
+python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
+```
+
+Пакет: `dist/retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip}`;
+руководство — [docs/UI_CLIENT.md](docs/UI_CLIENT.md), архитектура —
+[ADR-012](docs/adr/ADR-012-ui-client.md), headless smoke —
+`scripts/ui_smoke.py`, clean E2E — `scripts/ui_e2e.py`.
 
 ## Что внутри
 
@@ -31,8 +128,12 @@ ctest --preset pc-debug --output-on-failure
   детерминированная тригонометрия — без float в игровой логике.
 - **ECS**: 7 компонентных пулов с фиксированными ёмкостями, dense-итерация,
   generation-хэндлы с защитой от stale-use.
-- **HAL**: единый C-API (`Platform/Render/Input/Audio/FileSystem`) с двумя
-  бэкендами — PC (SDL3 + OpenGL 3.3) и PS1 (PSn00bSDK, GTE+GPU+OT).
+- **HAL**: единый C-API (`Platform/Render/Input/Audio/FileSystem`) с четырьмя
+  compile-time бэкендами — PC (SDL3 + OpenGL 3.3), PS1 (PSn00bSDK,
+  GTE+GPU+OT), Saturn HAL (Jo Engine, VDP1-полигоны/CLUT, VDP2 NBG1
+  bitmap, Master+Slave SH-2, padded input) и N64 (libdragon, VI
+  320×240, joypad, read-only DFS, memory ledger, render skeleton;
+  RSP/RDP — S43–44).
 - **Рендерер**: 320×240 reference framebuffer, affine-текстурирование,
   1/16-пиксельное квантование, Painter's algorithm, CI8/RGB555+STP.
 - **Ассеты**: `.mesh` v1 (glTF→движок) и `.tex` v1 (PNG→CI8+палитра),
@@ -46,23 +147,64 @@ ctest --preset pc-debug --output-on-failure
 |---|---|
 | [docs/RetroEngine_Engineering_Documentation_v1.43.md](docs/RetroEngine_Engineering_Documentation_v1.43.md) | Каноническая инженерная спецификация MVP (нормативная) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Слои движка, пайплайн рендера, ассет-пайплайн, платформенные контракты |
-| [docs/BUILDING.md](docs/BUILDING.md) | Установка тулчейна, канонические пресеты, запуск PC/PS1, troubleshooting |
+| [docs/BUILDING.md](docs/BUILDING.md) | Установка тулчейна, канонические пресеты, запуск PC/PS1/Saturn/N64, troubleshooting |
+| [docs/SDK.md](docs/SDK.md) | SDK: install/export, `find_package`, примеры, пакеты PC/PS1/Saturn, manifest/checksums |
+| [docs/UI_CLIENT.md](docs/UI_CLIENT.md) | UI client: установка, project/target/import/build/run, диагностика, упаковка |
+| [docs/SATURN.md](docs/SATURN.md) | Saturn: первоисточники, toolchain, разрешение, память, ввод, эмулятор |
+| [docs/N64.md](docs/N64.md) | N64: reference-факты, toolchain/libdragon, ROM/CRC policy, memory ledger, DFS, input mapping, gopher64 gate |
+| [docs/adr/ADR-008-saturn-backend.md](docs/adr/ADR-008-saturn-backend.md) | Нормативное решение по Saturn backend |
+| [docs/adr/ADR-009-master-slave.md](docs/adr/ADR-009-master-slave.md) | Master+Slave SH-2: SPSC-синхронизация, workload, fallback |
+| [docs/adr/ADR-011-public-sdk-api.md](docs/adr/ADR-011-public-sdk-api.md) | Границы публичного SDK API и install/export |
+| [docs/adr/ADR-012-ui-client.md](docs/adr/ADR-012-ui-client.md) | UI client: SDL3 + Dear ImGui, `.rpeproject`, границы UI/SDK |
+| [docs/adr/ADR-013-release-freeze.md](docs/adr/ADR-013-release-freeze.md) | Release freeze: любая публикация релизов отложена до v0.9.x, draft-only workflow |
+| [docs/adr/ADR-014-n64-backend.md](docs/adr/ADR-014-n64-backend.md) | N64 backend: libdragon/toolchain, `.z64`, ROM header/CRC, gopher64 |
 | [docs/API.md](docs/API.md) | Вводный обзор API: ECS, Renderer, Input, FileSystem, Math |
 | [docs/ASSETS.md](docs/ASSETS.md) | Байтовые форматы `.mesh`/`.tex` v1, CLI конвертера, загрузчики |
 | [docs/TESTING.md](docs/TESTING.md) | Пирамида тестов, запуск unit/integration/visual, QA-чек-листы |
 | [docs/CONTRIBUTING.md](docs/CONTRIBUTING.md) | Форк→ветка→тесты→PR, стиль, Doxygen, review-процесс |
+| [docs/OPENCODE_MCP.md](docs/OPENCODE_MCP.md) | Context7/TestSprite MCP в OpenCode: подключение и безопасное хранение API-ключей |
 | [docs/CODE_OF_CONDUCT.md](docs/CODE_OF_CONDUCT.md) | Contributor Covenant |
 | [docs/LEGAL.md](docs/LEGAL.md) | Лицензии зависимостей и правила сохранения notices |
 | [docs/STYLE_GUIDE.md](docs/STYLE_GUIDE.md) | Именование, форматирование, ограничения языка |
 | [docs/TROUBLESHOOTING.md](docs/TROUBLESHOOTING.md) | Частые проблемы и решения |
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | Операционный план: вехи M0–M8, PERT, критический путь, гейты G1–G13 |
 | [docs/plans/README.md](docs/plans/README.md) | Детальные планы спринтов (`docs/plans/sprint_NN.md`) |
+| [docs/RELEASING.md](docs/RELEASING.md) | Релизная политика: обязательные SDK + UI client, gate v2, статус v0.2.0 |
+| [docs/RELEASE_NOTES_v0.2.1.md](docs/RELEASE_NOTES_v0.2.1.md) | DRAFT release notes v0.2.1 (release candidate withdrawn; не опубликованы) |
 
 ## Скриншоты
 
-| hello_triangle PC | rotating_cube PC | hello_triangle PS1 (эмулятор) |
-|---|---|---|
-| ![ht-pc](screenshots/hello_triangle_pc.png) | ![rc-pc](screenshots/rotating_cube_pc.png) | ![ht-ps1](screenshots/hello_triangle_ps1.png) |
+| hello_triangle PC | rotating_cube PC | hello_triangle PS1 (эмулятор) | hello_triangle Saturn v0.2.0 (Mednafen) |
+|---|---|---|---|
+| ![ht-pc](screenshots/hello_triangle_pc.png) | ![rc-pc](screenshots/rotating_cube_pc.png) | ![ht-ps1](screenshots/hello_triangle_ps1.png) | ![saturn](screenshots/hello_triangle_saturn.png) |
+
+N64 boot-demo S39–40 (gopher64 1.2.1, 320×240 VI + RDPQ clear):
+
+| hello_n64 boot |
+|---|
+| ![n64-boot](screenshots/hello_n64_boot_s39_40.png) |
+
+N64 HAL S41–42 (DFS `CUBE.MSH`/`TEX0.TEX`, memory overlay, input):
+
+| n64 boot S41–42 |
+|---|
+| ![n64-boot-s41-42](screenshots/n64_boot_s41_42.png) |
+
+UI client:
+
+| Welcome | Project | Assets | Build log | Run |
+|---|---|---|---|---|
+| ![ui-welcome](screenshots/ui_welcome.png) | ![ui-project](screenshots/ui_project.png) | ![ui-assets](screenshots/ui_assets.png) | ![ui-build](screenshots/ui_build_done.png) | ![ui-run](screenshots/ui_run.png) |
+
+UI client gate: `.cue` из UI-проекта запущен в эмуляторах:
+
+| PS1 (DuckStation) | Saturn (Mednafen 1.32.1) |
+|---|---|
+| ![ui-gate-ps1](screenshots/ui_gate_ps1.png) | ![ui-gate-saturn](screenshots/ui_gate_saturn.png) |
+
+Saturn `hello_triangle`: D-pad — поворот объекта, A/B — дистанция камеры,
+C/X — высота, Y/Z — орбита, Start — сброс. Сборка/запуск —
+[docs/BUILDING.md](docs/BUILDING.md#сборка-saturn).
 
 ## Канонические пресеты
 
@@ -73,10 +215,14 @@ ctest --preset pc-debug --output-on-failure
 | `pc-debug` | Разработка + unit-тесты |
 | `pc-release` | Оптимизированные примеры |
 | `pc-debug-render` | W0-golden + visual regression (`xvfb-run` в CI) |
+| `ui-debug` | UI client Debug + core-тесты |
+| `ui-release` | UI client Release (пакет) |
 | `pc-asan` | AddressSanitizer |
 | `pc-bench` | google/benchmark |
 | `pc-coverage` | lcov покрытие |
 | `ps1-release` | Кросс-сборка PS-EXE + CD-образ |
+| `saturn-release` | Saturn hello_triangle: SH-2 ELF + bootable ISO/CUE |
+| `n64-release` | N64 boot-demo: `.z64` + DFS (`mkdfs`) + map + sha256 (libdragon) |
 
 Подробнее — [docs/BUILDING.md](docs/BUILDING.md).
 
@@ -90,9 +236,25 @@ ctest --preset pc-debug --output-on-failure
 - [x] HAL PS1 + CD-ROM ФС (M5)
 - [x] hello_triangle PS1 (M6)
 - [x] rotating_cube demo (M7)
-- [x] Документация + release gate + GitHub Release (M8)
+- [x] Документация + release gate (M8)
+- [x] SDK packaging: install/export, CMake package, consumer smoke (S33–34)
+- [x] UI client MVP: project/target/import/build/run, package, smoke/E2E (S35–36)
+- [x] Release gate v2: payload `sdk/`+`ui/`, checksums, negative-tests (S37–38)
+- [x] N64 S39–40: libdragon/toolchain, bootable `.z64`, CI, docs/N64.md, ADR-014
+- [x] N64 S41–42: HAL VI/input/DFS/память, render skeleton, gopher64 gate
+- [ ] N64 S43–46: RSP/RDP/Z/TMEM → hello_triangle (v0.3.0 draft)
+- [ ] Публикация отложена до v0.9.x (release freeze); v0.2.1 Release удалён/отозван
 
-Release-контракт: `scripts/verify_release_contract.py`.
+Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
+[docs/RELEASING.md](docs/RELEASING.md). Любая публикация релизов отложена до
+**v0.9.x**; разработка продолжается, следующий milestone — N64 **v0.3.0**
+(S39–46). Планы — [sprint_33_34](docs/plans/sprint_33_34.md),
+[sprint_35_36](docs/plans/sprint_35_36.md),
+[sprint_37_38](docs/plans/sprint_37_38.md),
+[sprint_39_40](docs/plans/sprint_39_40.md),
+[sprint_41_42](docs/plans/sprint_41_42.md),
+[sprint_43_44](docs/plans/sprint_43_44.md),
+[sprint_45_46](docs/plans/sprint_45_46.md).
 
 ## Лицензия
 

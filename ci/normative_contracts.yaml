@@ -1,7 +1,7 @@
 # SPDX-License-Identifier: MIT
 # RetroPolyEngine — ci/normative_contracts.yaml
 #
-# Машинно-читаемый манифест нормативных контрактов MVP v0.1.0.
+# Машинно-читаемый манифест нормативных контрактов v0.2.1 (SDK + UI gate v2).
 # CI и scripts/verify_release_contract.py сверяют фактические значения
 # против этого файла. Изменение любого значения = обновление этого файла,
 # соответствующего ADR и теста в одном изменении
@@ -9,18 +9,25 @@
 
 project:
   name: RetroPolyEngine
-  version: 0.1.0
+  version: 0.2.1
 
 presets:
   canonical:
     - pc-debug
     - pc-release
     - pc-debug-render
+    - ui-debug
+    - ui-release
     - ps1-release
+    - saturn-release
+    - n64-release
   optional:
     - pc-asan
     - pc-bench
     - pc-coverage
+    - saturn-single
+    - saturn-hang
+    - saturn-flood
 
 engine_scalar:
   format: Q16.16
@@ -78,7 +85,158 @@ assets:
   tex_palette_bytes: 512
   allowed_texture_dims: [64, 128, 256]
 
+sdk:
+  # Спринт 33–34: устанавливаемый SDK + CMake package + consumer smoke.
+  # Проверяется scripts/verify_release_contract.py и CI-джобой sdk-package.
+  schema_version: 1
+  package_name: retro-engine-sdk
+  archive_naming: "retro-engine-sdk-<version>-<platform>[-<os>]-<arch>.{tar.gz,zip}"
+  umbrella_header: include/retro_engine/retro_engine.h
+  public_include_dir: include/retro_engine
+  platforms: [pc, ps1, saturn]
+  targets:
+    - RetroPolyEngine::retro_engine
+    - RetroPolyEngine::hal
+    - RetroPolyEngine::log
+  required_targets:
+    - RetroPolyEngine::retro_engine
+    - RetroPolyEngine::hal
+    - RetroPolyEngine::log
+  required_components:
+    - public_headers
+    - libraries
+    - cmake_package
+    - asset_converter
+    - examples
+    - templates
+    - legal_notices
+    - version
+    - checksums
+    - manifest
+  required_archive_entries:
+    - sdk/include/retro_engine/retro_engine.h
+    - sdk/include/retro_engine/version.h
+    - sdk/lib/cmake/RetroPolyEngine/RetroPolyEngineConfig.cmake
+    - sdk/lib/cmake/RetroPolyEngine/RetroPolyEngineTargets.cmake
+    - sdk/sdk_manifest.json
+    - sdk/checksums.sha256
+    - sdk/VERSION.txt
+    - sdk/LEGAL.md
+  forbidden_header_dirs:
+    - include/retro_engine/render
+    - include/retro_engine/hal/pc
+    - include/retro_engine/hal/ps1
+    - include/retro_engine/hal/saturn
+  consumer:
+    project: tests/sdk/consumer
+    cmake_package: RetroPolyEngine
+    run_headless: true
+  package_files:
+    - include/retro_engine
+    - lib
+    - lib/cmake/RetroPolyEngine
+    - lib/pkgconfig/retro_engine.pc
+    - cmake
+    - tools/asset_converter
+    - examples
+    - templates/project
+    - VERSION.txt
+    - LEGAL.md
+    - LICENSE
+    - sdk_manifest.json
+    - checksums.sha256
+
+ui:
+  # Спринт 35–36: launcher/editor (SDL3 + Dear ImGui), пакет ui/.
+  schema_version: 1
+  package_name: retro-engine-ui
+  archive_naming: "retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip,dmg}"
+  manifest: ui_manifest.json
+  sdk_series: "0.2"
+  required_files:
+    - retro-engine-ui
+    - assets/DejaVuSans.ttf
+    - assets/DejaVu-LICENSE.txt
+    - samples/cube.gltf
+    - samples/texture.png
+    - README-ui.md
+    - VERSION.txt
+    - LEGAL.md
+    - ui_manifest.json
+    - checksums.sha256
+  required_components:
+    - project_create_open
+    - target_select
+    - asset_import
+    - build_and_run
+    - diagnostics
+    - version_compatibility
+  forbidden_parts: [.git, build, CMakeFiles, bios, roms, secrets]
+
 release:
+  # Политика с v0.2.0: публичный релиз = готовый SDK + UI client.
+  # Demo-образы/source-only архив НЕ являются релизом; см. docs/RELEASING.md.
+  #
+  # RELEASE FREEZE (2026-11-14): любая публикация релизов отложена до v0.9.x.
+  # v0.2.1 GitHub Release и тег удалены/отозваны; версия остаётся development.
+  # release.yml создаёт только draft; публикация — не ранее v0.9.x, вручную
+  # после приёмки maintainer'ом совместно с агентом.
+  payload_policy: sdk_plus_ui_client
+  payload: sdk+ui
+  sdk_required: true
+  ui_client_required: true
+  v0_2_0_release_withdrawn: true
+  v0_2_1_release_status: withdrawn
+  release_freeze:
+    active: true
+    until: "v0.9.x"
+    manual_acceptance_required: true
+    auto_publish: false
+  supported_hosts:
+    - linux-x86_64
+    - windows-x86_64
+    - macos-arm64
+  supported_targets:
+    - pc
+    - ps1
+    - saturn
+  # Layout dist/retro-engine-v<ver>/ (scripts/build_release_bundle.py).
+  payload_required_entries:
+    - sdk
+    - ui
+    - checksums.sha256
+    - release_contract_report.json
+    - README.md
+    - LICENSE
+    - LEGAL.md
+  payload_optional_entries:
+    - demos
+  payload_required_checksums:
+    - sdk/checksums.sha256
+    - ui/checksums.sha256
+    - checksums.sha256
+  payload_forbidden_parts:
+    - .git
+    - build
+    - CMakeFiles
+    - bios
+    - roms
+    - secrets
+  required_sdk_components:
+    - public_headers
+    - pc_libraries
+    - ps1_libraries
+    - saturn_libraries
+    - cmake_package_config
+    - asset_converter
+    - examples
+    - legal_notices
+    - checksums
+  required_ui_components:
+    - project_create_open
+    - target_select
+    - asset_import
+    - build_and_run
   ps1_exe_max_bytes: 512000
   required_artifacts_pc:
     - hello_triangle
@@ -89,6 +247,157 @@ release:
     - RETRO.bin
     - RETRO.cue
     - system.cnf
+  required_artifacts_saturn:
+    - hello_triangle.elf
+    - hello_triangle.bin
+    - hello_triangle.iso
+    - hello_triangle.cue
+    - hello_triangle.map
+
+saturn:
+  preset: saturn-release
+  target: hello_triangle_saturn
+  toolchain:
+    jo_engine_tag: v2026.2
+    jo_engine_commit: 5e99944238030821a48e17a40abefd77e81953c2
+    compiler: sh-none-elf-gcc 8.2.0
+  resolution:
+    width: 320
+    height: 224
+  budgets:
+    work_ram_bytes: 2097152
+    vdp1_vram_bytes: 524288
+    vdp2_vram_bytes: 524288
+    vdp1_texture_area_bytes: 451832
+    vdp2_nbg1_bitmap_bytes: 262144
+    asset_heap_bytes: 954368
+    hello_triangle_elf_max_bytes: 1048576
+    hello_triangle_bin_max_bytes: 1048576
+    hello_triangle_iso_max_bytes: 4194304
+    master_stack_top: 0x060FBC00
+  golden:
+    scene: hello_triangle
+    screenshot: screenshots/hello_triangle_saturn_scene.png
+    sha256: b51b8847e5061a671cf17fec033e993e6a6daa4388412c2730620259b601ec24
+  parallel:
+    master_triangles_per_frame: 16
+    slave_triangles_per_frame: 16
+    single_cpu_preset: saturn-single
+
+platforms:
+  # S41–42: N64 HAL (VI/input/DFS/память) + render skeleton (ADR-014).
+  # RSP/RDP/Z/TMEM — S43–44. Бюджет — 4 MiB base; Expansion Pak
+  # определяется, но арены не растут (policy v0.3.0).
+  n64:
+    status: development
+    milestone: v0.3.0
+    preset: n64-release
+    target: hello_n64
+    toolchain:
+      compiler: mips64-elf-gcc 16.2.0
+      libdragon_commit: e356bf3f56f7afbf7e5246329562f145965cfdfc
+      libdragon_license: MIT
+      toolchain_sha256_manifest: ci/n64-toolchain.sha256
+      libdragon_commit_manifest: ci/n64-libdragon.commit
+    rom:
+      extension: .z64
+      endianness: big
+      entry: "0x80000400"
+      max_bytes: 67108864
+      engine_rom_budget_bytes: 33554432
+      header_crc: libdragon_ipl3_header_crc_unused
+      verifier: scripts/verify_n64_rom.py
+      dfs_image: retro_n64.dfs
+      dfs_listing: retro_n64.dfs.txt
+      heap_verifier: scripts/verify_n64_no_heap.py
+      artifacts:
+        - hello_n64.z64
+        - hello_n64.map
+        - hello_n64.z64.sha256
+        - retro_n64.elf
+        - retro_n64.dfs
+        - retro_n64.dfs.txt
+    emulator:
+      validation: manual
+      baseline: gopher64 1.2.1
+      sha256_manifest: ci/n64-gopher64.sha256
+      ci_runs_emulator: false
+      expansion_pak: true
+      overclock: false
+      stress_minutes: 10
+    memory:
+      # Ledger фиксирован static_assert'ами src/hal/n64/n64_memory.h.
+      rdram_base_bytes: 4194304
+      rdram_expansion_bytes: 8388608
+      cpu_stack_bytes: 65536
+      framebuffer_count: 2
+      framebuffer_bytes: 307200
+      asset_arena_bytes: 1572864
+      frame_arena_bytes: 262144
+      command_arena_bytes: 131072
+      fs_staging_bytes: 131072
+      engine_arenas_bytes: 2097152
+      code_data_sdk_reserve_bytes: 1724416
+      tmem_bytes: 4096
+      z_bits: 18
+      rom_max_bytes: 67108864
+      heap: forbidden
+    filesystem:
+      type: dragonfs
+      image: retro_n64.dfs
+      access: read_only
+      max_file_bytes: 131072
+      staging_bytes: 131072
+      max_open_files: 4
+      deterministic_mkdfs: true
+      files:
+        - CUBE.MSH
+        - TEX0.TEX
+        - TRIANGLE.MSH
+      names: uppercase_8_3
+    input:
+      source: libdragon_joypad
+      polls_per_frame: 1
+      deadzone: 8
+      y_axis: sdl_inverted
+      mapping:
+        d_up: INPUT_PAD_UP
+        d_down: INPUT_PAD_DOWN
+        d_left: INPUT_PAD_LEFT
+        d_right: INPUT_PAD_RIGHT
+        a: INPUT_PAD_CROSS
+        b: INPUT_PAD_CIRCLE
+        z: INPUT_PAD_SQUARE
+        c_up: INPUT_PAD_TRIANGLE
+        c_down: INPUT_PAD_SELECT
+        c_left: INPUT_PAD_L2
+        c_right: INPUT_PAD_R2
+        l: INPUT_PAD_L1
+        r: INPUT_PAD_R1
+        start: INPUT_PAD_START
+      axes:
+        stick: INPUT_AXIS_LEFTX/LEFTY
+        cstick: INPUT_AXIS_RIGHTX/RIGHTY
+        analog_lr: INPUT_AXIS_L2/R2
+    renderer:
+      skeleton: s41_42
+      width: 320
+      height: 240
+      bitdepth: 16
+      refresh_hz: 60
+      clear_color: [0, 0, 32]
+      command_arena_bytes: 131072
+      triangles: s43_44
+      textures: s43_44
+    logging:
+      channel: isviewer_usb
+      rate_limit_per_second: 120
+    boundaries:
+      audio: false
+      filesystem: read_only_dfs
+      renderer: skeleton_s41_42
+      sdk_ui: s45_46
+      expansion_pak: detect_only
 
 workloads:
   w0:

@@ -11,6 +11,8 @@ coverage.info
 
 # Релизные артефакты (генерируются CI / scripts/create_release_archive.sh)
 /release_contract_report.json
+/payload_verification_report.json
+/release-assets/
 /dist/
 /retro-engine-*.tar.gz
 
@@ -19,3 +21,21 @@ testsprite_tests/
 tests/visual/reference/*.dump.px
 testsprite_tests/tmp/
 testsprite_tests/tmp/config.json
+
+# Секреты OpenCode/MCP: штатно лежат вне репозитория
+# (~/.config/opencode/secrets/), это страховка от случайного коммита
+# локальных копий.
+/.env
+/.env.*
+!/.env.example
+/.opencode/secrets/
+
+# Локальные BIOS/ROM для ручного эмуляторного gate (не вендорятся, не публикуются).
+/bios/
+__pycache__
+
+# N64 env-install: toolchain/libdragon/gopher64 не вендорятся (ADR-014).
+/n64-sdk/
+/gopher64
+/gopher64-linux-x86_64
+*.z64

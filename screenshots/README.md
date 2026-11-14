@@ -1,4 +1,14 @@
-# Скриншоты (PC vs PS1)
+# Скриншоты (PC vs PS1 vs N64)
+
+## `n64_boot_s41_42.png` — N64 HAL gate (Спринт 41–42)
+
+Скриншот boot-demo в pinned gopher64 1.2.1 (Xvfb/llvmpipe, 320×240,
+16-bit VI): тёмно-синий clear `(0,0,32)`, строки `BOOT OK / S41-42`,
+`DFS OK MESH 600 TEX 66068` (`CUBE.MSH`/`TEX0.TEX` из read-only DFS),
+memory overlay (asset current/peak, frame/command/FS staging), состояние
+pad 1 и frame/time. Ручной gate: 60 с + 10-минутный stress, input-лог
+`[n64_input] pad0 press …`; эмулятор/ROM не вендорятся. Подробности —
+[`../docs/N64.md`](../docs/N64.md) §9.
 
 ## `rotating_cube_pc.png` — демо MVP, веха M7 (Спринт 17–18)
 

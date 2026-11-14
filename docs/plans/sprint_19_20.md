@@ -2,6 +2,9 @@
 
 > Детальный план спринта. Родительский документ: [`DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) (§5).
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
+> **Историческое примечание:** релиз v0.1.0 публиковал demo-образы PC/PS1,
+> а не SDK+UI. С v0.2.0 действует политика [`../RELEASING.md`](../RELEASING.md):
+> публичный релиз обязан содержать готовый SDK и UI-клиент.
 
 ## Карточка спринта
 
@@ -54,7 +57,8 @@
 - [ ] [B] Исправление найденных багов (заложенный баг-фикс-буфер)
 
 **Неделя 40 — Релиз и анонс:**
-- [x] [B] `.github/workflows/release.yml` (по тегу `v*`): checkout submodules; PSn00bSDK pinned+sha; build PC (hello_triangle, rotating_cube) + PS1 (включая disc image); validate artifacts (все 5 файлов); payload `bin/pc`, `bin/ps1`, README, LICENSE; `create_release_archive.sh` → `retro-engine-<tag>.tar.gz`; softprops/action-gh-release + generate_release_notes
+- [x] [B] `.github/workflows/release.yml` (по тегу `v*`): checkout submodules; PSn00bSDK pinned+sha; build PC (hello_triangle, rotating_cube) + PS1 (включая disc image); validate artifacts (все 5 файлов); payload `bin/pc`, `bin/ps1`, README, LICENSE (**исторический demo-payload,
+не SDK-релиз** — см. `../RELEASING.md`); `create_release_archive.sh` → `retro-engine-<tag>.tar.gz`; softprops/action-gh-release + generate_release_notes
 - [ ] [B] Тег: `git tag -a v0.1.0 -m "Release v0.1.0"`, push main --tags
 - [ ] [B] GitHub Release опубликован (авто)
 - [ ] [B] Announcement post (шаблон из ЭТАПА 8 §5.1) → Reddit (r/ps1, r/homebrew, r/gamedev, r/opensource, r/cpp), HN, Twitter/X (#gamedev #homebrew #ps1 #opensource #cpp), Discord-серверы homebrew, форумы (psxdev.net) — **не входит в текущую задачу (соцсети)**

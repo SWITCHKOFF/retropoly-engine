@@ -1,0 +1,236 @@
+# ============================================================================
+# N64 CI — Спринты 39–42 (docs/plans/sprint_39_40.md, sprint_41_42.md),
+# ADR-014.
+#
+# Собирает pinned mips64-elf-gcc 16.2.0 + libdragon (commit e356bf3),
+# bootable .z64 с read-only DFS (mkdfs: CUBE.MSH/TEX0.TEX) через
+# канонический пресет n64-release. Эмулятор в CI НЕ запускается:
+# BIOS/ROM-образы не вендорятся, визуальный/60-секундный/10-минутный
+# gate — ручной (gopher64 1.2.1, docs/N64.md §9).
+#
+# Structural checks:
+#   - ROM header/ELF/CRC-policy/sha256;
+#   - DFS listing + побайтовое сравнение извлечённых ассетов;
+#   - запрет heap в src/hal/n64 (scripts/verify_n64_no_heap.py).
+#
+# Negative-checks:
+#   - N64_INST/LIBDRAGON_ROOT отсутствует → configure падает;
+#   - «чужой» toolchain (host gcc вместо mips64-elf) → configure падает;
+#   - включено больше одного PLATFORM_* → configure падает;
+#   - нет/битый .z64 → scripts/verify_n64_rom.py падает.
+# ============================================================================
+name: build-n64
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+jobs:
+  build-n64:
+    name: N64 (ubuntu-latest, n64-release, libdragon pinned)
+    runs-on: ubuntu-latest
+
+    env:
+      N64_SDK: ${{ github.workspace }}/n64-sdk
+      N64_INST: ${{ github.workspace }}/n64-sdk/toolchain/opt/libdragon
+      LIBDRAGON_ROOT: ${{ github.workspace }}/n64-sdk/libdragon
+
+    steps:
+      - name: "Checkout (без submodules: N64 не тянет SDL3/PSn00bSDK)"
+        uses: actions/checkout@v4
+
+      - name: Тулчейн-хост (ninja + curl/dpkg-deb + build-essential)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build curl build-essential libpng-dev zlib1g-dev
+
+      - name: Кэш pinned toolchain/libdragon
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/n64-sdk
+          key: n64-sdk-${{ hashFiles('ci/n64-toolchain.sha256', 'ci/n64-libdragon.commit') }}
+
+      - name: libdragon-toolchain (pinned deb + SHA-256)
+        run: |
+          set -euo pipefail
+          mkdir -p "$N64_SDK"
+          cd "$N64_SDK"
+          # deb содержит только mips64-elf toolchain; n64tool/mkdfs/dumpdfs
+          # ставит следующий шаг (libdragon tools-install).
+          if [ ! -x "$N64_INST/bin/mips64-elf-gcc" ]; then
+            curl -L --retry 3 -o gcc-toolchain-mips64-x86_64.deb \
+              https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
+            sha256sum -c "$GITHUB_WORKSPACE/ci/n64-toolchain.sha256"
+            rm -rf toolchain
+            dpkg-deb -x gcc-toolchain-mips64-x86_64.deb toolchain
+          else
+            echo "toolchain cache hit: $N64_INST"
+          fi
+          test -x "$N64_INST/bin/mips64-elf-gcc"
+
+      - name: libdragon (pinned commit → make install + tools-install)
+        run: |
+          set -euo pipefail
+          PIN="$(grep -E '^[0-9a-f]{40}$' ci/n64-libdragon.commit | head -n 1)"
+          test -n "$PIN"
+          if [ ! -f "$N64_INST/mips64-elf/lib/libdragon.a" ] || \
+             [ ! -x "$N64_INST/bin/n64sym" ] || \
+             [ ! -x "$N64_INST/bin/mkdfs" ] || \
+             [ ! -x "$N64_INST/bin/dumpdfs" ]; then
+            rm -rf "$LIBDRAGON_ROOT"
+            git config --global advice.detachedHead false
+            git clone --filter=blob:none https://github.com/DragonMinded/libdragon.git "$LIBDRAGON_ROOT"
+            git -C "$LIBDRAGON_ROOT" checkout "$PIN"
+            cd "$LIBDRAGON_ROOT"
+            make -j"$(nproc)"
+            make install
+            make tools-install
+          fi
+          test "$(git -C "$LIBDRAGON_ROOT" rev-parse HEAD)" = "$PIN"
+          test -f "$N64_INST/mips64-elf/lib/libdragon.a"
+          test -x "$N64_INST/bin/n64tool"
+          test -x "$N64_INST/bin/n64sym"
+          test -x "$N64_INST/bin/n64elfcompress"
+          test -x "$N64_INST/bin/mkdfs"
+          test -x "$N64_INST/bin/dumpdfs"
+
+      - name: "Configure (canon: cmake --preset n64-release)"
+        run: cmake --preset n64-release
+
+      - name: "Build (canon: cmake --build --preset n64-release)"
+        run: cmake --build --preset n64-release
+
+      - name: "Проверка ROM: header/entry/ELF/CRC-policy/sha256"
+        run: |
+          set -euo pipefail
+          ART=build/n64-release/src/hal/n64
+          test -s "$ART/retro_n64.elf"
+          test -s "$ART/retro_n64.map"
+          test -s "$ART/retro_n64.z64"
+          test -s "$ART/retro_n64.z64.sha256"
+          test -s "$ART/retro_n64.dfs"
+          test -s "$ART/retro_n64.dfs.txt"
+          test -s "$ART/hello_n64.z64"
+          test -s "$ART/hello_n64.map"
+          test -s "$ART/hello_n64.z64.sha256"
+          cmp "$ART/retro_n64.z64" "$ART/hello_n64.z64"
+          file "$ART/retro_n64.elf" | grep -q 'MIPS'
+          mips64-elf-readelf -h "$ART/retro_n64.elf" 2>/dev/null | grep -q '0x80000400' || \
+            "$N64_INST/bin/mips64-elf-readelf" -h "$ART/retro_n64.elf" | grep -q '0x80000400'
+          python3 scripts/verify_n64_rom.py --json "$ART/hello_n64.z64" \
+            > "$RUNNER_TEMP/n64_rom_report.json"
+          python3 - <<'PY'
+          import json, os
+          report = json.load(open(os.environ["RUNNER_TEMP"] + "/n64_rom_report.json"))
+          assert report["errors"] == [], report["errors"]
+          assert report["magic_ok"] is True
+          assert report["entry"] == "0x80000400"
+          assert report["elf"] and report["elf"]["load_segments"] >= 1
+          assert report["crc_policy"] == "libdragon_ipl3_header_crc_unused"
+          assert report["size_bytes"] <= 64 * 1024 * 1024
+          print("N64 ROM report: PASS", report["size_bytes"], report["sha256"])
+          PY
+          cd "$ART"
+          sha256sum -c hello_n64.z64.sha256
+
+      - name: "Проверка DFS-ассетов в ROM (S41–42)"
+        run: |
+          set -euo pipefail
+          ART=build/n64-release/src/hal/n64
+          grep -q 'CUBE.MSH' "$ART/retro_n64.dfs.txt"
+          grep -q 'TEX0.TEX' "$ART/retro_n64.dfs.txt"
+          grep -q 'TRIANGLE.MSH' "$ART/retro_n64.dfs.txt"
+          "$N64_INST/bin/dumpdfs" -e "$ART/hello_n64.z64" CUBE.MSH > "$RUNNER_TEMP/CUBE.MSH"
+          "$N64_INST/bin/dumpdfs" -e "$ART/hello_n64.z64" TEX0.TEX > "$RUNNER_TEMP/TEX0.TEX"
+          "$N64_INST/bin/dumpdfs" -e "$ART/hello_n64.z64" TRIANGLE.MSH > "$RUNNER_TEMP/TRIANGLE.MSH"
+          cmp "$RUNNER_TEMP/CUBE.MSH" assets/build/cube.mesh
+          cmp "$RUNNER_TEMP/TEX0.TEX" assets/build/texture_0.tex
+          cmp "$RUNNER_TEMP/TRIANGLE.MSH" assets/build/triangle.mesh
+          # mkdfs детерминирован: сборка уже сравнила два прогона (compare_files),
+          # здесь фиксируем размер/хэш образа для аудита.
+          python3 - <<'PY'
+          import hashlib, os
+          path = "build/n64-release/src/hal/n64/retro_n64.dfs"
+          data = open(path, "rb").read()
+          print("N64 DFS: PASS", len(data), hashlib.sha256(data).hexdigest())
+          PY
+
+      - name: "Запрет heap в N64 HAL (статическая проверка)"
+        run: python3 scripts/verify_n64_no_heap.py
+
+      - name: Негативные проверки конфигурации/артефактов
+        run: |
+          set -euo pipefail
+          NEG="$RUNNER_TEMP/n64-neg"
+          rm -rf "$NEG"
+          mkdir -p "$NEG"
+
+          # 1) Нет N64_INST/LIBDRAGON_ROOT → toolchain file обязан упасть.
+          if env -u N64_INST -u LIBDRAGON_ROOT \
+              cmake -S . -B "$NEG/no-root" -G Ninja \
+                    -DCMAKE_TOOLCHAIN_FILE=cmake/n64-toolchain.cmake \
+                    -DPLATFORM_N64=ON > "$NEG/no-root.log" 2>&1; then
+            echo "ERROR: configure без N64_INST прошёл" >&2
+            exit 1
+          fi
+          grep -q "N64_INST не задан" "$NEG/no-root.log"
+
+          # 2) «Чужой» toolchain: host gcc под именем mips64-elf-gcc.
+          FAKE="$NEG/fake"
+          mkdir -p "$FAKE/bin" "$FAKE/include" "$FAKE/mips64-elf/include" "$FAKE/mips64-elf/lib"
+          cp "$N64_INST/include/n64.mk" "$FAKE/include/"
+          touch "$FAKE/mips64-elf/include/libdragon.h"
+          touch "$FAKE/mips64-elf/lib/libdragon.a" \
+                "$FAKE/mips64-elf/lib/libdragonsys.a" "$FAKE/mips64-elf/lib/n64.ld"
+          for tool in gcc g++ ld strip objcopy gcc-ar gcc-ranlib; do
+            ln -s "$(command -v gcc)" "$FAKE/bin/mips64-elf-$tool"
+          done
+          for tool in n64tool n64sym n64elfcompress mkdfs dumpdfs; do
+            ln -s /usr/bin/true "$FAKE/bin/$tool"
+          done
+          if env -u LIBDRAGON_ROOT N64_INST="$FAKE" \
+              cmake -S . -B "$NEG/wrong-toolchain" -G Ninja \
+                    -DCMAKE_TOOLCHAIN_FILE=cmake/n64-toolchain.cmake \
+                    -DPLATFORM_N64=ON > "$NEG/wrong-toolchain.log" 2>&1; then
+            echo "ERROR: configure с host gcc прошёл" >&2
+            exit 1
+          fi
+          grep -q "не N64 cross-toolchain" "$NEG/wrong-toolchain.log"
+
+          # 3) Больше одного PLATFORM_* → guard «ровно один backend».
+          if cmake -S . -B "$NEG/two-platforms" -G Ninja \
+                   -DPLATFORM_PC=ON -DPLATFORM_N64=ON > "$NEG/two-platforms.log" 2>&1; then
+            echo "ERROR: configure с двумя PLATFORM_* прошёл" >&2
+            exit 1
+          fi
+          grep -q "ровно один бэкенд" "$NEG/two-platforms.log"
+
+          # 4) Нет/битый .z64 → verifier обязан упасть.
+          if python3 scripts/verify_n64_rom.py "$NEG/absent.z64" > /dev/null 2>&1; then
+            echo "ERROR: verifier принял отсутствующий ROM" >&2
+            exit 1
+          fi
+          head -c 1024 build/n64-release/src/hal/n64/hello_n64.z64 > "$NEG/truncated.z64"
+          if python3 scripts/verify_n64_rom.py "$NEG/truncated.z64" > /dev/null 2>&1; then
+            echo "ERROR: verifier принял битый ROM" >&2
+            exit 1
+          fi
+          echo "negative checks: PASS"
+
+      - name: Upload N64 ROM
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-n64-rom
+          path: |
+            build/n64-release/src/hal/n64/hello_n64.z64
+            build/n64-release/src/hal/n64/hello_n64.map
+            build/n64-release/src/hal/n64/hello_n64.z64.sha256
+            build/n64-release/src/hal/n64/retro_n64.z64
+            build/n64-release/src/hal/n64/retro_n64.z64.sha256
+            build/n64-release/src/hal/n64/retro_n64.elf
+            build/n64-release/src/hal/n64/retro_n64.dfs
+            build/n64-release/src/hal/n64/retro_n64.dfs.txt
+          if-no-files-found: error
