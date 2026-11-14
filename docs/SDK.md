@@ -214,7 +214,9 @@ N64 toolchain/libdragon не входят в архив (MIT, env-install):
 
 ```sh
 export N64_INST=$HOME/n64-sdk/toolchain/opt/libdragon
-cmake -S examples/hello_triangle_n64 -B build -G Ninja       -DCMAKE_TOOLCHAIN_FILE=<sdk>/cmake/n64-toolchain.cmake       -DCMAKE_PREFIX_PATH=<sdk>
+cmake -S examples/hello_triangle_n64 -B build -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=<sdk>/cmake/n64-toolchain.cmake \
+  -DCMAKE_PREFIX_PATH=<sdk>
 cmake --build build          # → build/hello_triangle_n64.z64
 ```
 
@@ -249,7 +251,7 @@ cmake --build build-sat
 публичные заголовки Jo Engine. Запуск — в Mednafen (BIOS пользователя, не
 вендорится).
 
-## 8. Манифест и checksums
+## 9. Манифест и checksums
 
 `sdk_manifest.json` содержит:
 
@@ -272,7 +274,7 @@ python3 scripts/verify_release_contract.py \
   --sdk-archive dist/retro-engine-sdk-0.3.0-pc-x86_64.tar.gz
 ```
 
-## 9. Clean consumer smoke
+## 10. Clean consumer smoke
 
 ```sh
 python3 scripts/sdk_consumer_smoke.py \
@@ -288,7 +290,7 @@ python3 scripts/sdk_consumer_smoke.py --sdk-dir /path/to/sdk --platform saturn
 python3 scripts/sdk_consumer_smoke.py --sdk-archive <n64>.tar.gz --platform n64
 ```
 
-## 10. Ограничения v0.3.0
+## 11. Ограничения v0.3.0
 
 - Нет dependency manager/version solver: SDK поставляет ровно один набор
   headers/libs/config/checksums.

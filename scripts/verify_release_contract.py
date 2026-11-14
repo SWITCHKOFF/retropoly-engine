@@ -711,7 +711,7 @@ def _find_n64_sdk(args, tempdir):
     return None, None
 
 
-def assert_ui_smoke_n64(contract, ui_archive, n64_sdk_archive, skip):
+def assert_ui_smoke_n64(contract, ui_archive, n64_sdk_archive, pc_sdk_dir, skip):
     """UI client: New Project target N64 → build .z64 (без запуска эмулятора)."""
     if skip:
         return True, {"skipped": True}
@@ -727,6 +727,8 @@ def assert_ui_smoke_n64(contract, ui_archive, n64_sdk_archive, skip):
         cmd = [sys.executable, UI_SMOKE_SCRIPT,
                "--sdk-dir", sdk_dir, "--ui-package", ui_archive,
                "--platform", "n64", "--no-run"]
+        if pc_sdk_dir is not None:
+            cmd += ["--pc-sdk-dir", pc_sdk_dir]
         rc, out, err = run(cmd, timeout=900)
         ok = rc == 0 and "[smoke] PASS" in out
         return ok, {"exit_code": rc,
@@ -891,7 +893,7 @@ def main():
         contract, sdk_dir, ui_manifest_archive,
         args.skip_build_checks or args.skip_ui_smoke)
     results["ui_smoke_n64"] = assert_ui_smoke_n64(
-        contract, ui_manifest_archive, n64_sdk_archive,
+        contract, ui_manifest_archive, n64_sdk_archive, sdk_dir,
         args.skip_build_checks or args.skip_ui_smoke)
 
     results["presets"] = assert_presets(contract)

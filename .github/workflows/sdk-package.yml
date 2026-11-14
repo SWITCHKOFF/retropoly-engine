@@ -4,7 +4,8 @@
 # Матрица:
 #   - PC: Ubuntu/Windows/macOS, pc-release → sdk_package → clean consumer;
 #   - PS1: pinned PSn00bSDK v0.24 → ps1-release → sdk_package → consumer;
-#   - Saturn: pinned Jo Engine v2026.2 → saturn-release → sdk_package → consumer.
+#   - Saturn: pinned Jo Engine v2026.2 → saturn-release → sdk_package → consumer;
+#   - N64: pinned libdragon → n64-release → sdk_package → consumer.
 #
 # Артефакты скачиваются/проверяются release gate v2 (S37–38).
 # ============================================================================
