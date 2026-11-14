@@ -4,8 +4,8 @@
 # Триггер: annotated tag v* (после release freeze — только draft).
 #   1. sdk / ui — переиспользуемые workflow S33–36: собирают SDK-архивы
 #      PC/PS1/Saturn/N64 и UI-пакеты Linux/Windows/macOS, каждый со smoke.
-#   2. release-gate — скачивает артефакты SDK/UI, собирает legacy PC/PS1/
-#      Saturn demo-образы, запускает verify_release_contract.py, clean-room
+#   2. release-gate — скачивает артефакты SDK/UI, собирает PC/PS1/Saturn/N64
+#      demo-образы, запускает verify_release_contract.py, clean-room
 #      consumer/UI E2E, negative-tests и собирает payload sdk/ + ui/.
 #   3. publish — создаёт DRAFT GitHub Release только если оба отчёта
 #      all_ok: true; публикация — не ранее v0.9.x, вручную после приёмки.

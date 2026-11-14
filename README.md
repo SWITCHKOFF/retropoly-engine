@@ -248,7 +248,7 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 | `pc-coverage` | lcov покрытие |
 | `ps1-release` | Кросс-сборка PS-EXE + CD-образ |
 | `saturn-release` | Saturn hello_triangle: SH-2 ELF + bootable ISO/CUE |
-| `n64-release` | N64 boot-demo: `.z64` + DFS (`mkdfs`) + map + sha256 (libdragon) |
+| `n64-release` | N64 hello_triangle/rotating_cube: `.z64` + DFS (`mkdfs`) + map + sha256 (libdragon) |
 
 Подробнее — [docs/BUILDING.md](docs/BUILDING.md).
 
