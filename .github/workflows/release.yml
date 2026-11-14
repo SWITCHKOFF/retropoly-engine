@@ -1,10 +1,15 @@
 # ============================================================================
-# Релизный workflow — Спринты 19–20 / 31–32 (v0.2.0).
+# Release workflow — Спринт 37–38 (release gate v2, v0.2.1).
+#
 # Триггер: annotated tag v*.
-# ВНИМАНИЕ: текущий workflow собирает legacy demo-payload (PC/PS1/Saturn
-# demo-образы + report). По политике docs/RELEASING.md это НЕ публичный
-# SDK-релиз: для тега v0.2.x/v0.3.0 обязательны готовый SDK и UI-клиент.
-# Не создавать/не анонсировать GitHub Release до release gate v2.
+#   1. sdk / ui — переиспользуемые workflow S33–36: собирают SDK-архивы
+#      PC/PS1/Saturn и UI-пакеты Linux/Windows/macOS, каждый со smoke.
+#   2. release-gate — скачивает артефакты SDK/UI, собирает legacy PC/PS1/
+#      Saturn demo-образы, запускает verify_release_contract.py, clean-room
+#      consumer/UI E2E, negative-tests и собирает payload sdk/ + ui/.
+#   3. publish — создаёт GitHub Release только если оба отчёта all_ok: true.
+#
+# Политика: docs/RELEASING.md. Demo-архив без SDK+UI релизом не является.
 # ============================================================================
 name: release
 
@@ -17,8 +22,17 @@ permissions:
   contents: write
 
 jobs:
-  release:
-    name: Release ${{ github.ref_name }}
+  sdk:
+    name: SDK packages
+    uses: ./.github/workflows/sdk-package.yml
+
+  ui:
+    name: UI packages
+    uses: ./.github/workflows/ui-client.yml
+
+  release-gate:
+    name: Release gate v2 (${{ github.ref_name }})
+    needs: [sdk, ui]
     runs-on: ubuntu-latest
 
     steps:
@@ -33,7 +47,21 @@ jobs:
           sudo apt-get install -y cmake ninja-build libgl1-mesa-dev \
             libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
             libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev \
-            xvfb python3-yaml genisoimage
+            xvfb mesa-utils libgl1-mesa-dri python3-yaml genisoimage unzip
+
+      - name: Download SDK artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: retro-engine-sdk-*
+          path: dist
+          merge-multiple: true
+
+      - name: Download UI artifacts
+        uses: actions/download-artifact@v4
+        with:
+          pattern: retro-engine-ui-*
+          path: dist
+          merge-multiple: true
 
       - name: Verify vendored dependencies
         run: sh ci/verify_vendored.sh
@@ -121,43 +149,150 @@ jobs:
           isoinfo -i hello_triangle.iso -f | grep -q '/TEX0.TEX;1'
           isoinfo -i hello_triangle.iso -f | grep -q '/TEX1.TEX;1'
 
-      - name: Release contract
-        run: |
-          xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60
-
-      - name: Upload release contract report
-        uses: actions/upload-artifact@v4
-        with:
-          name: release_contract_report
-          path: release_contract_report.json
-
-      - name: Package release archive
+      - name: Prepare optional demo images
         run: |
           set -euo pipefail
-          tag="${GITHUB_REF_NAME}"
-          mkdir -p "dist/retro-engine-${tag}"
-          cp -r build/pc-release/game "dist/retro-engine-${tag}/pc"
-          mkdir -p "dist/retro-engine-${tag}/ps1"
+          mkdir -p dist/demos/pc dist/demos/ps1 dist/demos/saturn
+          cp build/pc-release/game/hello_triangle \
+             build/pc-release/game/rotating_cube dist/demos/pc/
           cp build/ps1-release/src/hal/ps1/RETRO.bin \
              build/ps1-release/src/hal/ps1/RETRO.cue \
-             build/ps1-release/src/hal/ps1/retro_ps1.exe \
-             "dist/retro-engine-${tag}/ps1/"
-          mkdir -p "dist/retro-engine-${tag}/saturn"
+             build/ps1-release/src/hal/ps1/retro_ps1.exe dist/demos/ps1/
           cp build/saturn-release/src/hal/saturn/hello_triangle.elf \
              build/saturn-release/src/hal/saturn/hello_triangle.bin \
              build/saturn-release/src/hal/saturn/hello_triangle.iso \
              build/saturn-release/src/hal/saturn/hello_triangle.cue \
              build/saturn-release/src/hal/saturn/hello_triangle.map \
-             "dist/retro-engine-${tag}/saturn/"
-          cp README.md LICENSE docs/LEGAL.md "dist/retro-engine-${tag}/"
-          tar -czf "retro-engine-${tag}.tar.gz" -C dist "retro-engine-${tag}"
+             dist/demos/saturn/
+
+      - name: Release contract v2 (build checks)
+        run: |
+          set -euo pipefail
+          SDK="$(ls dist/retro-engine-sdk-*-pc-linux-*.tar.gz | head -n 1)"
+          UI="$(ls dist/retro-engine-ui-*-linux-*.tar.gz | head -n 1)"
+          xvfb-run -a python3 scripts/verify_release_contract.py \
+            --w1-seconds 60 --skip-payload \
+            --sdk-archive "$SDK" --ui-archive "$UI" \
+            --output release_contract_report.json
+
+      - name: Clean-room UI E2E (SDK archive + UI package)
+        run: |
+          set -euo pipefail
+          SDK="$(ls dist/retro-engine-sdk-*-pc-linux-*.tar.gz | head -n 1)"
+          UI="$(ls dist/retro-engine-ui-*-linux-*.tar.gz | head -n 1)"
+          xvfb-run -a python3 scripts/ui_e2e.py \
+            --sdk-archive "$SDK" --ui-package "$UI" \
+            --screenshot-dir dist/ui-screenshots
+
+      - name: Build SDK+UI release bundle
+        run: |
+          set -euo pipefail
+          SDK="$(ls dist/retro-engine-sdk-*-pc-linux-*.tar.gz | head -n 1)"
+          UI="$(ls dist/retro-engine-ui-*-linux-*.tar.gz | head -n 1)"
+          python3 scripts/build_release_bundle.py \
+            --sdk-archive "$SDK" --ui-archive "$UI" \
+            --report release_contract_report.json \
+            --demos-dir dist/demos
+
+      - name: Payload gate (sdk/ + ui/ + checksums)
+        run: |
+          python3 scripts/verify_release_contract.py --payload-only \
+            --payload-dir "dist/retro-engine-v${GITHUB_REF_NAME#v}" \
+            --output payload_verification_report.json
+
+      - name: Negative-tests (missing SDK/UI/checksum, BIOS/ROM)
+        run: |
+          python3 scripts/release_gate_negative_tests.py \
+            --bundle-dir "dist/retro-engine-v${GITHUB_REF_NAME#v}"
+
+      - name: Assert all reports green
+        run: |
+          python3 - <<'PY'
+          import json
+          for path in ("release_contract_report.json",
+                       "payload_verification_report.json"):
+              with open(path, encoding="utf-8") as f:
+                  report = json.load(f)
+              if report.get("all_ok") is not True:
+                  raise SystemExit("%s: all_ok is not true" % path)
+              print("%s: all_ok=true (version %s)" %
+                    (path, report.get("version")))
+          PY
+
+      - name: Stage release assets
+        run: |
+          set -euo pipefail
+          mkdir -p release-assets
+          cp dist/retro-engine-v*.tar.gz dist/retro-engine-v*.tar.gz.sha256 \
+             release-assets/
+          cp dist/retro-engine-sdk-* dist/retro-engine-ui-* release-assets/
+          cp release_contract_report.json payload_verification_report.json \
+             release-assets/
+          ls -lh release-assets
+
+      - name: Upload release gate artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: release-gate-artifacts
+          path: release-assets/
+          if-no-files-found: error
+
+  publish:
+    name: Publish GitHub Release
+    needs: release-gate
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout release notes
+        uses: actions/checkout@v4
+
+      - name: Download gate artifacts
+        uses: actions/download-artifact@v4
+        with:
+          name: release-gate-artifacts
+          path: release-assets
+
+      - name: Verify reports and generate asset checksums
+        run: |
+          set -euo pipefail
+          python3 - <<'PY'
+          import json
+          for path in ("release-assets/release_contract_report.json",
+                       "release-assets/payload_verification_report.json"):
+              with open(path, encoding="utf-8") as f:
+                  report = json.load(f)
+              if report.get("all_ok") is not True:
+                  raise SystemExit("%s: all_ok is not true" % path)
+          PY
+          python3 - <<'PY'
+          import sys
+          sys.path.insert(0, "scripts")
+          import release_payload
+          bad = release_payload._forbidden_entries("release-assets")
+          if bad:
+              raise SystemExit("forbidden release assets: " +
+                               ", ".join(bad[:20]))
+          print("release-assets: no BIOS/ROM/secrets/build dirs")
+          PY
+          cd release-assets
+          find . -maxdepth 1 -type f ! -name checksums.sha256 -printf '%P\n' \
+            | sort | while read -r file; do sha256sum "$file"; done \
+            > checksums.sha256
+          sha256sum -c checksums.sha256
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
         with:
+          name: RetroPolyEngine ${{ github.ref_name }} — SDK + UI client
+          body_path: docs/RELEASE_NOTES_v0.2.1.md
+          fail_on_unmatched_files: true
           files: |
-            retro-engine-*.tar.gz
-            release_contract_report.json
-          generate_release_notes: true
+            release-assets/retro-engine-v*.tar.gz
+            release-assets/retro-engine-v*.tar.gz.sha256
+            release-assets/retro-engine-sdk-*
+            release-assets/retro-engine-ui-*
+            release-assets/checksums.sha256
+            release-assets/release_contract_report.json
+            release-assets/payload_verification_report.json
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}

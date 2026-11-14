@@ -55,12 +55,26 @@ cmake --preset ps1-release && cmake --build --preset ps1-release
 # Ручной запуск RETRO.cue в DuckStation
 ```
 
-## Release gate
+## Release gate v2 (S37–38)
 
-Перед тегом `v0.1.0` должен быть зелёным:
+Перед тегом `v0.2.1` должен быть зелёным полный gate:
 
 ```sh
-python3 scripts/verify_release_contract.py
+# Контракты + clean consumer + W0/W1 (SDK/UI архивы в dist/)
+xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60 \
+  --skip-payload \
+  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+
+# Payload sdk/ + ui/ + checksums + report
+python3 scripts/build_release_bundle.py \
+  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+  --report release_contract_report.json --demos-dir dist/demos
+python3 scripts/verify_release_contract.py --payload-only
+
+# Negative-tests (missing SDK/UI/checksum, BIOS/ROM, build-каталоги)
+python3 scripts/release_gate_negative_tests.py
 ```
 
 Скрипт проверяет:
@@ -71,7 +85,12 @@ python3 scripts/verify_release_contract.py
 - W0 framebuffer hash;
 - W1 FPS PC/PS1;
 - валидацию ассетов;
-- отсутствие silent renderer overflow.
+- отсутствие silent renderer overflow;
+- SDK: архивы/checksums/manifest/headers/clean `find_package` consumer;
+- UI: архивы/checksums/manifest/компоненты/запрет BIOS-ROM-build,
+  headless smoke (New Project → import → Build PC → Run);
+- payload: `sdk/` + `ui/` + optional `demos/`, полные checksums,
+  `release_contract_report.json`, запрет BIOS/ROM/секретов.
 
 ## CI
 
@@ -169,3 +188,18 @@ python3 scripts/verify_release_contract.py
       полный push-CI v0.2.1: `build-pc` 43491683505, `build-ps1` 43491683796,
       `build-saturn` 43491683545, `tests` 43491683683,
       `sdk-package` 43491683616.
+
+## Release payload и negative-tests (S37–38)
+
+- [x] `scripts/build_release_bundle.py` — `dist/retro-engine-v0.2.1/`
+      (`sdk/`, `ui/`, optional `demos/`, `checksums.sha256`,
+      `release_contract_report.json`, README/LICENSE/LEGAL) + детерминированный
+      `retro-engine-v0.2.1.tar.gz` и sidecar.
+- [x] `verify_release_contract.py --payload-only` — layout, версии SDK/UI,
+      nested/top-level checksums, report `all_ok`, запрет BIOS/ROM/секретов/
+      build-каталогов; demo-образы только в `demos/`.
+- [x] `scripts/release_gate_negative_tests.py` — 13 кейсов: baseline PASS;
+      missing SDK/UI/checksums/report, bad checksum, BIOS, ROMs, secrets,
+      build-dir, demo вне `demos/`, `all_ok: false`, лишний top-level → FAIL.
+- [x] Локальный полный gate 2026-11-14: `all_ok: true`, W1 225 FPS,
+      clean consumer PC/PS1/Saturn, UI headless smoke и clean E2E PASS.

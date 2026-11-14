@@ -37,6 +37,33 @@ sdk/
 рядом — `.sha256`. Layout детерминирован: фиксированный порядок файлов,
 mtime из `SOURCE_DATE_EPOCH`/даты git-коммита.
 
+## 1.1. Установка из релиза v0.2.1
+
+Release assets: `retro-engine-sdk-0.2.1-*` (отдельно) или
+`retro-engine-v0.2.1.tar.gz` (`sdk/` + `ui/` + optional `demos/`).
+
+| Host | Архив | Target |
+|---|---|---|
+| Linux x86_64 | `retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz` | PC |
+| Windows x86_64 | `retro-engine-sdk-0.2.1-pc-windows-x86_64.zip` | PC |
+| macOS x86_64/arm64 | `retro-engine-sdk-0.2.1-pc-macos-<arch>.tar.gz` | PC |
+| Linux (cross) | `retro-engine-sdk-0.2.1-ps1-mips.tar.gz` | PS1 (PSn00bSDK v0.24) |
+| Linux (cross) | `retro-engine-sdk-0.2.1-saturn-sh2.tar.gz` | Saturn (Jo Engine v2026.2) |
+
+```sh
+tar -xzf retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz
+cd sdk
+sha256sum -c checksums.sha256
+cat VERSION.txt sdk_manifest.json
+
+# примеры против установленного SDK
+cmake --preset sdk-release
+cmake --build --preset sdk-release
+```
+
+PS1/Saturn toolchains в архив не входят: установите pinned
+PSn00bSDK v0.24 / Jo Engine v2026.2 (см. `docs/BUILDING.md`).
+
 ## 2. Сборка SDK из репозитория
 
 ```sh

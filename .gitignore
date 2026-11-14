@@ -11,6 +11,8 @@ coverage.info
 
 # Релизные артефакты (генерируются CI / scripts/create_release_archive.sh)
 /release_contract_report.json
+/payload_verification_report.json
+/release-assets/
 /dist/
 /retro-engine-*.tar.gz
 

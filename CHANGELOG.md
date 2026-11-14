@@ -6,6 +6,41 @@
 
 ### Added
 
+- После приёмки v0.2.1: N64 (v0.3.0, S39+) — по отдельному плану.
+
+## [0.2.1] — 2026-11-14
+
+### Added
+
+- Спринт 37–38 — release gate v2 и публикация SDK+UI (недели 73–76):
+  (1) `scripts/release_payload.py` — единые правила layout
+  `dist/retro-engine-v<ver>/`: обязательные `sdk/` + `ui/`, optional
+  `demos/`, полный `checksums.sha256`, `release_contract_report.json`,
+  README/LICENSE/LEGAL; запрет BIOS/ROM/секретов/build-каталогов и
+  demo-образов вне `demos/`.
+  (2) `scripts/build_release_bundle.py` — сборка payload из SDK/UI-архивов
+  и отчёта gate, детерминированный `retro-engine-v<ver>.tar.gz` (+ sidecar);
+  без SDK/UI сборка падает, demo не подменяет релиз.
+  (3) `scripts/create_release_archive.sh` v2 — обёртка над bundle builder
+  (legacy demo-only путь удалён).
+  (4) `verify_release_contract.py` — assert `release_payload`, `--payload-only`,
+  `--payload-dir`, `--ui-archive`; проверка sidecar UI-архивов.
+  (5) `scripts/release_gate_negative_tests.py` — 13 negative-кейсов:
+  отсутствие SDK/UI/checksums/report, повреждённые checksums, BIOS/ROM/
+  секреты/build-каталоги, demo вне `demos/`, `all_ok: false`.
+  (6) `ci/normative_contracts.yaml` — `release.payload = sdk+ui`,
+  supported hosts/targets, обязательные checksums, статус v0.2.1.
+  (7) `release.yml` — reusable `sdk-package`/`ui-client` workflows → gate
+  на чистой распаковке (consumer/UI E2E, negative-tests) → публикация
+  только при `all_ok: true`; `docs/RELEASE_NOTES_v0.2.1.md`.
+  (8) `docs/RELEASING.md` (checklist v0.2.1), `docs/SDK.md`,
+  `docs/UI_CLIENT.md`, README — установка из релиза, supported matrix,
+  quickstart SDK+UI; v0.2.0 остаётся отозванным.
+  (9) Локальная приёмка 2026-11-14: `ctest` 289/289, render 305/305,
+  UI 47/47; полный gate `all_ok: true` (W1 225 FPS, UI headless smoke);
+  clean consumer PC/PS1/Saturn и UI E2E PASS; payload negative-tests
+  13/13. Публикация v0.2.1 — после remote CI на release-коммите и тега.
+
 - Спринт 35–36 — UI client MVP: project/target/import/build/run (недели 69–72):
   (1) ADR-012: SDL3 + Dear ImGui v1.93.0 (MIT, pinned в `VERSION.txt`),
   отдельный host-target `retro_engine_ui`, пресеты `ui-debug`/`ui-release`;
@@ -506,3 +541,5 @@
 - Спринт 3–4, Неделя 8 (M1): ECS — `src/core/ecs/entity.h` (24-bit index + 8-bit generation, `INVALID_ENTITY=0`), `src/core/ecs/registry.h/.cpp`: 7 MVP-пулов (Position/Rotation/Velocity 1024, MeshRenderer/Collider 256, Camera/PlayerControl 8), dense ComponentPool с swap-back, generation-increment и retirement слота при 255, `Registry::view<...>()` с кэшированием прямых dense-указателей; `sizeof(Registry)=239 648 B` (≤ 256 KiB budget). Тесты `tests/ecs/entity_test.cpp`, `tests/ecs/registry_test.cpp` (stale handle, generation wrap, dense order, 10 000 сущностей) — итого 88 юнит-тестов, 100% pass (pc-debug, pc-release, pc-asan); `ps1-release` ELF собирается.
 
 [0.1.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.1.0
+[0.2.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.0
+[0.2.1]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1

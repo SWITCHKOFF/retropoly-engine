@@ -15,6 +15,7 @@ on:
     branches: [main, develop]
   pull_request:
     branches: [main, develop]
+  workflow_call:
 
 jobs:
   ui-client:
@@ -113,6 +114,6 @@ jobs:
         if: runner.os == 'Linux'
         uses: actions/upload-artifact@v4
         with:
-          name: retro-engine-ui-screenshots
+          name: ui-e2e-screenshots
           path: dist/ui-screenshots/*.png
           if-no-files-found: warn

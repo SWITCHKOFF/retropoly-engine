@@ -12,9 +12,47 @@ VDP2 NBG1 bitmap-фон с VBlank-scroll (S27–30); 6-button pad и 60 Гц
 demo-образы, но не готовый SDK и UI-клиент — см.
 [docs/RELEASING.md](docs/RELEASING.md).
 
+**v0.2.1 — первый действующий публичный релиз: SDK + UI client.**
+Комбинированный payload `retro-engine-v0.2.1.tar.gz` содержит `sdk/`
+(headers/libs/CMake package/toolchain/examples) и `ui/` (launcher/editor),
+плюс optional `demos/`; release gate v2 проверяет clean consumer, UI E2E,
+checksums и отсутствие BIOS/ROM. Статус — [docs/RELEASING.md](docs/RELEASING.md).
+
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
-## Быстрый старт
+## Скачать и запустить (v0.2.1)
+
+Готовые архивы — в GitHub Release `v0.2.1` (публикация выполняется
+workflow `release` после зелёного gate; статус — [docs/RELEASING.md](docs/RELEASING.md)):
+
+| Asset | Для чего |
+|---|---|
+| `retro-engine-v0.2.1.tar.gz` | Всё сразу: `sdk/` + `ui/` + optional `demos/` |
+| `retro-engine-sdk-0.2.1-pc-<os>-<arch>.{tar.gz,zip}` | SDK для PC (Linux/Windows/macOS) |
+| `retro-engine-sdk-0.2.1-ps1-mips.{tar.gz,zip}` | SDK для PS1 (PSn00bSDK v0.24) |
+| `retro-engine-sdk-0.2.1-saturn-sh2.{tar.gz,zip}` | SDK для Saturn (Jo Engine v2026.2) |
+| `retro-engine-ui-0.2.1-<os>-<arch>.{tar.gz,zip,dmg}` | UI client для Linux/Windows/macOS |
+| `checksums.sha256` | SHA-256 всех assets |
+
+```sh
+# Проверить целостность
+sha256sum -c checksums.sha256
+
+# SDK: пример через find_package
+tar -xzf retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz
+cd sdk && sha256sum -c checksums.sha256
+cmake --preset sdk-release && cmake --build --preset sdk-release
+
+# UI client
+tar -xzf retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+./ui/retro-engine-ui    # New Project → SDK path → import → Build → Run
+```
+
+Поддерживаемые hosts/targets: SDK — Linux/Windows/macOS x86_64 (macOS также
+arm64), target PC/PS1/Saturn; UI — те же hosts. Полный гайд:
+[docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
+
+## Сборка из исходников
 
 ```sh
 git clone --recursive https://github.com/RetroPolyEngine/retro-engine.git
@@ -25,7 +63,9 @@ cmake --preset pc-debug
 cmake --build --preset pc-debug
 ctest --preset pc-debug --output-on-failure
 
-# Запуск примера
+# Release-пример
+cmake --preset pc-release
+cmake --build --preset pc-release
 ./build/pc-release/game/rotating_cube
 ```
 
@@ -123,6 +163,7 @@ python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | Операционный план: вехи M0–M8, PERT, критический путь, гейты G1–G13 |
 | [docs/plans/README.md](docs/plans/README.md) | Детальные планы спринтов (`docs/plans/sprint_NN.md`) |
 | [docs/RELEASING.md](docs/RELEASING.md) | Релизная политика: обязательные SDK + UI client, gate v2, статус v0.2.0 |
+| [docs/RELEASE_NOTES_v0.2.1.md](docs/RELEASE_NOTES_v0.2.1.md) | Release notes v0.2.1: assets, quickstart, supported platforms, checksums |
 
 ## Скриншоты
 
@@ -178,13 +219,15 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] Документация + release gate (M8)
 - [x] SDK packaging: install/export, CMake package, consumer smoke (S33–34)
 - [x] UI client MVP: project/target/import/build/run, package, smoke/E2E (S35–36)
-- [ ] Release gate v2 + публикация v0.2.1 (S37–38)
+- [x] Release gate v2: payload `sdk/`+`ui/`, checksums, negative-tests (S37–38)
+- [ ] Публикация v0.2.1: remote CI на release-коммите, тег, GitHub Release
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
-[docs/RELEASING.md](docs/RELEASING.md). Следующий этап — **S33–38 /
-v0.2.1**: SDK packaging + UI client; планы —
+[docs/RELEASING.md](docs/RELEASING.md). Следующий этап — публикация
+**v0.2.1** (SDK + UI client), затем N64 **v0.3.0** (S39+). Планы —
 [docs/plans/sprint_33_34.md](docs/plans/sprint_33_34.md),
-[sprint_35_36](docs/plans/sprint_35_36.md), [sprint_37_38](docs/plans/sprint_37_38.md).
+[sprint_35_36](docs/plans/sprint_35_36.md),
+[sprint_37_38](docs/plans/sprint_37_38.md).
 
 ## Лицензия
 

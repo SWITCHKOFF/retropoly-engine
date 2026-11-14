@@ -176,9 +176,42 @@ release:
   # Политика с v0.2.0: публичный релиз = готовый SDK + UI client.
   # Demo-образы/source-only архив НЕ являются релизом; см. docs/RELEASING.md.
   payload_policy: sdk_plus_ui_client
+  payload: sdk+ui
   sdk_required: true
   ui_client_required: true
   v0_2_0_release_withdrawn: true
+  v0_2_1_release_status: gate_pending   # released — только после тега/GitHub Release
+  supported_hosts:
+    - linux-x86_64
+    - windows-x86_64
+    - macos-x86_64
+    - macos-arm64
+  supported_targets:
+    - pc
+    - ps1
+    - saturn
+  # Layout dist/retro-engine-v<ver>/ (scripts/build_release_bundle.py).
+  payload_required_entries:
+    - sdk
+    - ui
+    - checksums.sha256
+    - release_contract_report.json
+    - README.md
+    - LICENSE
+    - LEGAL.md
+  payload_optional_entries:
+    - demos
+  payload_required_checksums:
+    - sdk/checksums.sha256
+    - ui/checksums.sha256
+    - checksums.sha256
+  payload_forbidden_parts:
+    - .git
+    - build
+    - CMakeFiles
+    - bios
+    - roms
+    - secrets
   required_sdk_components:
     - public_headers
     - pc_libraries

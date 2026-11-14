@@ -29,6 +29,7 @@ import glob
 import hashlib
 import json
 import os
+import platform as _platform
 import re
 import shutil
 import subprocess
@@ -40,9 +41,13 @@ import zipfile
 import yaml
 
 REPO_ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+import release_payload  # noqa: E402
+
 CONTRACT_PATH = os.path.join(REPO_ROOT, "ci", "normative_contracts.yaml")
 PRESETS_PATH = os.path.join(REPO_ROOT, "CMakePresets.json")
 REPORT_PATH = os.path.join(REPO_ROOT, "release_contract_report.json")
+PAYLOAD_REPORT_PATH = os.path.join(REPO_ROOT, "payload_verification_report.json")
 REFERENCE_ENV_PATH = os.path.join(
     REPO_ROOT, "docs", "benchmarks", "reference_environment.yaml")
 
@@ -62,12 +67,28 @@ SATURN_REQUIRED = ["hello_triangle.elf", "hello_triangle.bin",
 DIST_DIR = os.path.join(REPO_ROOT, "dist")
 SDK_CONSUMER_SCRIPT = os.path.join(REPO_ROOT, "scripts",
                                    "sdk_consumer_smoke.py")
+UI_SMOKE_SCRIPT = os.path.join(REPO_ROOT, "scripts", "ui_smoke.py")
 UI_ARCHIVE_GLOB = os.path.join(DIST_DIR, "retro-engine-ui-*.tar.gz")
+BUNDLE_GLOB = os.path.join(DIST_DIR, "retro-engine-v*")
 
 
 def load_contract():
     with open(CONTRACT_PATH, "r", encoding="utf-8") as f:
         return yaml.safe_load(f)
+
+
+def _host_names():
+    system = _platform.system().lower()
+    machine = _platform.machine().lower()
+    os_name = {"linux": "linux", "darwin": "macos", "windows": "windows"}.get(
+        system, system)
+    if machine in ("amd64", "x86_64", "x64"):
+        arch = "x86_64"
+    elif machine in ("arm64", "aarch64"):
+        arch = "arm64"
+    else:
+        arch = machine
+    return os_name, arch
 
 
 def load_presets():
@@ -340,8 +361,12 @@ def _find_sdk(args, tempdir):
                                                "retro-engine-sdk-*.tar.gz")))
     pc_candidates = [c for c in candidates if "-pc-" in os.path.basename(c)]
     if pc_candidates:
-        return _extract_sdk(pc_candidates[-1], tempdir), pc_candidates[-1], \
-            "pc"
+        host_os, host_arch = _host_names()
+        preferred = [c for c in pc_candidates
+                     if "-pc-%s-%s" % (host_os, host_arch) in
+                     os.path.basename(c)]
+        chosen = preferred[-1] if preferred else pc_candidates[-1]
+        return _extract_sdk(chosen, tempdir), chosen, "pc"
     if candidates:
         return _extract_sdk(candidates[-1], tempdir), candidates[-1], \
             _sdk_platform(candidates[-1])
@@ -372,7 +397,11 @@ def _assert_sdk_archive(contract, archive):
     if not os.path.isfile(sidecar):
         return False, {"error": "SDK archive checksum sidecar missing",
                        "path": sidecar}
-    expected = open(sidecar, "r", encoding="utf-8").read().split()[0]
+    sidecar_text = open(sidecar, "r", encoding="utf-8").read().split()
+    if not sidecar_text:
+        return False, {"error": "SDK archive checksum sidecar empty",
+                       "path": sidecar}
+    expected = sidecar_text[0]
     actual = _sha256(archive)
     names = []
     if archive.endswith(".zip"):
@@ -558,6 +587,24 @@ def assert_sdk_consumer(contract, sdk_dir, skip, platform):
                 "tail": (err if err else out)[-1200:]}
 
 
+def assert_ui_smoke(contract, sdk_dir, ui_archive, skip):
+    """UI headless smoke: New Project → import → Build PC → Run (S37–38)."""
+    if skip:
+        return True, {"skipped": True}
+    if sdk_dir is None:
+        return False, {"error": "SDK directory not found"}
+    if ui_archive is None or not os.path.isfile(ui_archive):
+        return False, {"error": "native UI archive not found",
+                       "archive": ui_archive}
+    cmd = [sys.executable, UI_SMOKE_SCRIPT,
+           "--sdk-dir", sdk_dir, "--ui-package", ui_archive,
+           "--platform", "pc", "--run-seconds", "2"]
+    rc, out, err = run(cmd, timeout=900)
+    ok = rc == 0 and "[smoke] PASS" in out
+    return ok, {"exit_code": rc, "ui_archive": os.path.basename(ui_archive),
+                "ok": ok, "tail": (err if err else out)[-1200:]}
+
+
 def _extract_ui(archive, dest):
     os.makedirs(dest, exist_ok=True)
     if archive.endswith((".tar.gz", ".tgz")):
@@ -575,6 +622,19 @@ def _assert_ui_archive(contract, archive):
         "ui/ui_manifest.json", "ui/checksums.sha256", "ui/README-ui.md"])
     forbidden = tuple(contract.get("ui", {}).get("forbidden_parts", [
         ".git", "build", "CMakeFiles", "bios", "roms", "secrets"]))
+    sidecar = archive + ".sha256"
+    checksum_ok = False
+    checksum_error = None
+    if os.path.isfile(sidecar):
+        sidecar_text = open(sidecar, "r", encoding="utf-8").read().split()
+        if sidecar_text:
+            checksum_ok = sidecar_text[0] == _sha256(archive)
+            if not checksum_ok:
+                checksum_error = "sidecar hash mismatch"
+        else:
+            checksum_error = "sidecar .sha256 empty"
+    else:
+        checksum_error = "sidecar .sha256 missing"
     if archive.endswith((".tar.gz", ".tgz")):
         with tarfile.open(archive, "r:gz") as tar:
             names = set(tar.getnames())
@@ -590,9 +650,11 @@ def _assert_ui_archive(contract, archive):
     parts = [name.split("/")[1] for name in names if name.startswith("ui/") and
              "/" in name]
     present_forbidden = sorted({p for p in parts if p in forbidden})
-    ok = not missing and not present_forbidden
+    ok = not missing and not present_forbidden and checksum_ok
     return ok, {"archive": os.path.basename(archive), "missing": missing,
-                "forbidden": present_forbidden}
+                "forbidden": present_forbidden,
+                "checksum_ok": checksum_ok,
+                "checksum_error": checksum_error}
 
 
 def assert_ui_archives(contract, archives):
@@ -606,6 +668,18 @@ def assert_ui_archives(contract, archives):
         ok = ok and archive_ok
         details.append(detail)
     return ok, {"archives": details}
+
+
+def assert_release_payload(contract, payload_dir):
+    """Проверяет dist/retro-engine-v<ver>/ (SDK+UI payload, S37–38)."""
+    if payload_dir is None:
+        candidates = sorted(glob.glob(BUNDLE_GLOB))
+        dirs = [c for c in candidates if os.path.isdir(c)]
+        if not dirs:
+            return False, {"error": "release payload not found in dist/ "
+                                    "(run scripts/build_release_bundle.py)"}
+        payload_dir = dirs[-1]
+    return release_payload.validate_payload(payload_dir, contract)
 
 
 def assert_ui_manifest(contract, archive):
@@ -644,7 +718,10 @@ def assert_ui_manifest(contract, archive):
                     line = line.strip()
                     if not line:
                         continue
-                    digest, rel = line.split("  ", 1)
+                    digest, sep, rel = line.partition("  ")
+                    if not sep or not rel:
+                        bad_hashes.append("malformed: " + line[:80])
+                        continue
                     target = os.path.join(ui_dir, rel)
                     if not os.path.isfile(target) or _sha256(target) != digest:
                         bad_hashes.append(rel)
@@ -661,19 +738,47 @@ def main():
     parser = argparse.ArgumentParser(description="Release contract verifier")
     parser.add_argument("--w1-seconds", type=int, default=60,
                         help="W1 bench duration (default: 60)")
-    parser.add_argument("--output", type=str, default=REPORT_PATH,
-                        help="Report JSON path")
+    parser.add_argument("--output", type=str, default=None,
+                        help="Report JSON path (default: release_contract_report.json; "
+                             "payload-only: payload_verification_report.json)")
     parser.add_argument("--skip-build-checks", action="store_true",
                         help="Skip ctest/bench execution (validate manifest only)")
     parser.add_argument("--sdk-dir", default=os.environ.get("RPE_SDK_DIR"),
                         help="Путь к распакованному SDK (default: dist/sdk)")
     parser.add_argument("--sdk-archive", default=None,
                         help="Путь к retro-engine-sdk-*.tar.gz/.zip")
+    parser.add_argument("--ui-archive", default=None,
+                        help="Путь к native retro-engine-ui-*.tar.gz")
+    parser.add_argument("--payload-dir", default=None,
+                        help="Путь к dist/retro-engine-v<ver>/ (default: dist)")
     parser.add_argument("--skip-sdk-consumer", action="store_true",
                         help="Не собирать clean consumer (только manifest)")
+    parser.add_argument("--skip-ui-smoke", action="store_true",
+                        help="Не запускать UI headless smoke")
+    parser.add_argument("--skip-payload", action="store_true",
+                        help="Не проверять SDK+UI payload (промежуточный отчёт)")
+    parser.add_argument("--payload-only", action="store_true",
+                        help="Проверить только release payload (S37–38) и выйти")
     args = parser.parse_args()
 
     contract = load_contract()
+    report_output = args.output or (
+        PAYLOAD_REPORT_PATH if args.payload_only else REPORT_PATH)
+
+    if args.payload_only:
+        ok, details = assert_release_payload(contract, args.payload_dir)
+        report = {
+            "project": contract["project"]["name"],
+            "version": contract["project"]["version"],
+            "all_ok": ok,
+            "asserts": {"release_payload": {"ok": ok,
+                                            "details": details}},
+        }
+        with open(report_output, "w", encoding="utf-8") as f:
+            json.dump(report, f, ensure_ascii=False, indent=2)
+        print(json.dumps(report, ensure_ascii=False, indent=2))
+        return 0 if ok else 1
+
     results = {}
     sdk_temp = tempfile.mkdtemp(prefix="rpe_sdk_gate_")
     sdk_dir, sdk_archive, sdk_platform = _find_sdk(args, sdk_temp)
@@ -690,9 +795,21 @@ def main():
         sdk_platform)
 
     ui_archives = sorted(glob.glob(UI_ARCHIVE_GLOB))
+    if args.ui_archive:
+        ui_manifest_archive = os.path.abspath(args.ui_archive)
+    else:
+        host_os, host_arch = _host_names()
+        native = os.path.join(
+            DIST_DIR, "retro-engine-ui-%s-%s-%s.tar.gz" %
+            (contract["project"]["version"], host_os, host_arch))
+        ui_manifest_archive = (native if os.path.isfile(native) else
+                               (ui_archives[-1] if ui_archives else None))
     results["ui_archives"] = assert_ui_archives(contract, ui_archives)
     results["ui_manifest"] = assert_ui_manifest(
-        contract, ui_archives[-1] if ui_archives else None)
+        contract, ui_manifest_archive)
+    results["ui_smoke"] = assert_ui_smoke(
+        contract, sdk_dir, ui_manifest_archive,
+        args.skip_build_checks or args.skip_ui_smoke)
 
     results["presets"] = assert_presets(contract)
     results["ps1_exe_size"] = assert_ps1_exe_size(contract)
@@ -700,6 +817,12 @@ def main():
     results["saturn_artifacts"] = assert_saturn_artifacts(contract)
     results["saturn_map_budget"] = assert_saturn_map_budget(contract)
     results["saturn_golden"] = assert_saturn_golden(contract)
+
+    if args.skip_payload:
+        results["release_payload"] = (True, {"skipped": True})
+    else:
+        results["release_payload"] = assert_release_payload(
+            contract, args.payload_dir)
 
     if not args.skip_build_checks:
         results["w0_hash"] = assert_w0_hash(contract)
@@ -724,7 +847,7 @@ def main():
         "asserts": {k: {"ok": v[0], "details": v[1]} for k, v in results.items()},
     }
 
-    with open(args.output, "w", encoding="utf-8") as f:
+    with open(report_output, "w", encoding="utf-8") as f:
         json.dump(report, f, ensure_ascii=False, indent=2)
 
     print(json.dumps(report, ensure_ascii=False, indent=2))
