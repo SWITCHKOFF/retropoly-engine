@@ -37,10 +37,13 @@ sdk/
 рядом — `.sha256`. Layout детерминирован: фиксированный порядок файлов,
 mtime из `SOURCE_DATE_EPOCH`/даты git-коммита.
 
-## 1.1. Установка из релиза v0.2.1
+## 1.1. Пакет SDK v0.2.1 (release candidate, не опубликован)
 
-Release assets: `retro-engine-sdk-0.2.1-*` (отдельно) или
-`retro-engine-v0.2.1.tar.gz` (`sdk/` + `ui/` + optional `demos/`).
+**Release freeze:** GitHub Release v0.2.1 удалён/отозван; публикация
+отложена до ~v0.9.x. Артефакты ниже собираются локально или в CI:
+
+`retro-engine-sdk-0.2.1-*` (отдельно) или `retro-engine-v0.2.1.tar.gz`
+(`sdk/` + `ui/` + optional `demos/`).
 
 | Host | Архив | Target |
 |---|---|---|

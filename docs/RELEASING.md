@@ -5,6 +5,14 @@
 > `ci/normative_contracts.yaml` + `scripts/verify_release_contract.py`
 > в одном изменении (DEVELOPMENT_PLAN §1, п. 6).
 
+> **RELEASE FREEZE (2026-11-14):** публичные релизы приостановлены до
+> **~v0.9.x**. GitHub Release v0.2.1 удалён/отозван; тег `v0.2.1`
+> остаётся технической меткой и не считается публичным релизом.
+> `release.yml` создаёт только **draft**; публикация — вручную после
+> совместной приёмки maintainer + агент. Автоматический public release
+> запрещён до отмены freeze. Решение —
+> [`adr/ADR-013-release-freeze.md`](adr/ADR-013-release-freeze.md).
+
 ## 1. Текущий статус
 
 Публикация **v0.2.0 отозвана**: в GitHub Release были вложены только
@@ -16,13 +24,14 @@
 **не является действующим публичным релизом**. Не ссылаться на него как
 на «релиз SDK» и не публиковать анонс до прохождения нового release gate.
 
-**v0.2.1 (S33–38):** опубликован
-[GitHub Release v0.2.1](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1)
-— готовый SDK + UI client, release gate v2 `all_ok: true`. Статус в
+**v0.2.1 (S33–38):** GitHub Release удалён/отозван 2026-11-14.
+SDK+UI payload и release gate v2 реализованы и проходят, но публикация
+**отложена до ~v0.9.x**: перед выпуском maintainer сам тестирует релиз
+совместно с агентом. Статус в
 [`ci/normative_contracts.yaml`](../ci/normative_contracts.yaml):
-`v0_2_1_release_status: released`; `v0_2_0_release_withdrawn` снят.
-v0.2.1 — первый действующий публичный релиз; v0.2.0 остаётся исторической
-технической меткой.
+`v0_2_1_release_status: withdrawn`, `release_freeze.active: true`.
+Тег `v0.2.1` остаётся технической меткой; не ссылаться на него как на
+публичный релиз. v0.2.0 также остаётся отозванным.
 
 ## 2. Что считается публичным релизом
 
@@ -142,7 +151,7 @@ python3 scripts/build_release_bundle.py \
 
 ## 3. Release gate v2 (обязательные проверки)
 
-До создания тега и GitHub Release должны быть зелёными:
+До публикации (draft → public) должны быть зелёными:
 
 1. `build-pc`, `build-ps1`, `build-saturn`, `tests`, `sdk-package`,
    `ui-client` — success на release-коммите.
@@ -161,6 +170,10 @@ python3 scripts/build_release_bundle.py \
 8. `checksums.sha256` проверяется; `release_contract_report.json` и
    `payload_verification_report.json` приложены.
 9. Release notes явно называют версию SDK, UI и поддерживаемые платформы.
+10. **Ручная приёмка maintainer + агент** на скачанных draft-assets:
+    распаковка, checksums, SDK consumer, UI New Project → import → Build →
+    Run, PS1/Saturn `.cue` (если применимо). Только после этого draft
+    публикуется вручную.
 
 Команды gate на release-коммите:
 
@@ -183,8 +196,8 @@ python3 scripts/verify_release_contract.py --payload-only \
 python3 scripts/release_gate_negative_tests.py
 ```
 
-Пока пункты 2–6 не выполнены, GitHub Release **не создаётся**, тег не
-анонсируется, а в README/CHANGELOG указывается статус «release
+Пока пункты 2–10 не выполнены, draft GitHub Release **не публикуется**,
+тег не анонсируется, а в README/CHANGELOG указывается статус «release
 withdrawn / SDK+UI pending».
 
 ## 4. Текущие пробелы и следующий шаг
@@ -197,7 +210,8 @@ withdrawn / SDK+UI pending».
 | Release payload SDK+UI | реализован в S37–38 (`scripts/build_release_bundle.py`, `create_release_archive.sh` v2) | Нет |
 | Negative-tests gate | реализован в S37–38 (`scripts/release_gate_negative_tests.py`) | Нет |
 | Demo-образы PC/PS1/Saturn | есть, только optional `demos/` | Нет |
-| Публикация тега/GitHub Release v0.2.1 | **ожидает зелёного gate на release-коммите** | Да (до публикации) |
+| Публикация v0.2.1 | **GitHub Release удалён/отозван; release freeze до ~v0.9.x** | Да (release freeze) |
+| Ручная приёмка maintainer + агент | не выполнена | Да (перед public release) |
 
 Поддерживаемые хосты/таргеты v0.2.1:
 
@@ -208,36 +222,35 @@ withdrawn / SDK+UI pending».
 
 macOS x86_64 собирается из исходников, но не входит в assets v0.2.1.
 
-Следующий этап — **S33–38** (v0.2.1):
+Следующий этап — **разработка до ~v0.9.x** при активном release freeze:
 
 - [`plans/sprint_33_34.md`](plans/sprint_33_34.md) — SDK install/export,
-  CMake package, consumer smoke;
+  CMake package, consumer smoke (готово);
 - [`plans/sprint_35_36.md`](plans/sprint_35_36.md) — UI client MVP
-  (project/target/import/build/run);
+  (project/target/import/build/run) (готово);
 - [`plans/sprint_37_38.md`](plans/sprint_37_38.md) — release gate v2,
-  payload `sdk/`+`ui/`, публикация **v0.2.1**.
+  payload `sdk/`+`ui/` (готово; публикация отложена).
 
-## 5. Release checklist v0.2.1
+## 5. Release checklist (draft; release freeze)
 
 - [x] SDK-архивы PC/PS1/Saturn, `sdk_manifest.json`, checksums
 - [x] UI-пакеты Linux/Windows/macOS, `ui_manifest.json`, checksums
-- [x] `verify_release_contract.py` SDK/UI asserts
+- [x] `verify_release_contract.py` SDK/UI/payload asserts
 - [x] `release_payload` assert и layout `sdk/` + `ui/`
 - [x] `build_release_bundle.py` / `create_release_archive.sh` v2
 - [x] Negative-tests: missing SDK/UI/checksum, BIOS/ROM, build-каталоги
-- [x] `release.yml`: reusable SDK/UI workflows → gate → publish
+- [x] `release.yml`: reusable SDK/UI workflows → gate → **draft** only
 - [x] Локальный полный gate 2026-11-14 (`--w1-seconds 60`, `all_ok: true`,
       UI headless smoke, consumer PC/PS1/Saturn)
 - [x] Clean-room consumer PC и clean-room UI E2E на локальных ассетах
-- [x] Remote CI на release-коммите (`build-pc/ps1/saturn`, `tests`,
-      `sdk-package`, `ui-client`) — success (push/PR run 3e816d1)
-- [x] Release workflow v0.2.1: SDK/UI matrix → gate → publish — success
-      (run 43577691540)
-- [x] Тег `v0.2.1` (annotated) и GitHub Release
-- [x] Проверка скачанных assets (`sha256sum -c checksums.sha256`), отчёты
-      `all_ok: true`, BIOS/ROM отсутствуют
-- [x] Статус `v0_2_1_release_status: released`; `v0_2_0_release_withdrawn`
-      снят
+- [x] Remote CI на коммите `3e816d1` — 12/12 green
+- [x] Тег `v0.2.1` (annotated) — техническая метка, не публичный релиз
+- [x] GitHub Release v0.2.1 удалён/отозван; assets проверены до отзыва
+- [ ] Публикация отложена до **~v0.9.x** (release freeze)
+- [ ] Ручная приёмка maintainer + агент на draft-assets
+- [ ] После ручной приёмки: вручную опубликовать draft и снять freeze
+      (статус `released` — только для будущего v0.9.x)
 
-v0.2.1 — первый действующий публичный релиз; v0.2.0 остаётся отозванным.
-N64 (v0.3.0) стартует с S39.
+v0.2.1 **не является** публичным релизом; v0.2.0 также остаётся
+отозванным. N64 (v0.3.0) и дальнейшая разработка продолжаются без
+публикации релизов до ~v0.9.x.

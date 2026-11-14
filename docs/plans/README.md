@@ -49,7 +49,7 @@
 > payload не содержит SDK и UI-клиента. Release gate v2 —
 > [`../RELEASING.md`](../RELEASING.md).
 
-## Stage 2.5: v0.2.1 — SDK + UI client (release gate v2)
+## Stage 2.5: v0.2.1 — SDK + UI client (release gate v2, publication frozen)
 
 Следующий этап после отзыва v0.2.0: публичный релиз обязан содержать готовый
 SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) стартует
@@ -67,17 +67,18 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ст
 > `docs/UI_CLIENT.md`, ADR-012. Ручной PS1/Saturn gate пройден
 > (DuckStation/Mednafen, `.cue` из UI-проекта); первый полный зелёный CI
 > push `79ce6f4` (`build-pc/ps1/saturn`, `tests`, `sdk-package`,
-> `ui-client`). S37–38 (release gate v2) завершён: payload
+> `ui-client`). S37–38 (release gate v2) завершён технически: payload
 > `sdk/`+`ui/`, `scripts/build_release_bundle.py`, verifier
 > `release_payload`, negative-tests, `create_release_archive.sh` v2 и
-> `release.yml` (reusable SDK/UI → gate → publish). Remote CI `3e816d1` —
-> 12/12 green; release workflow 43577691540 — success; annotated-тег
-> **v0.2.1** и GitHub Release опубликованы; скачанные assets прошли
-> checksums и проверку BIOS/ROM. v0.2.0 остаётся отозванным историческим
-> тегом. Следующий этап — N64 **v0.3.0** (S39+); метрики релиза — через
-> 1–2 недели.
+> `release.yml` (reusable SDK/UI → gate → **draft**). Remote CI `3e816d1`
+> — 12/12 green; release workflow 43577691540 создал GitHub Release, но
+> он **удалён/отозван**: публичные релизы заморожены до **~v0.9.x**
+> (`release freeze`), публикация — вручную после приёмки maintainer +
+> агент. Тег `v0.2.1` — техническая метка; v0.2.0 также отозван.
+> Следующий этап — N64 **v0.3.0** (S39+); метрики/анонс — после
+> снятия freeze.
 
-Следующие итерации (N64 v0.3.0, Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 6–8 / 4–6 / 4–6 / 8–12 спринтов. N64 начинается с S39 после приёмки v0.2.1 (SDK+UI release gate v2), когда будут известны фактические темп и ограничения Saturn-toolchain.
+Следующие итерации (N64 v0.3.0, Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 6–8 / 4–6 / 4–6 / 8–12 спринтов. N64 начинается с S39 как продолжение разработки; публичные релизы заморожены до ~v0.9.x.
 
 ## Соглашения
 

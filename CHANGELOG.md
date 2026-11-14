@@ -6,9 +6,15 @@
 
 ### Added
 
-- После приёмки v0.2.1: N64 (v0.3.0, S39+) — по отдельному плану.
+- N64 (v0.3.0, S39+) — по отдельному плану; публичные релизы заморожены
+  до ~v0.9.x.
 
-## [0.2.1] — 2026-11-14
+## [0.2.1] — не опубликовано (release withdrawn; deferred to ~v0.9.x)
+
+> GitHub Release v0.2.1 удалён/отозван 2026-11-14. SDK+UI payload и
+> release gate v2 готовы, но публикация отложена до ~v0.9.x: перед
+> выпуском maintainer тестирует draft совместно с агентом. Тег `v0.2.1`
+> остаётся технической меткой.
 
 ### Added
 
@@ -39,10 +45,10 @@
   (9) Локальная приёмка 2026-11-14: `ctest` 289/289, render 305/305,
   UI 47/47; полный gate `all_ok: true` (W1 225 FPS, UI headless smoke);
   clean consumer PC/PS1/Saturn и UI E2E PASS; payload negative-tests
-  13/13. Remote CI на `3e816d1` — 12/12 green (push+PR), release workflow
-  43577691540 — success; GitHub Release
-  [v0.2.1](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1)
-  опубликован, assets прошли checksums и проверку BIOS/ROM.
+  13/13. Remote CI на `3e816d1` — 12/12 green (push+PR). Release workflow
+  43577691540 создал GitHub Release, но он **удалён/отозван**:
+  публикация отложена до ~v0.9.x, `release.yml` переведён на draft-only;
+  тег `v0.2.1` остаётся технической меткой.
 
 - Спринт 35–36 — UI client MVP: project/target/import/build/run (недели 69–72):
   (1) ADR-012: SDL3 + Dear ImGui v1.93.0 (MIT, pinned в `VERSION.txt`),
@@ -545,4 +551,4 @@
 
 [0.1.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.1.0
 [0.2.0]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.0
-[0.2.1]: https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1
+[0.2.1]: https://github.com/SWITCHKOFF/retropoly-engine/tree/v0.2.1

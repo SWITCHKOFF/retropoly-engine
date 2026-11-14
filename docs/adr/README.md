@@ -12,3 +12,4 @@ ADR-001…ADR-007 зафиксированы в
 | 010 | VDP1: полигоны, texture/CLUT, triangle→quad, Painter's порядок | Accepted (2026-11-10) | [ADR-010-vdp1-polygons.md](ADR-010-vdp1-polygons.md) |
 | 011 | Публичный SDK API: `include/retro_engine/`, install/export, consumer smoke | Accepted (2026-11-13) | [ADR-011-public-sdk-api.md](ADR-011-public-sdk-api.md) |
 | 012 | UI client: SDL3 + Dear ImGui, `.rpeproject`, границы UI/SDK, упаковка | Accepted (2026-11-13) | [ADR-012-ui-client.md](ADR-012-ui-client.md) |
+| 013 | Release freeze: публичные релизы отложены до ~v0.9.x, draft-only workflow и ручная приёмка | Accepted (2026-11-14) | [ADR-013-release-freeze.md](ADR-013-release-freeze.md) |

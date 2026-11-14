@@ -1,15 +1,18 @@
 # ============================================================================
-# Release workflow — Спринт 37–38 (release gate v2, v0.2.1).
+# Release workflow — Спринт 37–38 (release gate v2).
 #
-# Триггер: annotated tag v*.
+# Триггер: annotated tag v* (после release freeze — только draft).
 #   1. sdk / ui — переиспользуемые workflow S33–36: собирают SDK-архивы
 #      PC/PS1/Saturn и UI-пакеты Linux/Windows/macOS, каждый со smoke.
 #   2. release-gate — скачивает артефакты SDK/UI, собирает legacy PC/PS1/
 #      Saturn demo-образы, запускает verify_release_contract.py, clean-room
 #      consumer/UI E2E, negative-tests и собирает payload sdk/ + ui/.
-#   3. publish — создаёт GitHub Release только если оба отчёта all_ok: true.
+#   3. publish — создаёт DRAFT GitHub Release только если оба отчёта
+#      all_ok: true; публикация — вручную после приёмки maintainer'ом.
 #
-# Политика: docs/RELEASING.md. Demo-архив без SDK+UI релизом не является.
+# RELEASE FREEZE (2026-11-14): публичные релизы приостановлены до ~v0.9.x.
+# v0.2.1 GitHub Release удалён/отозван; автоматический public release
+# запрещён. Политика: docs/RELEASING.md.
 # ============================================================================
 name: release
 
@@ -238,7 +241,7 @@ jobs:
           if-no-files-found: error
 
   publish:
-    name: Publish GitHub Release
+    name: Create draft GitHub Release
     needs: release-gate
     runs-on: ubuntu-latest
 
@@ -280,11 +283,12 @@ jobs:
             > checksums.sha256
           sha256sum -c checksums.sha256
 
-      - name: Create GitHub Release
+      - name: Create draft GitHub Release
         uses: softprops/action-gh-release@v2
         with:
           name: RetroPolyEngine ${{ github.ref_name }} — SDK + UI client
-          body_path: docs/RELEASE_NOTES_v0.2.1.md
+          draft: true
+          generate_release_notes: true
           fail_on_unmatched_files: true
           files: |
             release-assets/retro-engine-v*.tar.gz

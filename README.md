@@ -12,46 +12,40 @@ VDP2 NBG1 bitmap-фон с VBlank-scroll (S27–30); 6-button pad и 60 Гц
 demo-образы, но не готовый SDK и UI-клиент — см.
 [docs/RELEASING.md](docs/RELEASING.md).
 
-**v0.2.1 — первый действующий публичный релиз: SDK + UI client.**
-Комбинированный payload `retro-engine-v0.2.1.tar.gz` содержит `sdk/`
-(headers/libs/CMake package/toolchain/examples) и `ui/` (launcher/editor),
-плюс optional `demos/`; release gate v2 проверил clean consumer, UI E2E,
-checksums и отсутствие BIOS/ROM. Релиз —
-[GitHub Release v0.2.1](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1).
+**Публичные релизы приостановлены до ~v0.9.x (release freeze).**
+v0.2.1 — release candidate: SDK+UI payload и release gate v2 готовы, но
+GitHub Release удалён/отозван. Публикация — только после ручной приёмки
+maintainer + агент; `release.yml` создаёт **draft**, а не public release.
+Подробности — [docs/RELEASING.md](docs/RELEASING.md).
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
-## Скачать и запустить (v0.2.1)
+## Release candidate v0.2.1 (не опубликован)
 
-Готовые архивы — в
-[GitHub Release `v0.2.1`](https://github.com/SWITCHKOFF/retropoly-engine/releases/tag/v0.2.1):
-
-| Asset | Для чего |
-|---|---|
-| `retro-engine-v0.2.1.tar.gz` | Всё сразу: `sdk/` + `ui/` + optional `demos/` |
-| `retro-engine-sdk-0.2.1-pc-<os>-<arch>.{tar.gz,zip}` | SDK для PC (Linux/Windows/macOS) |
-| `retro-engine-sdk-0.2.1-ps1-mips.{tar.gz,zip}` | SDK для PS1 (PSn00bSDK v0.24) |
-| `retro-engine-sdk-0.2.1-saturn-sh2.{tar.gz,zip}` | SDK для Saturn (Jo Engine v2026.2) |
-| `retro-engine-ui-0.2.1-<os>-<arch>.{tar.gz,zip,dmg}` | UI client для Linux/Windows/macOS |
-| `checksums.sha256` | SHA-256 всех assets |
+Публичного GitHub Release сейчас нет. Те же артефакты можно собрать
+локально/в CI:
 
 ```sh
-# Проверить целостность
-sha256sum -c checksums.sha256
+# SDK + UI package
+cmake --preset pc-release && cmake --build --preset pc-release
+cmake --build build/pc-release --target sdk_package
+cmake --preset ui-release
+cmake --build build/ui-release --target retro_engine_ui
+python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
 
-# SDK: пример через find_package
-tar -xzf retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz
-cd sdk && sha256sum -c checksums.sha256
-cmake --preset sdk-release && cmake --build --preset sdk-release
-
-# UI client
-tar -xzf retro-engine-ui-0.2.1-linux-x86_64.tar.gz
-./ui/retro-engine-ui    # New Project → SDK path → import → Build → Run
+# Проверить gate и собрать payload (см. docs/RELEASING.md)
+xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60 --skip-payload
+python3 scripts/build_release_bundle.py \
+  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+  --report release_contract_report.json
+python3 scripts/verify_release_contract.py --payload-only
 ```
 
+Будущий payload: `retro-engine-v0.2.1.tar.gz` (`sdk/` + `ui/` + optional
+`demos/`) + отдельные SDK/UI-архивы PC/PS1/Saturn, checksums и отчёты gate.
 Поддерживаемые hosts/targets v0.2.1: SDK — Linux x86_64, Windows x86_64,
-macOS arm64; target PC/PS1/Saturn. UI — те же hosts. Сборка macOS x86_64
-возможна из исходников, но в v0.2.1 assets её нет. Полный гайд:
+macOS arm64; target PC/PS1/Saturn. Полный гайд:
 [docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
 
 ## Сборка из исходников
@@ -153,6 +147,7 @@ python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
 | [docs/adr/ADR-009-master-slave.md](docs/adr/ADR-009-master-slave.md) | Master+Slave SH-2: SPSC-синхронизация, workload, fallback |
 | [docs/adr/ADR-011-public-sdk-api.md](docs/adr/ADR-011-public-sdk-api.md) | Границы публичного SDK API и install/export |
 | [docs/adr/ADR-012-ui-client.md](docs/adr/ADR-012-ui-client.md) | UI client: SDL3 + Dear ImGui, `.rpeproject`, границы UI/SDK |
+| [docs/adr/ADR-013-release-freeze.md](docs/adr/ADR-013-release-freeze.md) | Release freeze: публикация отложена до ~v0.9.x, draft-only workflow |
 | [docs/API.md](docs/API.md) | Вводный обзор API: ECS, Renderer, Input, FileSystem, Math |
 | [docs/ASSETS.md](docs/ASSETS.md) | Байтовые форматы `.mesh`/`.tex` v1, CLI конвертера, загрузчики |
 | [docs/TESTING.md](docs/TESTING.md) | Пирамида тестов, запуск unit/integration/visual, QA-чек-листы |
@@ -165,7 +160,7 @@ python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | Операционный план: вехи M0–M8, PERT, критический путь, гейты G1–G13 |
 | [docs/plans/README.md](docs/plans/README.md) | Детальные планы спринтов (`docs/plans/sprint_NN.md`) |
 | [docs/RELEASING.md](docs/RELEASING.md) | Релизная политика: обязательные SDK + UI client, gate v2, статус v0.2.0 |
-| [docs/RELEASE_NOTES_v0.2.1.md](docs/RELEASE_NOTES_v0.2.1.md) | Release notes v0.2.1: assets, quickstart, supported platforms, checksums |
+| [docs/RELEASE_NOTES_v0.2.1.md](docs/RELEASE_NOTES_v0.2.1.md) | DRAFT release notes v0.2.1 (release candidate withdrawn; не опубликованы) |
 
 ## Скриншоты
 
@@ -222,12 +217,12 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] SDK packaging: install/export, CMake package, consumer smoke (S33–34)
 - [x] UI client MVP: project/target/import/build/run, package, smoke/E2E (S35–36)
 - [x] Release gate v2: payload `sdk/`+`ui/`, checksums, negative-tests (S37–38)
-- [x] Публикация v0.2.1: remote CI, тег, GitHub Release
+- [ ] Публикация — release freeze до ~v0.9.x; v0.2.1 Release удалён/отозван
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
-[docs/RELEASING.md](docs/RELEASING.md). Следующий этап — публикация
-**v0.2.1** (SDK + UI client), затем N64 **v0.3.0** (S39+). Планы —
-[docs/plans/sprint_33_34.md](docs/plans/sprint_33_34.md),
+[docs/RELEASING.md](docs/RELEASING.md). Публичные релизы приостановлены до
+**~v0.9.x**; разработка продолжается, следующий milestone — N64 **v0.3.0**
+(S39+). Планы — [docs/plans/sprint_33_34.md](docs/plans/sprint_33_34.md),
 [sprint_35_36](docs/plans/sprint_35_36.md),
 [sprint_37_38](docs/plans/sprint_37_38.md).
 

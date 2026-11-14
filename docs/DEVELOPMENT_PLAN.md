@@ -244,7 +244,7 @@ v0.2.1 (SDK + UI client): детальные планы S33–38 — §13.2.
 | `regression.yml` | Спринт 7–8 | pc-debug unit + `pc-debug-render` под `xvfb-run` (renderer integration) |
 | `build-ps1.yml` | Спринт 13–14 | Pinned PSn00bSDK v0.24 + sha256; ps1-release; upload artifacts |
 | `coverage.yml` | Спринт 15–16 | pc-coverage → lcov → Codecov (порог core/ > 70%) |
-| `release.yml` | Спринт 37–38 | Тег v*: reusable SDK/UI workflows → gate v2 (consumer/UI E2E, negative-tests) → GitHub Release только при `all_ok: true` |
+| `release.yml` | Спринт 37–38 | Тег v*: reusable SDK/UI workflows → gate v2 (consumer/UI E2E, negative-tests) → **draft** GitHub Release только при `all_ok: true`; public publish — вручную |
 | `sdk-package.yml` | Спринт 33–34 | SDK-архивы PC/PS1/Saturn + clean consumer smoke (готов) |
 | `ui-client.yml` | Спринт 35–36 | UI matrix: core-тесты, ui-release package, Linux clean E2E |
 | `docs.yml` | Спринт 19–20 | Doxygen → GitHub Pages (по тегу) (готов) |
@@ -417,7 +417,7 @@ v0.2.1 (SDK + UI client): детальные планы S33–38 — §13.2.
 ## 13. Post-MVP roadmap (после v0.1.0 — справочно)
 
 - **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn. Детальные планы S21–32 — §13.1. GitHub Release отозван (demo-only payload).
-- **v0.2.1 — SDK + UI client (3 пары спринтов, S33–38):** install/export CMake package, SDK-архивы PC/PS1/Saturn, consumer smoke; UI client (project/target/import/build/run); release gate v2 и payload `sdk/`+`ui/` опубликованы как **v0.2.1** (2026-11-14). Детальные планы — §13.2.
+- **v0.2.1 — SDK + UI client (3 пары спринтов, S33–38):** install/export CMake package, SDK-архивы PC/PS1/Saturn, consumer smoke; UI client (project/target/import/build/run); release gate v2 и payload `sdk/`+`ui/` готовы, но публикация **отозвана/отложена до ~v0.9.x** (release freeze, ручная приёмка). Детальные планы — §13.2.
 - **v0.3.0 — N64 (6–8 спринтов, S39+):** микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, libdragon.
 - **v0.4.0 — Jaguar (4–6 спринтов):** blitter-программирование (Tom), Jerry-DSP; 68000 host.
 - **v0.5.0 — 3DO (4–6 спринтов):** CEL/MADAM-композитинг; отдельная юридическая проверка SDK перед любым vendoring/перераспределением.
@@ -508,17 +508,20 @@ push `79ce6f4`. S37–38 (release gate v2) реализован: `release_payloa
 negative-tests, `create_release_archive.sh` v2, `release.yml`
 (reusable SDK/UI workflows → gate → publish), RELEASING checklist и
 release notes. Remote CI `3e816d1` — 12/12 green; release workflow
-43577691540 — success; annotated-тег `v0.2.1` и GitHub Release
-опубликованы 2026-11-14; скачанные assets прошли checksums и проверку
-BIOS/ROM. `v0_2_1_release_status: released`; `v0_2_0_release_withdrawn`
-снят.
+43577691540 создал GitHub Release, но он **удалён/отозван** 2026-11-14:
+публикация отложена до ~v0.9.x (`release freeze`), а `release.yml`
+переведён на **draft-only**. Тег `v0.2.1` остаётся технической меткой;
+статус `v0_2_1_release_status: withdrawn`, `v0_2_0_release_withdrawn: true`.
+Перед будущей публикацией — ручная приёмка maintainer + агент; решение
+зафиксировано в [`adr/ADR-013-release-freeze.md`](adr/ADR-013-release-freeze.md).
 
 **Гейт v0.2.1:** SDK-архив проходит clean `find_package` consumer; UI client
 создаёт проект, импортирует ассет, собирает и запускает target; payload
 содержит `sdk/` + `ui/` + `checksums.sha256`; `verify_release_contract.py`
 `all_ok: true`; negative-tests падают без SDK/UI/checksums и при
 BIOS/ROM/build-каталогах в payload; v0.2.0 остаётся отозванным. Гейт
-пройден; N64 S39+ — следующий этап.
+технически пройден, но публикация заморожена до ~v0.9.x; N64 S39+ —
+следующий этап разработки.
 
 ## 14. Реестр рисков (операционный)
 
