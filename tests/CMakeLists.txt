@@ -122,6 +122,50 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     retro_engine_apply_flags(saturn_hal_tests)
     gtest_discover_tests(saturn_hal_tests DISCOVERY_TIMEOUT 60)
 
+    # -----------------------------------------------------------------------
+    # N64 HAL host-tests (S39–42). Host-компилятор с PLATFORM_N64=1, без
+    # libdragon: C-мост заменён fake_n64_bridge.cpp. Проверяются lifecycle/
+    # idempotence/time, input mapping, DFS/asset loading, memory ledger,
+    # RDP command arena и render skeleton (ADR-014).
+    # -----------------------------------------------------------------------
+    add_executable(n64_hal_tests
+        n64/fake_n64_bridge.cpp
+        n64/n64_hal_test.cpp
+        n64/n64_assets_test.cpp
+        n64/n64_command_buffer_test.cpp
+        n64/n64_fs_test.cpp
+        n64/n64_input_test.cpp
+        n64/n64_log_rate_test.cpp
+        n64/n64_memory_test.cpp
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/platform_n64.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/render_n64.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_assets.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_fs.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_input.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_log_rate.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_memory.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/rdp_command.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/log/log.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/memory/memory_profiler.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/math/fixed.cpp"
+        "${CMAKE_SOURCE_DIR}/src/core/math/math.cpp"
+        "${CMAKE_SOURCE_DIR}/src/render/renderer.cpp"
+        "${CMAKE_SOURCE_DIR}/src/render/texture.cpp"
+        "${CMAKE_SOURCE_DIR}/src/assets/mesh_loader.cpp"
+        "${CMAKE_SOURCE_DIR}/src/assets/texture_loader.cpp")
+    target_compile_features(n64_hal_tests PRIVATE cxx_std_14)
+    target_include_directories(n64_hal_tests PRIVATE
+        "${CMAKE_SOURCE_DIR}"
+        "${CMAKE_SOURCE_DIR}/src"
+        "${RPE_PUBLIC_INCLUDE_DIR}"
+        "${RPE_PUBLIC_API_INCLUDE_DIR}")
+    target_link_libraries(n64_hal_tests PRIVATE GTest::gtest_main)
+    target_compile_definitions(n64_hal_tests PRIVATE
+        PLATFORM_N64=1
+        RPE_TEST_SOURCE_DIR="${CMAKE_SOURCE_DIR}")
+    retro_engine_apply_flags(n64_hal_tests)
+    gtest_discover_tests(n64_hal_tests DISCOVERY_TIMEOUT 60)
+
     # Рендер-интеграционные (W0-golden, неделя 16) — пресет pc-debug-render
     # (BUILD_RENDER_INTEGRATION_TESTS=ON). Требуют дисплей/GL: headless-CI
     # пропускает кейсы через GTEST_SKIP (см. render_golden_test.cpp).

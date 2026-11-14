@@ -6,14 +6,38 @@
 
 ### Added
 
-- N64 (v0.3.0, S39+) — по отдельному плану; публичные релизы заморожены
-  до ~v0.9.x.
+- N64 (v0.3.0, S39–46) — детальные планы: toolchain/libdragon, HAL,
+  RSP/RDP, hello_triangle и draft-релиз; любая публикация релизов
+  отложена до v0.9.x.
+- Спринт 39–40 — N64 bring-up: pinned mips64-elf-gcc 16.2.0 +
+  libdragon `e356bf3` (MIT), `cmake/n64-toolchain.cmake` + пресет
+  `n64-release`, `PLATFORM_N64` в guard «ровно один backend», imported
+  libdragon/libdragonsys, bootable `hello_n64.z64` (VI 320×240 16-bit +
+  RDPQ clear + debug-текст), `.map` + `.sha256`, `n64_hal_tests` 6/6,
+  `scripts/verify_n64_rom.py` (header/ELF/CRC-policy/sha256),
+  `.github/workflows/build-n64.yml` (pinned toolchain, artifacts,
+  negative-checks; эмулятор не запускается), `scripts/run_n64.sh/.bat`,
+  `docs/N64.md`, ADR-014, пины `ci/n64-{toolchain,libdragon,gopher64}`.
+  Ручной gate 60 с — gopher64 1.2.1 (mupen64plus не грузит libdragon
+  IPL3 r5+, mupen64plus-core#1185); PC regression 295/295. Remote CI —
+  после push; релизы по-прежнему draft-only до v0.9.x.
+- Спринт 41–42 — N64 HAL: VI 320×240 16-bit NTSC + идемпотентный
+  lifecycle, ровно один `joypad_poll`/кадр с полным маппингом
+  A/B/Z/Start/D-pad/C/L/R и deadzone, монотонное время, read-only DFS
+  (`mkdfs` + `n64tool --align 16`) с `CUBE.MSH`/`TEX0.TEX` и safe
+  `.mesh`/`.tex` загрузкой, memory ledger 4 MiB (engine arenas 2 MiB,
+  stack 64 KiB, framebuffers 300 KiB, reserve 1 724 416 B), запрет heap
+  (`scripts/verify_n64_no_heap.py`), render skeleton (Begin/Clear/End) +
+  bounded RDP command arena 128 KiB, `n64_hal_tests` 46/46 (+ASan),
+  PC regression 335/335, `build-n64.yml` DFS/heap checks, 60-с gate и
+  10-минутный stress в gopher64 1.2.1, `docs/N64.md`, ADR-014 revision 2,
+  скриншот `screenshots/n64_boot_s41_42.png`.
 
-## [0.2.1] — не опубликовано (release withdrawn; deferred to ~v0.9.x)
+## [0.2.1] — не опубликовано (release withdrawn; deferred to v0.9.x)
 
 > GitHub Release и тег `v0.2.1` удалены/отозваны 2026-11-14. SDK+UI payload
-> и release gate v2 готовы, но публикация отложена до ~v0.9.x: перед
-> выпуском maintainer тестирует draft совместно с агентом. Версия 0.2.1
+> и release gate v2 готовы, но любая публикация релизов отложена до v0.9.x:
+> перед выпуском maintainer тестирует draft совместно с агентом. Версия 0.2.1
 > остаётся development-версией.
 
 ### Added
@@ -47,8 +71,9 @@
   clean consumer PC/PS1/Saturn и UI E2E PASS; payload negative-tests
   13/13. Remote CI на `3e816d1` — 12/12 green (push+PR). Release workflow
   43577691540 создал GitHub Release, но он **удалён/отозван** вместе с
-  тегом `v0.2.1`: публикация отложена до ~v0.9.x, `release.yml` переведён
-  на draft-only; версия 0.2.1 остаётся development-версией.
+  тегом `v0.2.1`: любая публикация релизов отложена до v0.9.x,
+  `release.yml` переведён на draft-only; версия 0.2.1 остаётся
+  development-версией.
 
 - Спринт 35–36 — UI client MVP: project/target/import/build/run (недели 69–72):
   (1) ADR-012: SDL3 + Dear ImGui v1.93.0 (MIT, pinned в `VERSION.txt`),

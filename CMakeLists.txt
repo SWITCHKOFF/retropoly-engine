@@ -8,9 +8,10 @@
 #     «CMakePresets.json is the only canonical build entry point»
 #
 # Правила:
-#   - ровно один бэкенд (PLATFORM_PC XOR PLATFORM_PS1 XOR PLATFORM_SATURN);
+#   - ровно один бэкенд (PLATFORM_PC XOR PLATFORM_PS1 XOR PLATFORM_SATURN
+#     XOR PLATFORM_N64);
 #   - hello_triangle / rotating_cube ссылаются только на retro_engine
-#     (никогда напрямую на SDL3/OpenGL/PSn00bSDK/Jo Engine);
+#     (никогда напрямую на SDL3/OpenGL/PSn00bSDK/Jo Engine/libdragon);
 #   - asset_converter — host-only, не собирается кросс-компиляторами;
 #   - все сборки через канонические пресеты CMakePresets.json.
 # ============================================================================
@@ -19,7 +20,7 @@ cmake_minimum_required(VERSION 3.25)
 
 project(retro_engine
     VERSION 0.2.1
-    DESCRIPTION "RetroPolyEngine — deterministic retro engine (PC: SDL3 + OpenGL 3.3; PS1: PSn00bSDK v0.24; Saturn: Jo Engine v2026.2)"
+    DESCRIPTION "RetroPolyEngine — deterministic retro engine (PC: SDL3 + OpenGL 3.3; PS1: PSn00bSDK v0.24; Saturn: Jo Engine v2026.2; N64: libdragon)"
     LANGUAGES C CXX ASM
 )
 
@@ -36,6 +37,8 @@ elseif(PLATFORM_PS1)
     set(RPE_PLATFORM_NAME "ps1")
 elseif(PLATFORM_SATURN)
     set(RPE_PLATFORM_NAME "saturn")
+elseif(PLATFORM_N64)
+    set(RPE_PLATFORM_NAME "n64")
 endif()
 
 # Нормализованная архитектура для layout lib/<platform>/<arch> (RELEASING §2.1).
@@ -50,6 +53,8 @@ elseif(RPE_PLATFORM_ARCH MATCHES "^(aarch64|arm64)$")
     set(RPE_PLATFORM_ARCH "arm64")
 elseif(RPE_PLATFORM_ARCH MATCHES "^(mips|mipsel)$")
     set(RPE_PLATFORM_ARCH "mips")
+elseif(RPE_PLATFORM_ARCH MATCHES "^(mips64|mips64el)$")
+    set(RPE_PLATFORM_ARCH "mips64")
 elseif(RPE_PLATFORM_ARCH MATCHES "^(sh|sh2|sh-2)$")
     set(RPE_PLATFORM_ARCH "sh2")
 endif()
@@ -89,6 +94,7 @@ configure_file("${CMAKE_SOURCE_DIR}/cmake/version.h.in"
 option(PLATFORM_PC     "Собирать целевой бэкенд PC (SDL3 + OpenGL 3.3)"             OFF)
 option(PLATFORM_PS1    "Собирать целевой бэкенд PS1 (PSn00bSDK v0.24, pinned)"      OFF)
 option(PLATFORM_SATURN "Собирать целевой бэкенд Saturn (Jo Engine v2026.2, pinned)" OFF)
+option(PLATFORM_N64    "Собирать целевой бэкенд N64 (libdragon pinned, ADR-014)"    OFF)
 option(BUILD_TESTS                       "Собирать юнит-тесты (GoogleTest)"               ON)
 option(BUILD_EXAMPLES                    "Собирать примеры hello_triangle/rotating_cube"  OFF)
 option(BUILD_UI_CLIENT                   "Собирать UI client (SDL3 + Dear ImGui, PC host)" OFF)
@@ -99,14 +105,14 @@ option(ENABLE_COVERAGE "Покрытие кода тестами (только P
 
 # --- Guard: ровно один бэкенд -------------------------------------------------
 set(RPE_PLATFORM_COUNT 0)
-foreach(_rpe_platform PLATFORM_PC PLATFORM_PS1 PLATFORM_SATURN)
+foreach(_rpe_platform PLATFORM_PC PLATFORM_PS1 PLATFORM_SATURN PLATFORM_N64)
     if(${_rpe_platform})
         math(EXPR RPE_PLATFORM_COUNT "${RPE_PLATFORM_COUNT} + 1")
     endif()
 endforeach()
 if(NOT RPE_PLATFORM_COUNT EQUAL 1)
     message(FATAL_ERROR
-        "Не выбран ровно один бэкенд (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN): "
+        "Не выбран ровно один бэкенд (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN/PLATFORM_N64): "
         "включённых платформ — ${RPE_PLATFORM_COUNT}. См. CMakePresets.json.")
 endif()
 if(BUILD_UI_CLIENT AND NOT PLATFORM_PC)
@@ -130,6 +136,18 @@ if(PLATFORM_SATURN)
     include_directories(SYSTEM
         "${JO_ENGINE_NEWLIB_INCLUDE}"
         "${JO_ENGINE_GCC_INCLUDE_FIXED}")
+endif()
+
+# --- N64: libdragon/newlib-заголовки из pinned toolchain (ADR-014) ----------
+# Как и Saturn, кросс-компилятор не должен видеть host /usr/include.
+# libdragon подключается как SYSTEM (его заголовки не под -Werror).
+if(PLATFORM_N64)
+    if(NOT DEFINED N64_INST OR NOT DEFINED N64_INCLUDEDIR OR NOT DEFINED N64_LIBDIR)
+        message(FATAL_ERROR
+            "N64 toolchain не задал N64_INST/N64_INCLUDEDIR/N64_LIBDIR. "
+            "Сборка — только через пресет n64-release (cmake/n64-toolchain.cmake).")
+    endif()
+    include_directories(SYSTEM "${N64_INCLUDEDIR}")
 endif()
 
 # --- Вендоренные зависимости (§3.6) -------------------------------------------
@@ -341,9 +359,12 @@ install(FILES
         "${CMAKE_SOURCE_DIR}/cmake/ps1-toolchain.cmake"
         "${CMAKE_SOURCE_DIR}/cmake/saturn-toolchain.cmake"
         "${CMAKE_SOURCE_DIR}/cmake/saturn-sdk-toolchain.cmake"
+        "${CMAKE_SOURCE_DIR}/cmake/n64-toolchain.cmake"
         DESTINATION cmake)
 
 # SDK-архив: cmake --build <build-dir> --target sdk_package
+# N64 SDK/UI — S45–46; в S39–40 пакет не создаётся (package_sdk.py пока
+# поддерживает pc/ps1/saturn, а N64-библиотеки требуют libdragon).
 if(PLATFORM_PC)
     set(RPE_SDK_PACKAGE_DEPS retro_engine retro_engine_hal retro_engine_log
         asset_converter hello_triangle rotating_cube)
@@ -355,7 +376,7 @@ elseif(PLATFORM_SATURN)
         hello_triangle_saturn)
 endif()
 find_package(Python3 COMPONENTS Interpreter QUIET)
-if(Python3_Interpreter_FOUND)
+if(Python3_Interpreter_FOUND AND DEFINED RPE_SDK_PACKAGE_DEPS)
     add_custom_target(sdk_package
         COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/package_sdk.py"
                 --build-dir "${CMAKE_BINARY_DIR}"

@@ -117,6 +117,34 @@ git clone --depth 1 --branch v2026.2 https://github.com/johannes-fetz/joengine.g
 set JO_ENGINE_ROOT=C:\joengine
 ```
 
+### Nintendo 64
+
+- libdragon-toolchain: GNU GCC 16.2.0 для `mips64-elf` (Linux x86_64 deb),
+  SHA-256 — [`../ci/n64-toolchain.sha256`](../ci/n64-toolchain.sha256).
+- libdragon (MIT), pinned commit `e356bf3` — env-install, не vendored
+  ([`../ci/n64-libdragon.commit`](../ci/n64-libdragon.commit)).
+- `N64_INST` — install-prefix (bin/, `mips64-elf/{include,lib}`);
+  `LIBDRAGON_ROOT` — git-checkout для проверки commit.
+- Эмулятор ручного gate — gopher64 1.2.1 (не vendored, BIOS не нужен).
+- Версии/SHA-256: [`../VERSION.txt`](../VERSION.txt); платформа —
+  [`N64.md`](N64.md); решение — ADR-014.
+
+```bash
+mkdir -p "$HOME/n64-sdk" && cd "$HOME/n64-sdk"
+curl -L -o gcc-toolchain-mips64-x86_64.deb \
+  https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
+sha256sum -c /path/to/retro-engine/ci/n64-toolchain.sha256
+dpkg-deb -x gcc-toolchain-mips64-x86_64.deb toolchain
+export N64_INST="$HOME/n64-sdk/toolchain/opt/libdragon"
+
+git clone https://github.com/DragonMinded/libdragon.git
+git -C libdragon checkout e356bf3f56f7afbf7e5246329562f145965cfdfc
+make -C libdragon -j"$(nproc)"
+make -C libdragon install
+make -C libdragon tools-install
+export LIBDRAGON_ROOT="$HOME/n64-sdk/libdragon"
+```
+
 ## Клонирование
 
 ```sh
@@ -147,6 +175,7 @@ git submodule update --init --recursive
 | `saturn-single` | Saturn | OFF | OFF | S25–26 single-CPU fallback (`RPE_SATURN_DUAL_CPU=OFF`) |
 | `saturn-hang` | Saturn | OFF | OFF | S25–26 fault injection: Slave зависает |
 | `saturn-flood` | Saturn | OFF | OFF | S25–26 fault injection: переполнение очереди |
+| `n64-release` | N64 | OFF | OFF | `.z64` + DFS (`mkdfs`) + map + sha256 (libdragon) |
 
 ## SDK: install/export и пакет
 
@@ -261,9 +290,9 @@ sh scripts/check_binary_size.sh
 
 Лимит: 512 000 байт.
 
-> Публичные релизы: только SDK + UI client по
+> Публичным релизом считается только SDK + UI client по
 > [`RELEASING.md`](RELEASING.md); demo-образы `hello_triangle.*` — примеры,
-> не релиз.
+> не релиз. Любая публикация релизов отложена до v0.9.x (release freeze).
 
 ## Сборка Saturn
 
@@ -348,6 +377,77 @@ cmake --build --preset saturn-flood
 Метрики S25–26, порог и ручной чек-лист — [`SATURN.md`](SATURN.md) §11,
 нормативное решение — [`adr/ADR-009-master-slave.md`](adr/ADR-009-master-slave.md).
 
+## Сборка Nintendo 64
+
+```sh
+export N64_INST="$HOME/n64-sdk/toolchain/opt/libdragon"
+export LIBDRAGON_ROOT="$HOME/n64-sdk/libdragon"
+cmake --preset n64-release
+cmake --build --preset n64-release
+```
+
+Артефакты `build/n64-release/src/hal/n64/`:
+
+- `hello_n64.z64` — bootable `.z64` (canonical demo);
+- `hello_n64.map` — linker map;
+- `hello_n64.z64.sha256` — SHA-256 (`sha256sum -c`);
+- `retro_n64.z64` — те же байты под engine-именем;
+- `retro_n64.elf` + `retro_n64.sym` — ELF и символы;
+- `retro_n64.dfs` + `retro_n64.dfs.txt` — read-only DFS (`CUBE.MSH`,
+  `TEX0.TEX`, `TRIANGLE.MSH`) и listing.
+
+Проверка ROM без эмулятора:
+
+```sh
+python3 scripts/verify_n64_rom.py \
+  build/n64-release/src/hal/n64/hello_n64.z64
+python3 scripts/verify_n64_no_heap.py
+"$N64_INST/bin/dumpdfs" -l build/n64-release/src/hal/n64/hello_n64.z64
+```
+
+Ожидается `RESULT: PASS`, `entry 0x80000400`,
+`crc_policy=libdragon_ipl3_header_crc_unused` (libdragon IPL3 не читает
+header CRC — policy ADR-014).
+
+Ручной запуск в pinned gopher64 1.2.1:
+
+```sh
+curl -L -o gopher64 \
+  https://github.com/gopher64/gopher64/releases/download/v1.2.1/gopher64-linux-x86_64
+chmod +x gopher64
+GOPHER64_BIN=$PWD/gopher64 scripts/run_n64.sh
+
+# headless
+xvfb-run -a -s "-screen 0 800x600x24" \
+  env GOPHER64_BIN=$PWD/gopher64 scripts/run_n64.sh
+```
+
+Gate: 60 с, тёмно-синий экран `(0,0,32)`, строки `BOOT OK / S41-42`,
+`DFS OK MESH 600 TEX 66068`, memory overlay, heartbeat
+`frame=… time=…` каждые ~5 с, input-лог `[n64_input] pad0 press …`,
+без RSP-crash; 10-минутный stress — ручной. mupen64plus не использовать:
+libdragon IPL3 r5+ не загружается (mupen64plus-core#1185). CI
+(`.github/workflows/build-n64.yml`) собирает ROM, проверяет
+header/ELF/sha256/DFS и запрет heap, но эмулятор не запускает. Полный
+чек-лист — [`N64.md`](N64.md) §9.
+
+N64 HAL host-тесты (без libdragon):
+
+```sh
+cmake --preset pc-debug
+cmake --build build/pc-debug --target n64_hal_tests
+ctest --test-dir build/pc-debug -R N64 --output-on-failure
+```
+
+Цель компилирует `src/hal/n64/*` host-компилятором с `PLATFORM_N64=1`
+и fake C-мостом (`tests/n64/fake_n64_bridge.cpp`). ASan-прогон:
+
+```sh
+cmake --preset pc-asan
+cmake --build build/pc-asan --target n64_hal_tests
+ASAN_OPTIONS=detect_leaks=1:abort_on_error=1 ./build/pc-asan/tests/n64_hal_tests
+```
+
 ## Частые проблемы
 
 ### `SDL3 not found` / submodule пуст
@@ -403,6 +503,37 @@ python3 -m pip install pycdlib
 cmake --preset saturn-release
 cmake --build --preset saturn-release
 ```
+
+### `n64-release → N64_INST не задан`
+
+Сообщение:
+
+```
+N64_INST не задан. Установите pinned mips64-elf toolchain + libdragon
+```
+
+Решение: выполнить установку из раздела Nintendo 64 выше; проверить
+`test -x "$N64_INST/bin/n64tool"` и
+`test -f "$N64_INST/mips64-elf/lib/libdragon.a"`.
+
+### `n64-release → LIBDRAGON_ROOT HEAD=…`
+
+Toolchain file требует pinned commit `e356bf3` при наличии `.git`.
+Решение: `git -C "$LIBDRAGON_ROOT" checkout
+e356bf3f56f7afbf7e5246329562f145965cfdfc`; обновление libdragon —
+отдельная задача с ADR-014.
+
+### `n64-release → mips64-elf-gcc … не N64 cross-toolchain`
+
+`N64_INST` указывает не на libdragon-toolchain (в `bin/` лежит host gcc
+или другой target). Переустановить pinned deb из `VERSION.txt`.
+
+### N64 ROM чёрный в mupen64plus
+
+Не использовать mupen64plus: libdragon IPL3 r5+ не загружается
+(mupen64plus-core#1185). Pinned baseline — gopher64 1.2.1
+(`scripts/run_n64.sh`); ares также загружает ROM, но Linux-бинаря
+upstream нет.
 
 ### Visual Studio: ошибки линковки SDL3-static
 

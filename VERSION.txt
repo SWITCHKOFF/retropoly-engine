@@ -131,3 +131,40 @@ note        = pinned для ручного smoke-теста S23–26 (5 мин S
               VDP2 clear + CD self-test .mesh/.tex; 10 мин S25–26: dual-CPU
               workload, fallback, determinism). CI собирает образ, но не
               запускает эмулятор.
+
+; ============================================================================
+; v0.3.0 — Nintendo 64 (Спринты 39–40, ADR-014). Дата: 2026-11-14.
+; ============================================================================
+
+[libdragon]
+repo        = https://github.com/DragonMinded/libdragon.git
+commit      = e356bf3f56f7afbf7e5246329562f145965cfdfc
+path        = env-install (LIBDRAGON_ROOT/N64_INST), не вендорен в репозиторий
+license     = MIT
+compiler    = GNU GCC 16.2.0 для mips64-elf (libdragon-toolchain)
+sha256_manifest = ci/n64-toolchain.sha256
+note        = pinned по immutable commit; libdragon ставится в N64_INST
+              (mips64-elf/{lib,include}, bin/n64tool). Обновление =
+              отдельная задача с ADR. IPL3 r8: header CRC не используется
+              (docs/N64.md §4).
+
+[n64-toolchain-linux]
+asset       = https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
+sha256      = fac8e6572493a66468b7d45df41b042f90b1a630ec96aa218bd5fb1f320a0a4d
+install_root = ~/n64-sdk/toolchain/opt/libdragon   ; env-install, не вендорится
+env_n64_inst = $HOME/n64-sdk/toolchain/opt/libdragon
+compiler     = mips64-elf-gcc (GCC) 16.2.0
+target       = mips64-elf (NEC VR4300, big-endian, MIPS III)
+note         = CI скачивает deb, проверяет SHA-256 (ci/n64-toolchain.sha256),
+               затем собирает pinned libdragon (make + install + tools-install).
+
+[gopher64]
+version      = 1.2.1
+asset        = https://github.com/gopher64/gopher64/releases/download/v1.2.1/gopher64-linux-x86_64
+sha256       = 4822cbb76298b59f4df65560f285acd29c3e8fd7cb714637794ddd15d6132369
+license      = GPL-3.0-or-later
+path         = env-install (ручная приёмка; в репозиторий/CI не вендорится)
+note         = pinned baseline ручного gate S39–40; BIOS не нужен.
+               mupen64plus отклонён: libdragon IPL3 r5+ не загружается
+               (mupen64plus-core#1185); ares не публикует Linux-бинарь.
+               CI собирает ROM, но эмулятор не запускает.

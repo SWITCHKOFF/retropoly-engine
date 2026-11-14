@@ -106,6 +106,16 @@
       }
     },
     {
+      "name": "n64-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/n64-release",
+      "toolchainFile": "${sourceDir}/cmake/n64-toolchain.cmake",
+      "cacheVariables": {
+        "PLATFORM_N64": "ON",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
       "name": "saturn-single",
       "inherits": "saturn-release",
       "binaryDir": "${sourceDir}/build/saturn-single",
@@ -141,6 +151,7 @@
     { "name": "pc-coverage", "configurePreset": "pc-coverage" },
     { "name": "ps1-release", "configurePreset": "ps1-release" },
     { "name": "saturn-release", "configurePreset": "saturn-release" },
+    { "name": "n64-release", "configurePreset": "n64-release" },
     { "name": "saturn-single", "configurePreset": "saturn-single" },
     { "name": "saturn-hang", "configurePreset": "saturn-hang" },
     { "name": "saturn-flood", "configurePreset": "saturn-flood" }

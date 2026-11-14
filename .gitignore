@@ -33,3 +33,9 @@ testsprite_tests/tmp/config.json
 # Локальные BIOS/ROM для ручного эмуляторного gate (не вендорятся, не публикуются).
 /bios/
 __pycache__
+
+# N64 env-install: toolchain/libdragon/gopher64 не вендорятся (ADR-014).
+/n64-sdk/
+/gopher64
+/gopher64-linux-x86_64
+*.z64

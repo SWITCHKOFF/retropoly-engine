@@ -21,8 +21,8 @@
 // Контракт заголовка: не включает SDL/glad/PSn00bSDK/Jo Engine — бекенды
 // подключают свои зависимости только в .cpp; заголовок компилируется во
 // всех бекендах без SH-2/MIPS/хост-специфичных типов. Выбор backend —
-// compile-time CMake (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN, ADR-001/
-// ADR-008); платформенных #ifdef в этом заголовке нет by design.
+// compile-time CMake (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN/PLATFORM_N64,
+// ADR-001/ADR-008/ADR-014); платформенных #ifdef в этом заголовке нет by design.
 // Функции — свободные (без namespace): имена сохранены дословно из §3
 // (норматив). Порядок значений enum'ов — контракт ABI: вставки только
 // перед *_COUNT.
@@ -45,6 +45,10 @@
  * Saturn (ADR-008): ровно один вызов на процесс; повторный — идемпотентен.
  * Backdrop выставляется через VDP2; 3D/VDP1 в v0.2.0-S23–24 отсутствует
  * (VDP1-draw вернёт false до S27–28).
+ *
+ * N64 (ADR-014): ровно один вызов на процесс; повторный — идемпотентен.
+ * VI 320×240 16-bit NTSC + RDPQ; debug-канал ISViewer/USB; joypad и
+ * read-only DFS инициализируются здесь (S41–42); RSP/RDP-рендер — S43–44.
  *
  * Последовательность (§3.3 + sprint_05_06, неделя 9):
  *   1. SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD) — БЕЗ SDL_INIT_TIMER
@@ -80,6 +84,7 @@ void Platform_Shutdown(void);
  * PS1/Saturn: очереди событий нет — константный true; выход определяется
  * платформенным вводом (PS1 START; Saturn — START читается через Input_*).
  * Saturn дополнительно опрашивает 6-button pad ровно один раз за кадр.
+ * N64 (S41–42): ровно один `joypad_poll` за кадр; выход — оператор/эмулятор.
  *
  * @return true — обычный кадр; false — получено SDL_EVENT_QUIT
  *         (главный цикл обязан завершиться; Shutdown — задача вызывающего).
@@ -90,6 +95,8 @@ bool Platform_PumpEvents(void);
  * Показ кадра на экран: SDL_GL_SwapWindow. Безопасный no-op, если
  * окно/GL-контекст не созданы. PS1: DrawSync → VSync → flip. Saturn
  * skeleton: no-op — кадром владеет jo_core_run() (VDP1/VDP2 sync).
+ * N64 (S41–42): no-op — кадром владеет render backend
+ * (`hal_render_backend_begin_frame/end_frame` через RDPQ).
  */
 void Platform_SwapBuffers(void);
 
@@ -104,6 +111,8 @@ void Platform_SleepMs(uint32_t ms);
  *
  * PS1/Saturn: виртуальное время платформенного VBlank-счётчика
  * (без системных часов; wrap-safe беззнаковая разность).
+ * N64 (S41–42): libdragon `get_ticks_ms()` (uint32-срез, wrap-safe;
+ * 10-минутный прогон укладывается без переполнения).
  *
  * @return миллисекунды (monotonic, без коррекций системных часов).
  */
@@ -340,7 +349,11 @@ typedef enum
 // Saturn 6-button pad → INPUT_PAD_* (engine policy, docs/SATURN.md):
 //   D-pad → UP/DOWN/LEFT/RIGHT; A→CROSS; B→CIRCLE; C→SQUARE; X→TRIANGLE;
 //   Y→L1; Z→R1; L→L2; R→R2; START→START. Select на 6-button pad отсутствует.
-// Enum НЕ расширяется Saturn-кнопками в S21–22: расширение — только перед
+// N64 → INPUT_PAD_* (engine policy, docs/N64.md §7):
+//   D-pad → UP/DOWN/LEFT/RIGHT; A→CROSS; B→CIRCLE; Z→SQUARE;
+//   C-Up→TRIANGLE; C-Down→SELECT; C-Left→L2; C-Right→R2; L/R→L1/R1;
+//   START→START; stick→LEFTX/LEFTY; C-stick→RIGHTX/RIGHTY.
+// Enum НЕ расширяется платформенными кнопками: расширение — только перед
 // INPUT_PAD_COUNT и только с ADR/обновлением всех бэкендов.
 
 /**
@@ -476,6 +489,12 @@ typedef struct FileData
  * host-пути/`..`/`;`/wildcard'ы. Буфер выделяется из WRAM-H asset heap и
  * освобождается только через FileSystem_FreeFile; ошибка чтения/валидации
  * возвращает {nullptr, 0} без утечки persistent-памяти.
+ *
+ * N64 (S41–42): read-only DragonFS (`mkdfs`, `rom:/`), bare UPPERCASE-имена
+ * (`CUBE.MSH`, `TEX0.TEX`), максимум 128 KiB; буфер выделяется из
+ * static FS-staging арены (без heap), освобождается только через
+ * FileSystem_FreeFile; short read/malformed возвращает {nullptr, 0} без
+ * утечки staging-памяти.
  *
  * @param path путь; NULL/пустая строка — отказ без краша.
  *

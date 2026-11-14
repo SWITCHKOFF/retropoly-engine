@@ -31,6 +31,8 @@ if(PLATFORM_PC)
     target_compile_definitions(retro_engine_log PRIVATE PLATFORM_PC=1)
 elseif(PLATFORM_SATURN)
     target_compile_definitions(retro_engine_log PRIVATE PLATFORM_SATURN=1)
+elseif(PLATFORM_N64)
+    target_compile_definitions(retro_engine_log PRIVATE PLATFORM_N64=1)
 endif()
 retro_engine_apply_flags(retro_engine_log)
 
@@ -40,6 +42,8 @@ elseif(PLATFORM_PS1)
     add_subdirectory(hal/ps1)
 elseif(PLATFORM_SATURN)
     add_subdirectory(hal/saturn)
+elseif(PLATFORM_N64)
+    add_subdirectory(hal/n64)
 endif()
 
 include(EmbedShaders) # cmake/EmbedShaders.cmake (шейдеры → generated/headers).
@@ -67,6 +71,8 @@ if(PLATFORM_PC)
     target_compile_definitions(retro_engine PRIVATE PLATFORM_PC=1)
 elseif(PLATFORM_SATURN)
     target_compile_definitions(retro_engine PRIVATE PLATFORM_SATURN=1)
+elseif(PLATFORM_N64)
+    target_compile_definitions(retro_engine PRIVATE PLATFORM_N64=1)
 endif()
 
 # Публичные заголовки SDK: <retro_engine/...> из include/ + source-style

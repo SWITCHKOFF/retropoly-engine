@@ -21,6 +21,10 @@ static FILE* s_log_file = NULL;
 #include "hal/saturn/jo_saturn_bridge.h"
 /// VDP2-текст инициализируется вместе с Jo Engine core.
 static bool s_log_inited = false;
+#elif defined(PLATFORM_N64)
+#include "hal/n64/n64_bridge.h"
+/// ISViewer/USB debug-канал инициализируется в rpe_n64_core_init.
+static bool s_log_inited = false;
 #endif
 
 bool Log_Init(void)
@@ -38,6 +42,11 @@ bool Log_Init(void)
     // Platform_Init доступен всегда (строку выводит C-мост).
     s_log_inited = true;
     return true;
+#elif defined(PLATFORM_N64)
+    // N64: sink — ISViewer (эмулятор) / USB debug-канал (libdragon debugf).
+    // Мост инициализируется до Log_Init в Platform_Init.
+    s_log_inited = rpe_n64_core_ready();
+    return s_log_inited;
 #else
     // PS1: файловой подсистемы в MVP нет — Sink отключён; API сохраняет
     // контракт (false — «недоступен») без краша.
@@ -53,6 +62,8 @@ void Log_Shutdown(void)
         s_log_file = NULL;
     }
 #elif defined(PLATFORM_SATURN)
+    s_log_inited = false;
+#elif defined(PLATFORM_N64)
     s_log_inited = false;
 #endif
 }
@@ -119,6 +130,16 @@ void Log_Message(LogLevel level, const char* domain, const char* format, ...)
     va_start(args, format);
     rpe_saturn_log_write_va((int)level, (domain != nullptr && domain[0] != '\0') ? domain : "?",
                             format, &args);
+    va_end(args);
+#elif defined(PLATFORM_N64)
+    if (!s_log_inited) {
+        return; // No-op вне [Init..Shutdown] — контракт log.h.
+    }
+    // Форматирование — в C-мосте (фиксированный буфер), вывод — ISViewer/USB.
+    va_list args;
+    va_start(args, format);
+    rpe_n64_log_write_va((int)level, (domain != nullptr && domain[0] != '\0') ? domain : "?",
+                         format, &args);
     va_end(args);
 #else
     (void)level;

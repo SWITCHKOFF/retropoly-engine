@@ -15,6 +15,9 @@
 | DejaVuSans | `tools/ui_client/assets/DejaVuSans.ttf` | Bitstream Vera Fonts license (см. below) | Шрифт UI client для RU/EN; распространяется вместе с `LEGAL.md` |
 | Jo Engine | `JO_ENGINE_ROOT` (env-install) | MIT | Pinned v2026.2 (`5e99944`); Saturn backend, не вендорится |
 | sh-none-elf-gcc | bundled в Jo Engine `Compiler/LINUX` | GPL-3.0-or-later + GCC Runtime Library Exception; newlib BSD-style | Только сборка; скомпилированный код движка остаётся MIT |
+| libdragon | `N64_INST`/`LIBDRAGON_ROOT` (env-install) | MIT | Pinned commit `e356bf3`; N64 backend (S39–40), не вендорится |
+| mips64-elf-gcc 16.2.0 | libdragon-toolchain deb (env-install) | GPL-3.0-or-later + GCC Runtime Library Exception; newlib BSD-style | Только сборка; скомпилированный код движка остаётся MIT |
+| gopher64 | env-install (ручная приёмка) | GPL-3.0-or-later | Pinned v1.2.1; в релизы/CI/репозиторий не входит |
 | Mednafen | env-install (ручная приёмка) | GPL-2.0-or-later | В релизы/CI/репозиторий не входит; BIOS не вендорится |
 
 Правило распространения: проект распространяется под MIT (см. LICENSE); при включении компонентов под GPL (mkpsxiso, GCC toolchain при распространении, Mednafen при распространении) в распространяемые пакеты соблюдаются их лицензии и обязательные attributions. BIOS Sega Saturn в проект не входит и не распространяется.
@@ -34,6 +37,10 @@
   bundled `sh-none-elf-gcc` (GPL-3.0-or-later + GCC Runtime Exception,
   newlib BSD-style) в SDK **не** входит — используется внешний
   `JO_ENGINE_ROOT`.
+- N64 SDK-пакет — S45–46: libdragon (MIT) и mips64-elf-gcc
+  (GPL-3.0-or-later + GCC Runtime Exception) остаются внешними
+  (`N64_INST`); в архив входят только библиотеки движка и notices.
+  `.z64`-образы не являются SDK и в релизный payload не входят.
 - BIOS/ROM/ключи и build-каталоги запрещены в любом SDK-архиве; проверка —
   `scripts/package_sdk.py` + `scripts/verify_release_contract.py`.
 
