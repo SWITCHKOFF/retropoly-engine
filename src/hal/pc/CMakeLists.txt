@@ -20,8 +20,9 @@ find_package(OpenGL REQUIRED)
 
 # glad (OpenGL-загрузчик, §3.3) — вендоренный, подключается как static.
 if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/glad/src/gl.c")
-    add_subdirectory("${CMAKE_SOURCE_DIR}/src/third_party/glad" glad
-        EXCLUDE_FROM_ALL)
+    # Без EXCLUDE_FROM_ALL: install-правила EXCLUDE-подкаталогов CMake
+    # игнорирует, а glad входит в PC SDK.
+    add_subdirectory("${CMAKE_SOURCE_DIR}/src/third_party/glad" glad)
 else()
     message(FATAL_ERROR
         "HAL PC (Спринт 5–6) требует вендоренный glad (src/third_party/glad).")
@@ -42,6 +43,8 @@ retro_engine_apply_flags(retro_engine_hal)
 # cmake/EmbedShaders.cmake пишет в ${CMAKE_BINARY_DIR}/generated/render/.
 target_include_directories(retro_engine_hal PRIVATE
     "${CMAKE_SOURCE_DIR}/src"
+    "${RPE_PUBLIC_INCLUDE_DIR}"
+    "${RPE_PUBLIC_API_INCLUDE_DIR}"
     "${CMAKE_BINARY_DIR}/generated")
 
 # Публичные зависимости propagate: examples/tests ссылаются только на

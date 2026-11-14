@@ -1,0 +1,16 @@
+# RetroPolyEngine build-tree package (find_package ... PATHS <build-dir>).
+#
+# Этот файл генерируется в build-каталоге и НЕ устанавливается: он ссылается
+# на build-tree export и вендоренный SDL3 (PC).
+include(CMakeFindDependencyMacro)
+
+if("@RPE_PLATFORM_NAME@" STREQUAL "pc")
+    find_dependency(OpenGL REQUIRED)
+    if(NOT TARGET SDL3::SDL3)
+        find_dependency(SDL3 CONFIG REQUIRED
+            PATHS "@RPE_SDL3_BUILD_CONFIG_DIR@"
+            NO_DEFAULT_PATH)
+    endif()
+endif()
+
+include("${CMAKE_CURRENT_LIST_DIR}/RetroPolyEngineTargets.cmake")

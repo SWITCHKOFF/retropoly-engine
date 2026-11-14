@@ -1,0 +1,5 @@
+# SPDX-License-Identifier: MIT
+# Pinned libdragon commit (MIT). CI клонирует DragonMinded/libdragon и
+# проверяет `git rev-parse HEAD`; toolchain file — cmake/n64-toolchain.cmake.
+# Обновление libdragon — отдельная задача с ADR (ADR-014).
+e356bf3f56f7afbf7e5246329562f145965cfdfc

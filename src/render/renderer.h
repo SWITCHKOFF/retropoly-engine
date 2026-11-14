@@ -52,66 +52,6 @@
 uint32_t depth_key_from_camera_z(int32_t camera_z, uint32_t depth_min, uint32_t depth_max);
 
 // ---------------------------------------------------------------------------
-// Диагностика (Renderer safety contract: явные ошибки, без silent drop)
-// ---------------------------------------------------------------------------
-
-/**
- * Детерминированные диагностические коды рендера. Порядок — контракт;
- * расширение — только перед RENDER_DIAG_COUNT. Каждый «reject»-этап
- * CONVEYOR-а обязан оставлять последний код в state диагностики.
- */
-typedef enum
-{
-    RENDER_DIAG_OK = 0,              /**< Успех. */
-    RENDER_DIAG_DOUBLE_INIT,         /**< Render_Init при активном рендере. */
-    RENDER_DIAG_NOT_INITIALIZED,     /**< Вызов до Init (EndFrame и пр.). */
-    RENDER_DIAG_END_FRAME_BEFORE_INIT,/**< EndFrame до первого Init. */
-    RENDER_DIAG_NULL_ARGUMENT,       /**< NULL-аргумент API рендера. */
-    RENDER_DIAG_INVALID_SIZE,        /**< (w,h) вне [1..4096]. */
-    RENDER_DIAG_NO_WINDOW,           /**< Окно/GL-контекст отсутствует. */
-    RENDER_DIAG_BACKEND_FAIL,        /**< Отказ GL/backend (реализация). */
-    RENDER_DIAG_INVALID_PROJECTION,  /**< Не выводятся near/far (proj). */
-    RENDER_DIAG_TEXTURE_FAIL,        /**< Отказ создания текстуры (пул/арена). */
-    RENDER_DIAG_INVALID_VERTEX_INDEX,/**< Индекс вне [0..vertex_count). */
-    RENDER_DIAG_CLIP_REJECT,         /**< Отброс near/far-plane (счётчик). */
-    RENDER_DIAG_CULL_REJECT,         /**< Отброс backface (счётчик). */
-    RENDER_DIAG_DEPTH_REJECT,        /**< depth_key вне диапазона (счётчик). */
-    RENDER_DIAG_COMMAND_OVERFLOW,    /**< 64 KiB буфер исчерпан (явная). */
-    RENDER_DIAG_READBACK_FAIL,       /**< glReadPixels неудача. */
-    RENDER_DIAG_END_FRAME_WITHOUT_BEGIN, /**< EndFrame без BeginFrame. */
-    RENDER_DIAG_DRAW_OUTSIDE_FRAME,  /**< DrawMesh вне BeginFrame..EndFrame. */
-    RENDER_DIAG_COUNT
-} RenderDiag;
-
-/** Диагностический счётчик рендера (детерминированный, тест-совместимый). */
-typedef struct RenderDiagnostics
-{
-    uint32_t submitted;        /**< Треугольников добавлено в буфер кадра. */
-    uint32_t clip_rejects;     /**< Отброшено near/far (конвейер CLIP). */
-    uint32_t backface_rejects; /**< Отброшено backface (конвейер CULL). */
-    uint32_t depth_rejects;    /**< Отброшено depth вне диапазона (SORT gate). */
-    uint32_t last_code;        /**< Последний код RenderDiag (0 — OK). */
-} RenderDiagnostics;
-
-/**
- * Текущие счётчики диагностики рендера (для тестов/логов; без блокировок —
- * однопоточный драйвер). Счётчики НЕ сбрасываются автоматически (reset —
- * зона вызывающего; Render_Init обнуляет).
- *
- * @return Снимок счётчиков.
- */
-RenderDiagnostics render_diagnostics(void);
-
-/**
- * Занятое место в командном буфере кадра (байт).
- *
- * Используется MemoryProfiler для учёта RAM рендера (Спринт 15–16).
- *
- * @return Использовано байт в текущем/последнем кадре; 0 до Render_Init.
- */
-uint32_t render_command_buffer_used_bytes(void);
-
-// ---------------------------------------------------------------------------
 // W0-конформанс: framebuffer readback + hash (§1.2.9, план недели 16)
 // ---------------------------------------------------------------------------
 
@@ -138,14 +78,6 @@ uint64_t Render_TestReadbackHash(void);
 bool Render_TestReadbackPixels(uint8_t* dst_rgba8, uint32_t dst_size);
 
 // ---------------------------------------------------------------------------
-// Константы ядра (воедино для renderer.cpp и тестов)
+// Константы/диагностика рендера объявлены в публичном hal/platform.h
+// (ADR-011); этот заголовок — внутренние контракты ядра поверх публичного API.
 // ---------------------------------------------------------------------------
-
-/** Разрешение reference-фреймбуфера (§1.2.1 manifest: renderer). */
-#define RENDER_FB_WIDTH 320u
-#define RENDER_FB_HEIGHT 240u
-
-/** Цвет очистки по умолчанию (неделя 13: smoke «окно (0,0,32)»). */
-#define RENDER_CLEAR_DEFAULT_R 0u
-#define RENDER_CLEAR_DEFAULT_G 0u
-#define RENDER_CLEAR_DEFAULT_B 32u

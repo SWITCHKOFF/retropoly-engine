@@ -1,0 +1,127 @@
+# ============================================================================
+# Saturn CI — Спринты 21–32 (docs/plans/sprint_23_24.md, sprint_25_26.md,
+# sprint_27_28.md, sprint_29_30.md, sprint_31_32.md), ADR-008/009/010.
+#
+# Собирает pinned toolchain Jo Engine v2026.2 (GCC 8.2.0 sh-none-elf) +
+# bootable ISO/CUE через канонический пресет saturn-release и проверяет
+# наличие .mesh/.tex в ISO. Дополнительно собираются S25–26 variants:
+# saturn-single (fallback), saturn-hang, saturn-flood (fault injection).
+# Эмулятор в CI НЕ запускается: BIOS не вендорится и не публикуется;
+# smoke/stress и VDP1 visual gate — ручная приёмка (docs/SATURN.md §9, §11,
+# §12.5).
+# ============================================================================
+name: build-saturn
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+
+jobs:
+  build-saturn:
+    name: Saturn (ubuntu-latest, saturn-release, Jo Engine v2026.2)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: "Checkout (без submodules: Saturn не тянет SDL3/PSn00bSDK)"
+        uses: actions/checkout@v4
+
+      - name: Тулчейн-хост (ninja + mkisofs/genisoimage)
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build genisoimage
+
+      - name: Jo Engine v2026.2 (pinned commit + sha256 bundled compiler)
+        run: |
+          set -euo pipefail
+          git config --global advice.detachedHead false
+          git clone --depth 1 --branch v2026.2 --filter=blob:none --sparse \
+            https://github.com/johannes-fetz/joengine.git "$RUNNER_TEMP/joengine"
+          cd "$RUNNER_TEMP/joengine"
+          git sparse-checkout set \
+            Compiler/COMMON \
+            Compiler/LINUX \
+            Compiler/WINDOWS/sh-elf/include \
+            jo_engine
+          test "$(git rev-parse HEAD)" = "5e99944238030821a48e17a40abefd77e81953c2"
+          sha256sum -c "$GITHUB_WORKSPACE/ci/joengine-v2026.2.sha256"
+          echo "JO_ENGINE_ROOT=$RUNNER_TEMP/joengine" >> "$GITHUB_ENV"
+
+      - name: "Configure (canon: cmake --preset saturn-release)"
+        run: cmake --preset saturn-release
+
+      - name: "Build (canon: cmake --build --preset saturn-release)"
+        run: cmake --build --preset saturn-release
+
+      - name: Проверка артефактов (SH-2 ELF + ISO/CUE + IP.BIN)
+        run: |
+          set -euo pipefail
+          cd build/saturn-release/src/hal/saturn
+          test -s retro_saturn.elf
+          test -s retro_saturn.bin
+          test -s retro_saturn.iso
+          test -s retro_saturn.cue
+          test -s IP.BIN
+          test -s retro_saturn.map
+          test -s hello_triangle.elf
+          test -s hello_triangle.bin
+          test -s hello_triangle.iso
+          test -s hello_triangle.cue
+          cmp hello_triangle.iso retro_saturn.iso
+          cmp hello_triangle.bin retro_saturn.bin
+          file retro_saturn.elf | grep -q 'Renesas SH'
+          readelf -h retro_saturn.elf | grep -q '0x6004000'
+          head -c 16 IP.BIN | grep -aq 'SEGA SEGASATURN'
+          grep -Fx 'FILE "retro_saturn.iso" BINARY' retro_saturn.cue
+          grep -Fx '  TRACK 01 MODE1/2048' retro_saturn.cue
+          grep -Fx 'FILE "hello_triangle.iso" BINARY' hello_triangle.cue
+          isoinfo -i retro_saturn.iso -f | grep -q '/0.BIN;1'
+          isoinfo -i retro_saturn.iso -x '/0.BIN;1' > "$RUNNER_TEMP/iso0.bin"
+          cmp "$RUNNER_TEMP/iso0.bin" retro_saturn.bin
+          test "$(stat -c %s retro_saturn.bin)" -le 1048576
+          # S23–24: CD-ассеты обязаны лежать в ISO под bare 8.3-именами
+          # (saturn_fs_path.h); сверяем байты CUBE.MSH и TEX0.TEX с assets/build.
+          for asset in CUBE.MSH TRIANGLE.MSH TEXTURE.TEX TEX0.TEX TEX1.TEX TEX2.TEX TEX3.TEX; do
+            isoinfo -i retro_saturn.iso -f | grep -q "/${asset};1"
+          done
+          isoinfo -i retro_saturn.iso -x '/CUBE.MSH;1' > "$RUNNER_TEMP/iso_cube.msh"
+          isoinfo -i retro_saturn.iso -x '/TEX0.TEX;1' > "$RUNNER_TEMP/iso_tex0.tex"
+          cmp "$RUNNER_TEMP/iso_cube.msh" "$GITHUB_WORKSPACE/assets/build/cube.mesh"
+          cmp "$RUNNER_TEMP/iso_tex0.tex" "$GITHUB_WORKSPACE/assets/build/texture_0.tex"
+
+      - name: "S25–26 variants: single-CPU + hang/flood fault builds"
+        run: |
+          set -euo pipefail
+          for preset in saturn-single saturn-hang saturn-flood; do
+            cmake --preset "$preset"
+            cmake --build --preset "$preset"
+            cd "build/$preset/src/hal/saturn"
+            test -s retro_saturn.elf
+            test -s retro_saturn.bin
+            test -s retro_saturn.iso
+            test -s retro_saturn.cue
+            test -s retro_saturn.map
+            file retro_saturn.elf | grep -q 'Renesas SH'
+            readelf -h retro_saturn.elf | grep -q '0x6004000'
+            grep -q 'ASSERT ((__jo_work_end <= 0x60fbc00)' retro_saturn.map
+            cd "$GITHUB_WORKSPACE"
+          done
+
+      - name: Upload Saturn disc image
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-saturn-disc
+          path: |
+            build/saturn-release/src/hal/saturn/retro_saturn.iso
+            build/saturn-release/src/hal/saturn/retro_saturn.cue
+            build/saturn-release/src/hal/saturn/retro_saturn.elf
+            build/saturn-release/src/hal/saturn/retro_saturn.bin
+            build/saturn-release/src/hal/saturn/IP.BIN
+            build/saturn-release/src/hal/saturn/retro_saturn.map
+            build/saturn-release/src/hal/saturn/hello_triangle.iso
+            build/saturn-release/src/hal/saturn/hello_triangle.cue
+            build/saturn-release/src/hal/saturn/hello_triangle.bin
+            build/saturn-release/src/hal/saturn/hello_triangle.elf
+            build/saturn-release/src/hal/saturn/hello_triangle.map
+          if-no-files-found: error

@@ -3,48 +3,152 @@
 #
 # Нормативные источники:
 #   - docs/plans/sprint_00.md §3.5 (Система сборки, каркас)
+#   - docs/plans/sprint_21_22.md (Saturn skeleton, ADR-008)
 #   - docs/RetroEngine_Engineering_Documentation_v1.43.md: BUILD PRECEDENCE —
 #     «CMakePresets.json is the only canonical build entry point»
 #
 # Правила:
-#   - ровно один бэкенд (PLATFORM_PC XOR PLATFORM_PS1);
+#   - ровно один бэкенд (PLATFORM_PC XOR PLATFORM_PS1 XOR PLATFORM_SATURN
+#     XOR PLATFORM_N64);
 #   - hello_triangle / rotating_cube ссылаются только на retro_engine
-#     (никогда напрямую на SDL3/OpenGL/PSn00bSDK);
-#   - asset_converter — host-only, не собирается компилятором PS1;
+#     (никогда напрямую на SDL3/OpenGL/PSn00bSDK/Jo Engine/libdragon);
+#   - asset_converter — host-only, не собирается кросс-компиляторами;
 #   - все сборки через канонические пресеты CMakePresets.json.
 # ============================================================================
 
 cmake_minimum_required(VERSION 3.25)
 
 project(retro_engine
-    VERSION 0.1.0
-    DESCRIPTION "RetroPolyEngine — deterministic retro engine (PC: SDL3 + OpenGL 3.3; PS1: PSn00bSDK v0.24)"
+    VERSION 0.2.1
+    DESCRIPTION "RetroPolyEngine — deterministic retro engine (PC: SDL3 + OpenGL 3.3; PS1: PSn00bSDK v0.24; Saturn: Jo Engine v2026.2; N64: libdragon)"
     LANGUAGES C CXX ASM
 )
 
+# --- SDK: установка/экспорт (Спринт 33–34, ADR-011) -------------------------
+include(GNUInstallDirs)
+include(CMakePackageConfigHelpers)
+# SDK layout стабилен на всех дистрибутивах: lib/, не lib64/lib/<triplet>.
+set(CMAKE_INSTALL_LIBDIR "lib" CACHE STRING
+    "SDK install libdir (stable layout: lib/)" FORCE)
+
+if(PLATFORM_PC)
+    set(RPE_PLATFORM_NAME "pc")
+elseif(PLATFORM_PS1)
+    set(RPE_PLATFORM_NAME "ps1")
+elseif(PLATFORM_SATURN)
+    set(RPE_PLATFORM_NAME "saturn")
+elseif(PLATFORM_N64)
+    set(RPE_PLATFORM_NAME "n64")
+endif()
+
+# Нормализованная архитектура для layout lib/<platform>/<arch> (RELEASING §2.1).
+set(RPE_PLATFORM_ARCH "${CMAKE_SYSTEM_PROCESSOR}")
+if(NOT RPE_PLATFORM_ARCH)
+    set(RPE_PLATFORM_ARCH "${CMAKE_HOST_SYSTEM_PROCESSOR}")
+endif()
+string(TOLOWER "${RPE_PLATFORM_ARCH}" RPE_PLATFORM_ARCH)
+if(RPE_PLATFORM_ARCH MATCHES "^(amd64|x86_64|x64)$")
+    set(RPE_PLATFORM_ARCH "x86_64")
+elseif(RPE_PLATFORM_ARCH MATCHES "^(aarch64|arm64)$")
+    set(RPE_PLATFORM_ARCH "arm64")
+elseif(RPE_PLATFORM_ARCH MATCHES "^(mips|mipsel)$")
+    set(RPE_PLATFORM_ARCH "mips")
+elseif(RPE_PLATFORM_ARCH MATCHES "^(mips64|mips64el)$")
+    set(RPE_PLATFORM_ARCH "mips64")
+elseif(RPE_PLATFORM_ARCH MATCHES "^(sh|sh2|sh-2)$")
+    set(RPE_PLATFORM_ARCH "sh2")
+endif()
+
+set(RPE_SDK_LIBDIR "lib/${RPE_PLATFORM_NAME}/${RPE_PLATFORM_ARCH}" CACHE STRING
+    "SDK library layout: lib/<platform>/<arch> (RELEASING §2.1)")
+set(RPE_INSTALL_CMAKEDIR "lib/cmake/RetroPolyEngine")
+set(RPE_INSTALL_INCLUDEDIR "${CMAKE_INSTALL_INCLUDEDIR}")
+
+# Публичный include-корень: <prefix>/include (рекомендуется <retro_engine/...>)
+# и <prefix>/include/retro_engine (совместимость с внутренним стилем include
+# "core/..." — тот же набор public-заголовков, internal не устанавливаются).
+set(RPE_PUBLIC_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include")
+set(RPE_PUBLIC_API_INCLUDE_DIR "${CMAKE_SOURCE_DIR}/include/retro_engine")
+set(RPE_VERSION_INCLUDE_DIR "${CMAKE_BINARY_DIR}/generated/include")
+set(RPE_GENERATED_INCLUDE_DIR "${RPE_VERSION_INCLUDE_DIR}")
+set(RPE_SDL3_INSTALL_CMAKEDIR "lib/cmake/SDL3")
+set(RPE_SDL3_BUILD_CONFIG_DIR "${CMAKE_BINARY_DIR}/src/third_party/sdl3")
+
+if(PLATFORM_PC)
+    if(APPLE)
+        set(RPE_PKGCONFIG_PRIVATE_LIBS "-lSDL3 -lglad -framework OpenGL -framework Cocoa -framework IOKit -framework CoreAudio -framework CoreVideo -framework Metal")
+    elseif(WIN32)
+        set(RPE_PKGCONFIG_PRIVATE_LIBS "-lSDL3 -lglad -lopengl32")
+    else()
+        set(RPE_PKGCONFIG_PRIVATE_LIBS "-lSDL3 -lglad -lGL -ldl -lpthread -lm")
+    endif()
+else()
+    set(RPE_PKGCONFIG_PRIVATE_LIBS "")
+endif()
+set(RPE_PKGCONFIG_PLATFORM_LIBS "")
+
+configure_file("${CMAKE_SOURCE_DIR}/cmake/version.h.in"
+               "${RPE_VERSION_INCLUDE_DIR}/retro_engine/version.h" @ONLY)
+
 # --- Опции сборки ------------------------------------------------------------
-option(PLATFORM_PC   "Собирать целевой бэкенд PC (SDL3 + OpenGL 3.3)"        OFF)
-option(PLATFORM_PS1  "Собирать целевой бэкенд PS1 (PSn00bSDK v0.24, pinned)" OFF)
+option(PLATFORM_PC     "Собирать целевой бэкенд PC (SDL3 + OpenGL 3.3)"             OFF)
+option(PLATFORM_PS1    "Собирать целевой бэкенд PS1 (PSn00bSDK v0.24, pinned)"      OFF)
+option(PLATFORM_SATURN "Собирать целевой бэкенд Saturn (Jo Engine v2026.2, pinned)" OFF)
+option(PLATFORM_N64    "Собирать целевой бэкенд N64 (libdragon pinned, ADR-014)"    OFF)
 option(BUILD_TESTS                       "Собирать юнит-тесты (GoogleTest)"               ON)
 option(BUILD_EXAMPLES                    "Собирать примеры hello_triangle/rotating_cube"  OFF)
+option(BUILD_UI_CLIENT                   "Собирать UI client (SDL3 + Dear ImGui, PC host)" OFF)
 option(BUILD_RENDER_INTEGRATION_TESTS    "Рендер-интеграционные тесты (W0-golden, §3.5)"  OFF)
 option(BUILD_BENCHMARKS                  "Собирать benchmarks (пресет pc-bench)"          OFF)
 option(ENABLE_ASAN    "AddressSanitizer для целей движка (только PC)"         OFF)
 option(ENABLE_COVERAGE "Покрытие кода тестами (только PC, пресет pc-coverage)" OFF)
 
 # --- Guard: ровно один бэкенд -------------------------------------------------
-if(PLATFORM_PC AND PLATFORM_PS1)
+set(RPE_PLATFORM_COUNT 0)
+foreach(_rpe_platform PLATFORM_PC PLATFORM_PS1 PLATFORM_SATURN PLATFORM_N64)
+    if(${_rpe_platform})
+        math(EXPR RPE_PLATFORM_COUNT "${RPE_PLATFORM_COUNT} + 1")
+    endif()
+endforeach()
+if(NOT RPE_PLATFORM_COUNT EQUAL 1)
     message(FATAL_ERROR
-        "Конфликт конфигурации: PLATFORM_PC и PLATFORM_PS1 взаимоисключающие (ровно один HAL на сборку).")
+        "Не выбран ровно один бэкенд (PLATFORM_PC/PLATFORM_PS1/PLATFORM_SATURN/PLATFORM_N64): "
+        "включённых платформ — ${RPE_PLATFORM_COUNT}. См. CMakePresets.json.")
 endif()
-if(NOT PLATFORM_PC AND NOT PLATFORM_PS1)
-    message(FATAL_ERROR
-        "Не выбран бэкенд: включите PLATFORM_PC=ON или PLATFORM_PS1=ON (см. CMakePresets.json).")
+if(BUILD_UI_CLIENT AND NOT PLATFORM_PC)
+    message(FATAL_ERROR "BUILD_UI_CLIENT=ON требует PLATFORM_PC=ON (host UI client).")
 endif()
 
 # --- Канонические флаги компиляции (cmake/CompilerFlags.cmake) ----------------
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_CURRENT_SOURCE_DIR}/cmake")
 include(CompilerFlags)
+
+# --- Saturn: target-заголовки newlib из pinned Jo Engine SDK ------------------
+# Кросс-компилятор не должен видеть host /usr/include. Заголовки newlib
+# лежат в bundled-компиляторе Jo Engine (Compiler/WINDOWS/sh-elf/include) и
+# include-fixed GCC 8.2.0; подключаются как SYSTEM (не триггерят -Werror).
+if(PLATFORM_SATURN)
+    if(NOT DEFINED JO_ENGINE_NEWLIB_INCLUDE OR NOT DEFINED JO_ENGINE_GCC_INCLUDE_FIXED)
+        message(FATAL_ERROR
+            "Saturn toolchain не задал JO_ENGINE_NEWLIB_INCLUDE/JO_ENGINE_GCC_INCLUDE_FIXED. "
+            "Сборка — только через пресет saturn-release (cmake/saturn-toolchain.cmake).")
+    endif()
+    include_directories(SYSTEM
+        "${JO_ENGINE_NEWLIB_INCLUDE}"
+        "${JO_ENGINE_GCC_INCLUDE_FIXED}")
+endif()
+
+# --- N64: libdragon/newlib-заголовки из pinned toolchain (ADR-014) ----------
+# Как и Saturn, кросс-компилятор не должен видеть host /usr/include.
+# libdragon подключается как SYSTEM (его заголовки не под -Werror).
+if(PLATFORM_N64)
+    if(NOT DEFINED N64_INST OR NOT DEFINED N64_INCLUDEDIR OR NOT DEFINED N64_LIBDIR)
+        message(FATAL_ERROR
+            "N64 toolchain не задал N64_INST/N64_INCLUDEDIR/N64_LIBDIR. "
+            "Сборка — только через пресет n64-release (cmake/n64-toolchain.cmake).")
+    endif()
+    include_directories(SYSTEM "${N64_INCLUDEDIR}")
+endif()
 
 # --- Вендоренные зависимости (§3.6) -------------------------------------------
 # SDL3 подключается ДО ядра: HAL (src/hal/pc) линкует target SDL3::SDL3.
@@ -56,7 +160,18 @@ if(PLATFORM_PC)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/src/third_party/sdl3/CMakeLists.txt")
         set(SDL_SHARED OFF) # Только static: без DLL-развертывания.
         set(SDL_STATIC ON)
-        add_subdirectory(src/third_party/sdl3 EXCLUDE_FROM_ALL)
+        # SDK (S33–34): SDL3 устанавливается в тот же prefix; публичный API
+        # движка SDL не тянет, но PC-библиотекам нужен SDL3 при линковке.
+        # Cache FORCE: пресеты уже могли закэшировать SDL_INSTALL=OFF.
+        set(SDL_INSTALL ON CACHE BOOL "Install SDL3 into the SDK prefix" FORCE)
+        # IBus-заголовки в CI/минимальных окружениях часто отсутствуют;
+        # ввод движка от IBus не зависит.
+        set(SDL_IBUS OFF CACHE BOOL "Disable SDL3 IBus (optional)" FORCE)
+        set(SDL_TEST_LIBRARY OFF CACHE BOOL "Do not install SDL3_test" FORCE)
+        set(SDL_INSTALL_TESTS OFF CACHE BOOL "Do not install SDL3 tests" FORCE)
+        set(SDL_INSTALL_CMAKEDIR_ROOT "lib/cmake/SDL3" CACHE STRING
+            "SDL3 CMake package dir inside the SDK" FORCE)
+        add_subdirectory(src/third_party/sdl3)
     else()
         message(FATAL_ERROR
             "src/third_party/sdl3 пуст (submodule не инициализирован), но HAL PC "
@@ -156,4 +271,120 @@ if(PLATFORM_PC)
     # CTest агрегирует тесты рекурсивно (ctest --preset pc-debug из build/<preset>).
     enable_testing()
     add_subdirectory(tests)
+
+    # UI client — отдельный host-target retro_engine_ui (S35–36).
+    if(BUILD_UI_CLIENT)
+        add_subdirectory(tools/ui_client)
+    endif()
+endif()
+
+# ============================================================================
+# SDK install/export (Спринт 33–34, ADR-011, docs/SDK.md)
+# ============================================================================
+
+# Публичные заголовки (internal-заголовки не устанавливаются by design).
+install(DIRECTORY "${RPE_PUBLIC_INCLUDE_DIR}/retro_engine"
+        DESTINATION "${RPE_INSTALL_INCLUDEDIR}")
+install(FILES "${RPE_VERSION_INCLUDE_DIR}/retro_engine/version.h"
+        DESTINATION "${RPE_INSTALL_INCLUDEDIR}/retro_engine")
+
+# CMake package: find_package(RetroPolyEngine CONFIG REQUIRED).
+configure_package_config_file(
+    "${CMAKE_SOURCE_DIR}/cmake/RetroPolyEngineConfig.cmake.in"
+    "${CMAKE_BINARY_DIR}/cmake/RetroPolyEngineConfig.cmake"
+    INSTALL_DESTINATION "${RPE_INSTALL_CMAKEDIR}")
+write_basic_package_version_file(
+    "${CMAKE_BINARY_DIR}/cmake/RetroPolyEngineConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion)
+install(FILES
+        "${CMAKE_BINARY_DIR}/cmake/RetroPolyEngineConfig.cmake"
+        "${CMAKE_BINARY_DIR}/cmake/RetroPolyEngineConfigVersion.cmake"
+        DESTINATION "${RPE_INSTALL_CMAKEDIR}")
+install(EXPORT RetroPolyEngineTargets
+        FILE RetroPolyEngineTargets.cmake
+        NAMESPACE RetroPolyEngine::
+        DESTINATION "${RPE_INSTALL_CMAKEDIR}")
+
+# Build-tree package: find_package(RetroPolyEngine CONFIG PATHS <build-dir>).
+configure_file(
+    "${CMAKE_SOURCE_DIR}/cmake/RetroPolyEngineBuildTreeConfig.cmake.in"
+    "${CMAKE_BINARY_DIR}/RetroPolyEngineConfig.cmake" @ONLY)
+write_basic_package_version_file(
+    "${CMAKE_BINARY_DIR}/RetroPolyEngineConfigVersion.cmake"
+    VERSION "${PROJECT_VERSION}"
+    COMPATIBILITY SameMajorVersion)
+export(EXPORT RetroPolyEngineTargets
+       NAMESPACE RetroPolyEngine::
+       FILE "${CMAKE_BINARY_DIR}/RetroPolyEngineTargets.cmake")
+
+# pkg-config (SDK [H]): заголовки/либы и статические зависимости.
+configure_file("${CMAKE_SOURCE_DIR}/cmake/retro_engine.pc.in"
+               "${CMAKE_BINARY_DIR}/retro_engine.pc" @ONLY)
+install(FILES "${CMAKE_BINARY_DIR}/retro_engine.pc"
+        DESTINATION "lib/pkgconfig")
+
+# Примеры и шаблон проекта устанавливаются ИСХОДНИКАМИ и собираются только
+# против установленного SDK (standalone CMakeLists с find_package).
+if(PLATFORM_PC)
+    install(DIRECTORY examples/hello_triangle
+            DESTINATION examples
+            PATTERN "CMakeLists.txt" EXCLUDE)
+    install(DIRECTORY examples/rotating_cube
+            DESTINATION examples
+            PATTERN "CMakeLists.txt" EXCLUDE)
+    install(FILES "${CMAKE_SOURCE_DIR}/cmake/sdk-examples/hello_triangle-CMakeLists.txt"
+            DESTINATION examples/hello_triangle RENAME CMakeLists.txt)
+    install(FILES "${CMAKE_SOURCE_DIR}/cmake/sdk-examples/rotating_cube-CMakeLists.txt"
+            DESTINATION examples/rotating_cube RENAME CMakeLists.txt)
+    install(FILES
+            "${CMAKE_SOURCE_DIR}/assets/build/triangle.mesh"
+            "${CMAKE_SOURCE_DIR}/assets/build/texture.tex"
+            DESTINATION examples/hello_triangle/assets)
+    install(FILES
+            "${CMAKE_SOURCE_DIR}/assets/build/cube.mesh"
+            "${CMAKE_SOURCE_DIR}/assets/build/texture_0.tex"
+            "${CMAKE_SOURCE_DIR}/assets/build/texture_1.tex"
+            "${CMAKE_SOURCE_DIR}/assets/build/texture_2.tex"
+            "${CMAKE_SOURCE_DIR}/assets/build/texture_3.tex"
+            DESTINATION examples/rotating_cube/assets)
+elseif(PLATFORM_PS1)
+    install(DIRECTORY examples/sdk/ps1/ DESTINATION examples/hello_triangle_ps1)
+elseif(PLATFORM_SATURN)
+    install(DIRECTORY examples/sdk/saturn/ DESTINATION examples/hello_triangle_saturn)
+endif()
+
+install(DIRECTORY templates/project DESTINATION templates)
+install(FILES
+        "${CMAKE_SOURCE_DIR}/cmake/ps1-toolchain.cmake"
+        "${CMAKE_SOURCE_DIR}/cmake/saturn-toolchain.cmake"
+        "${CMAKE_SOURCE_DIR}/cmake/saturn-sdk-toolchain.cmake"
+        "${CMAKE_SOURCE_DIR}/cmake/n64-toolchain.cmake"
+        DESTINATION cmake)
+
+# SDK-архив: cmake --build <build-dir> --target sdk_package
+# N64 SDK/UI — S45–46; в S39–40 пакет не создаётся (package_sdk.py пока
+# поддерживает pc/ps1/saturn, а N64-библиотеки требуют libdragon).
+if(PLATFORM_PC)
+    set(RPE_SDK_PACKAGE_DEPS retro_engine retro_engine_hal retro_engine_log
+        asset_converter hello_triangle rotating_cube)
+elseif(PLATFORM_PS1)
+    set(RPE_SDK_PACKAGE_DEPS retro_engine retro_engine_hal retro_engine_log
+        retro_ps1 retro_disc)
+elseif(PLATFORM_SATURN)
+    set(RPE_SDK_PACKAGE_DEPS retro_engine retro_engine_hal retro_engine_log
+        hello_triangle_saturn)
+endif()
+find_package(Python3 COMPONENTS Interpreter QUIET)
+if(Python3_Interpreter_FOUND AND DEFINED RPE_SDK_PACKAGE_DEPS)
+    add_custom_target(sdk_package
+        COMMAND "${Python3_EXECUTABLE}" "${CMAKE_SOURCE_DIR}/scripts/package_sdk.py"
+                --build-dir "${CMAKE_BINARY_DIR}"
+                --platform "${RPE_PLATFORM_NAME}"
+                --arch "${RPE_PLATFORM_ARCH}"
+                --version "${PROJECT_VERSION}"
+                --output-dir "${CMAKE_SOURCE_DIR}/dist"
+        DEPENDS ${RPE_SDK_PACKAGE_DEPS}
+        COMMENT "SDK: install + deterministic archive + manifest (S33–34)"
+        VERBATIM)
 endif()

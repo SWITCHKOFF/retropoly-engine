@@ -39,6 +39,31 @@
       }
     },
     {
+      "name": "ui-base",
+      "hidden": true,
+      "inherits": "pc-base",
+      "cacheVariables": {
+        "BUILD_UI_CLIENT": "ON"
+      }
+    },
+    {
+      "name": "ui-debug",
+      "inherits": "ui-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "BUILD_TESTS": "ON"
+      }
+    },
+    {
+      "name": "ui-release",
+      "inherits": "ui-base",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Release",
+        "BUILD_TESTS": "OFF",
+        "BUILD_EXAMPLES": "OFF"
+      }
+    },
+    {
       "name": "pc-asan",
       "inherits": "pc-debug",
       "cacheVariables": {
@@ -69,20 +94,72 @@
         "PLATFORM_PS1": "ON",
         "CMAKE_BUILD_TYPE": "Release"
       }
+    },
+    {
+      "name": "saturn-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/saturn-release",
+      "toolchainFile": "${sourceDir}/cmake/saturn-toolchain.cmake",
+      "cacheVariables": {
+        "PLATFORM_SATURN": "ON",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "n64-release",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/build/n64-release",
+      "toolchainFile": "${sourceDir}/cmake/n64-toolchain.cmake",
+      "cacheVariables": {
+        "PLATFORM_N64": "ON",
+        "CMAKE_BUILD_TYPE": "Release"
+      }
+    },
+    {
+      "name": "saturn-single",
+      "inherits": "saturn-release",
+      "binaryDir": "${sourceDir}/build/saturn-single",
+      "cacheVariables": {
+        "RPE_SATURN_DUAL_CPU": "OFF"
+      }
+    },
+    {
+      "name": "saturn-hang",
+      "inherits": "saturn-release",
+      "binaryDir": "${sourceDir}/build/saturn-hang",
+      "cacheVariables": {
+        "RPE_SATURN_FAULT_MODE": "hang"
+      }
+    },
+    {
+      "name": "saturn-flood",
+      "inherits": "saturn-release",
+      "binaryDir": "${sourceDir}/build/saturn-flood",
+      "cacheVariables": {
+        "RPE_SATURN_FAULT_MODE": "flood"
+      }
     }
   ],
   "buildPresets": [
     { "name": "pc-debug", "configurePreset": "pc-debug" },
     { "name": "pc-release", "configurePreset": "pc-release" },
     { "name": "pc-debug-render", "configurePreset": "pc-debug-render" },
+    { "name": "ui-debug", "configurePreset": "ui-debug" },
+    { "name": "ui-release", "configurePreset": "ui-release" },
     { "name": "pc-asan", "configurePreset": "pc-asan" },
     { "name": "pc-bench", "configurePreset": "pc-bench" },
     { "name": "pc-coverage", "configurePreset": "pc-coverage" },
-    { "name": "ps1-release", "configurePreset": "ps1-release" }
+    { "name": "ps1-release", "configurePreset": "ps1-release" },
+    { "name": "saturn-release", "configurePreset": "saturn-release" },
+    { "name": "n64-release", "configurePreset": "n64-release" },
+    { "name": "saturn-single", "configurePreset": "saturn-single" },
+    { "name": "saturn-hang", "configurePreset": "saturn-hang" },
+    { "name": "saturn-flood", "configurePreset": "saturn-flood" }
   ],
   "testPresets": [
     { "name": "pc-debug", "configurePreset": "pc-debug", "output": { "outputOnFailure": true } },
     { "name": "pc-debug-render", "configurePreset": "pc-debug-render", "output": { "outputOnFailure": true } },
+    { "name": "ui-debug", "configurePreset": "ui-debug", "output": { "outputOnFailure": true } },
     { "name": "pc-asan", "configurePreset": "pc-asan", "output": { "outputOnFailure": true } },
     { "name": "pc-coverage", "configurePreset": "pc-coverage", "output": { "outputOnFailure": true } }
   ]

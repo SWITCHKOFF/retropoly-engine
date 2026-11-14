@@ -41,7 +41,10 @@ retro_engine_apply_flags(retro_engine_hal)
 
 # Заголовки движка включаются от корня src/; examples/game — от корня
 # репозитория (ретро-топология «каждый target видит СВОЙ слой»).
-target_include_directories(retro_engine_hal PRIVATE "${CMAKE_SOURCE_DIR}/src")
+target_include_directories(retro_engine_hal PRIVATE
+    "${CMAKE_SOURCE_DIR}/src"
+    "${RPE_PUBLIC_INCLUDE_DIR}"
+    "${RPE_PUBLIC_API_INCLUDE_DIR}")
 
 # core/log — приватная зависимость HAL (диагностика бэкенда). psn00bsdk
 # подключён toolchain'ом глобально (link_libraries) — вручную не линкуется.
@@ -50,7 +53,9 @@ target_link_libraries(retro_engine_hal PRIVATE retro_engine_log)
 # --- PS-EXE вехи M4-port (retro_ps1; диcк-файл RETRO.EXE;1) ----------------
 psn00bsdk_add_executable(retro_ps1 GPREL main_ps1.cpp)
 retro_engine_apply_flags(retro_ps1)
-target_include_directories(retro_ps1 PRIVATE "${CMAKE_SOURCE_DIR}")
+target_include_directories(retro_ps1 PRIVATE
+    "${CMAKE_SOURCE_DIR}"
+    "${CMAKE_SOURCE_DIR}/src")
 target_link_libraries(retro_ps1 PRIVATE retro_engine)
 
 # Ордер статических архивов: хелпер SDK добавил psx*/c ДО ретро-архивов, а в

@@ -107,6 +107,34 @@ xvfb-run -a ctest --preset pc-debug-render --output-on-failure -R integration
 **Решение**: если разница систематическая — перезапустить с
 `RENDER_GOLDEN_REBASE=1` и оформить rebase с обоснованием в журнале.
 
+## Saturn (v0.2.0)
+
+### `hello_triangle.cue` не стартует / BIOS error
+
+Проверьте: BIOS Japanese 1.01, `-ss.region_autodetect 0
+-ss.region_default jp`, файл `hello_triangle.iso` лежит рядом с `.cue`.
+BIOS/ROM не входят в репозиторий и релизный архив.
+
+### Нет фона / чёрный экран вместо VDP2
+
+Убедитесь, что собран `saturn-release` (не `saturn-single`) и в ISO есть
+`TEX1.TEX`; HAL требует bare 8.3-имена. VDP1 framebuffer при активном
+фоне стирается в transparent — если фон отключён, вернётся backdrop.
+
+### Пад не управляет камерой/объектом
+
+Mednafen: `ss.input.port1=gamepad`; клавиши по умолчанию — D-pad,
+A/B/C/X/Y/Z, Start. Mapping A→CROSS, B→CIRCLE, C→SQUARE, X→TRIANGLE,
+Y→L1, Z→R1, Start→START. Дисконнект/повторный опрос покрыты
+`saturn_hal_tests`.
+
+### Saturn-артефакты не проходят release contract
+
+Пересоберите `saturn-release`; проверьте
+`build/saturn-release/src/hal/saturn/hello_triangle.{elf,bin,iso,cue,map}`,
+`cmp hello_triangle.iso retro_saturn.iso`, `__jo_work_end <= 0x060FBC00`
+и golden `screenshots/hello_triangle_saturn_scene.png`.
+
 ## Связь
 
 Если проблема не решена — откройте issue с лейблом `question` или

@@ -6,7 +6,7 @@
 > 7 шагов), §4.5 (CMake-интеграция); [`plans/sprint_09_10.md`](plans/sprint_09_10.md),
 > [`plans/sprint_19_20.md`](plans/sprint_19_20.md) (финализация).
 > Этот документ фиксирует байтовые форматы, политику решений MVP и контракт CLI
-> конвертера. Единственный источник истины форматов в коде — [`../src/assets/assets.h`](../src/assets/assets.h).
+> конвертера. Единственный источник истины форматов в коде — [`../include/retro_engine/assets/assets.h`](../include/retro_engine/assets/assets.h).
 
 ## 1. Общие правила сериализации
 
@@ -164,7 +164,7 @@ assets/source/texture.png ──asset_converter──▶ assets/build/texture.te
 - `src/assets/mesh_loader.cpp` — `mesh_validate_and_load(data, size, alloc, out, out_error_code)`
 - `src/assets/texture_loader.cpp` — `texture_validate_and_load(data, size, alloc, out, out_error_code)`
 
-Диагностические коды `AssetDiag` (`src/assets/assets.h`; порядок — контракт):
+Диагностические коды `AssetDiag` (`include/retro_engine/assets/assets.h`; порядок — контракт):
 
 | Код | Имя                     | Шаг §1.2.7 |
 |-----|-------------------------|------------|
@@ -198,3 +198,39 @@ assets/source/texture.png ──asset_converter──▶ assets/build/texture.te
 3. **Прозрачность выключена** (STP = 0 в палитре); слот 0 зарезервирован
    под «transparent black» (см. §3.2).
 4. **`index_count` = число записей MeshIndex** (см. §2.1).
+
+## 7. Saturn v0.2.0
+
+- Форматы `.mesh` v1 / `.tex` v1 не меняются; Saturn-бэкенд конвертирует
+  CI8+RGB555 в VDP1 8bpp CLUT на этапе загрузки (S27–28).
+- Потолок `.tex` 256×256 — **engine policy** asset-pipeline, а не
+  hardware maximum VDP1 (см. `docs/SATURN.md` §2). Отдельный Saturn-формат
+  вводится только через новый ADR; v1 не ломается.
+- Имена файлов на CD — ISO9660 8.3 upper-case. HAL получает **bare-имена
+  без `;1`** (`CUBE.MSH`, `TEX0.TEX`); строчные нормализуются в upper-case,
+  host-пути/`..`/`;`/wildcard'ы отвергаются. Детали — `docs/SATURN.md` §8.
+- Карта образа v0.2.0: `assets/build/cube.mesh → CUBE.MSH`,
+  `triangle.mesh → TRIANGLE.MSH`, `texture.tex → TEXTURE.TEX`,
+  `texture_{0..3}.tex → TEX{0..3}.TEX`; копирование выполняет
+  `src/hal/saturn/CMakeLists.txt`, CI сверяет байты.
+- Загрузка: размер → `AssetHeap` (Work RAM-L, 932 KiB) → точное чтение
+  секторами 2048 Б → валидация `.mesh`/`.tex` во временной арене. Ошибка
+  чтения/валидации освобождает буфер (0 байт persistent-памяти). Boot
+  self-test читает `CUBE.MSH` + `TEX0.TEX`, логирует размер/FNV-1a.
+  С S25–26 `CUBE.MSH` остаётся в отдельной persistent-арене 64 KiB и служит
+  входом параллельного workload; `TEX0.TEX` валидируется во временной арене
+  и освобождается. Asset heap уменьшен до 932 KiB, чтобы выделить 28 KiB
+  shared-региона Master/Slave (см. `docs/SATURN.md` §2.1.1/§11).
+- **S27–28 (VDP1):** после валидации `.tex` вызывается
+  `Render_CreateTexture` → backend `vdp1_texture`: CI8 копируется
+  `jo_dma_copy` в VDP1 VRAM (451 832 B first-fit, 32-байтовое выравнивание)
+  по абсолютному адресу `VDP1_TEXTURE_BASE+offset`, палитра — в CRAM
+  (палитры 1..6; 7 — VDP2 background). Ошибка VRAM/CLUT/upload откатывает
+  оба ресурса; после неудачи persistent-память VDP1 — 0 байт. Width
+  обязана быть кратна 8, height ≤ 256 (256 клампится до 255 — VDP1 pattern
+  height 8 бит). UV треугольника обязаны быть в углах прямоугольника
+  текстуры, иначе — flat-Gouraud с диагностикой (ADR-010).
+- **S29–30 (VDP2):** `TEX1.TEX` (256×256 CI8) дополнительно тайлится 4× по X
+  в NBG1 bitmap 1024×256 (256 KiB VDP2 VRAM), палитра — CRAM 7;
+  `.tex` v1 не меняется. Ошибка размеров/инициализации — явный `false`;
+  фон можно отключить, тогда VDP1 clear снова непрозрачный.

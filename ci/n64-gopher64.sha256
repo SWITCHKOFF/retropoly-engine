@@ -1,0 +1,6 @@
+# SPDX-License-Identifier: MIT
+# gopher64 v1.2.1 (Linux x86_64) — pinned эмулятор ручного gate S39–40.
+# Asset: https://github.com/gopher64/gopher64/releases/download/v1.2.1/gopher64-linux-x86_64
+# В CI эмулятор НЕ запускается; файл нужен только для ручной приёмки.
+# mupen64plus отклонён: не загружает libdragon IPL3 r5+ (mupen64plus-core#1185).
+4822cbb76298b59f4df65560f285acd29c3e8fd7cb714637794ddd15d6132369  gopher64-linux-x86_64

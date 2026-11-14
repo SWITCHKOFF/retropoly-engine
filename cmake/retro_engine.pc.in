@@ -1,0 +1,12 @@
+# Relocatable: файл лежит в <prefix>/lib/pkgconfig.
+prefix=${pcfiledir}/../..
+exec_prefix=${prefix}
+libdir=${prefix}/@RPE_SDK_LIBDIR@
+includedir=${prefix}/@RPE_INSTALL_INCLUDEDIR@
+
+Name: RetroPolyEngine
+Description: Deterministic retro engine SDK (@RPE_PLATFORM_NAME@)
+Version: @PROJECT_VERSION@
+Cflags: -I${includedir} -I${includedir}/retro_engine
+Libs: -L${libdir} -L${prefix}/lib -lretro_engine -lretro_engine_hal -lretro_engine_log @RPE_PKGCONFIG_PLATFORM_LIBS@
+Libs.private: @RPE_PKGCONFIG_PRIVATE_LIBS@

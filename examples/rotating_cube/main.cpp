@@ -37,12 +37,14 @@ int main()
 #include "game/systems/rotation_system.h"
 #include "core/log/log.h"                // Log_Message (репортинг сессии/замера)
 #include "core/memory/memory_profiler.h" // debug-overlay: RAM usage (S17–18)
-#include "render/renderer.h"             // RENDER_FB_*, RENDER_CLEAR_DEFAULT_*, render_diagnostics()
-#include "render/texture.h"              // render_texture_pool_used_bytes (overlay)
+#include "hal/platform.h"                // RENDER_FB_*, RENDER_CLEAR_DEFAULT_*, diagnostics
 #include "core/memory/stack_allocator.h" // StackAllocator (арена кадра)
 
-#include <stdio.h>  // fprintf, snprintf
+#include <stdio.h>  // fprintf, printf, snprintf
 #include <stdlib.h> // strtoul
+#include <string.h> // strcmp
+
+#include <retro_engine/version.h>
 
 // ---------------------------------------------------------------------------
 // Static storage: реестр сцены и аллокаторы (§5.4)
@@ -204,6 +206,13 @@ void engine_shutdown()
 
 int main(int argc, char** argv)
 {
+    // Headless-проверка SDK/consumer smoke: не требует дисплея.
+    if (argc > 1 && strcmp(argv[1], "--version") == 0) {
+        printf("RetroPolyEngine %s (%s) rotating_cube\n", RETRO_ENGINE_VERSION_STRING,
+               RETRO_ENGINE_PLATFORM_NAME);
+        return 0;
+    }
+
     // Режим запуска: N секунд bench либо интерактив.
     uint32_t bench_seconds = 0u;
     if (argc > 1) {

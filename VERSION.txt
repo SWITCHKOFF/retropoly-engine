@@ -8,6 +8,14 @@
 # Дата вендоринга: 2026-10-28
 # ============================================================================
 
+[engine]
+name        = RetroPolyEngine
+version     = 0.2.1
+sdk_schema  = 1
+note        = версия SDK задаётся CMake project(VERSION) и попадает в
+              include/retro_engine/version.h, sdk_manifest.json и VERSION.txt
+              внутри SDK-архива (S33–34)
+
 [sdl3]
 repo        = https://github.com/libsdl-org/SDL.git
 tag         = release-3.4.18
@@ -48,6 +56,15 @@ path_image_write  = src/third_party/stb/stb_image_write.h
 sha256_image_write = cbd5f0ad7a9cf4468affb36354a1d2338034f2c12473cf1a8e32053cb6914a05
 license     = PD/MIT (dual)
 
+[imgui]
+repo        = https://github.com/ocornut/imgui.git
+tag         = v1.93.0
+commit      = c1aaac65e896a45f81f47a4d68f9959e0f86c859
+path        = src/third_party/imgui (submodule)
+license     = MIT
+note        = UI client (S35–36): backends imgui_impl_sdl3 + imgui_impl_opengl3;
+              baseline ADR-012; без docking-ветки
+
 [glad]
 generator   = glad2 (официальный генератор, pip-пакет `glad2`)
 parameters  = API=OpenGL, Profile=Core, Version=3.3, Generator=C, Extensions=все (+loader — для загрузки указателей функций GL в Спринтах 7–8)
@@ -73,3 +90,81 @@ env_psn00bsdk_libs = $HOME/PSn00bSDK/lib/libpsn00b
 sdk_cmake        = $PSN00BSDK_LIBS/cmake/sdk.cmake
 compiler         = mipsel-none-elf-gcc (GCC) 12.3.0
 note             = путь НЕ вендорен в репозиторий (env-install); обновление = отдельная задача с ADR
+
+; ============================================================================
+; v0.2.0 — Sega Saturn (Спринты 21–22, ADR-008). Дата: 2026-11-09.
+; ============================================================================
+
+[joengine]
+repo        = https://github.com/johannes-fetz/joengine.git
+tag         = v2026.2
+commit      = 5e99944238030821a48e17a40abefd77e81953c2
+path        = env-install (JO_ENGINE_ROOT), не вендорен в репозиторий
+license     = MIT
+compiler    = GNU GCC 8.2.0 для sh-none-elf (bundled Compiler/LINUX)
+sha256_manifest = ci/joengine-v2026.2.sha256
+note        = pinned по immutable tag/commit; обновление Jo Engine/компилятора =
+              отдельная задача с ADR. Полный checkout обязателен: Compiler/LINUX,
+              Compiler/COMMON, Compiler/WINDOWS/sh-elf/include, jo_engine.
+              S25–26 dual-CPU использует jo_engine/slave.c + FRT wake-up
+              (JO_COMPILE_WITH_DUAL_CPU_SUPPORT=1); отдельный SDK не нужен.
+
+[joengine-toolchain-linux]
+prefix      = Compiler/LINUX/bin/sh-none-elf-gcc-8.2.0
+target      = sh-none-elf (SH-2, big-endian)
+newlib_inc  = Compiler/WINDOWS/sh-elf/include
+gcc_inc     = Compiler/LINUX/lib/gcc/sh-none-elf/8.2.0/include
+gcc_inc_fixed = Compiler/LINUX/lib/gcc/sh-none-elf/8.2.0/include-fixed
+linker      = Compiler/COMMON/jo.linker
+note        = SHA-256 компилятора/cc1/cc1plus/as/ld/libc/libgcc и IP.BIN/jo.linker —
+              ci/joengine-v2026.2.sha256; CI проверяет перед сборкой.
+
+[mednafen]
+version     = 1.32.1
+url         = https://mednafen.github.io/releases/files/mednafen-1.32.1.tar.xz
+sha256      = de7eb94ab66212ae7758376524368a8ab208234b33796625ca630547dbc83832
+license     = GPL-2.0-or-later
+path        = env-install (ручная приёмка; в репозиторий/CI не вендорится)
+bios        = НЕ вендорится и НЕ публикуется; ss.bios_na_eu / ss.bios_jp задаёт
+              пользователь локально (docs/SATURN.md)
+note        = pinned для ручного smoke-теста S23–26 (5 мин S23–24:
+              VDP2 clear + CD self-test .mesh/.tex; 10 мин S25–26: dual-CPU
+              workload, fallback, determinism). CI собирает образ, но не
+              запускает эмулятор.
+
+; ============================================================================
+; v0.3.0 — Nintendo 64 (Спринты 39–40, ADR-014). Дата: 2026-11-14.
+; ============================================================================
+
+[libdragon]
+repo        = https://github.com/DragonMinded/libdragon.git
+commit      = e356bf3f56f7afbf7e5246329562f145965cfdfc
+path        = env-install (LIBDRAGON_ROOT/N64_INST), не вендорен в репозиторий
+license     = MIT
+compiler    = GNU GCC 16.2.0 для mips64-elf (libdragon-toolchain)
+sha256_manifest = ci/n64-toolchain.sha256
+note        = pinned по immutable commit; libdragon ставится в N64_INST
+              (mips64-elf/{lib,include}, bin/n64tool). Обновление =
+              отдельная задача с ADR. IPL3 r8: header CRC не используется
+              (docs/N64.md §4).
+
+[n64-toolchain-linux]
+asset       = https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
+sha256      = fac8e6572493a66468b7d45df41b042f90b1a630ec96aa218bd5fb1f320a0a4d
+install_root = ~/n64-sdk/toolchain/opt/libdragon   ; env-install, не вендорится
+env_n64_inst = $HOME/n64-sdk/toolchain/opt/libdragon
+compiler     = mips64-elf-gcc (GCC) 16.2.0
+target       = mips64-elf (NEC VR4300, big-endian, MIPS III)
+note         = CI скачивает deb, проверяет SHA-256 (ci/n64-toolchain.sha256),
+               затем собирает pinned libdragon (make + install + tools-install).
+
+[gopher64]
+version      = 1.2.1
+asset        = https://github.com/gopher64/gopher64/releases/download/v1.2.1/gopher64-linux-x86_64
+sha256       = 4822cbb76298b59f4df65560f285acd29c3e8fd7cb714637794ddd15d6132369
+license      = GPL-3.0-or-later
+path         = env-install (ручная приёмка; в репозиторий/CI не вендорится)
+note         = pinned baseline ручного gate S39–40; BIOS не нужен.
+               mupen64plus отклонён: libdragon IPL3 r5+ не загружается
+               (mupen64plus-core#1185); ares не публикует Linux-бинарь.
+               CI собирает ROM, но эмулятор не запускает.

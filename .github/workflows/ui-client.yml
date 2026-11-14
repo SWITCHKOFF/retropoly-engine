@@ -1,0 +1,119 @@
+# ============================================================================
+# UI client CI — Спринт 35–36 (недели 69–72).
+#
+# Матрица: Ubuntu/Windows/macOS
+#   - ui-debug: сборка + UI unit-тесты (project/sdk/commands/process/assets);
+#   - ui-release: сборка + пакет retro-engine-ui-<ver>-<os>-<arch>;
+#   - Linux: SDK pc-release + sdk_package → чистый UI E2E под xvfb-run.
+#
+# Артефакты UI скачиваются release gate v2 (S37–38).
+# ============================================================================
+name: ui-client
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_call:
+
+jobs:
+  ui-client:
+    name: UI (${{ matrix.os }})
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+
+    steps:
+      - name: "Checkout (submodules: SDL3, GoogleTest, Dear ImGui)"
+        uses: actions/checkout@v4
+        with:
+          submodules: recursive
+
+      - name: Host toolchain
+        shell: bash
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            sudo apt-get update
+            sudo apt-get install -y ninja-build libgl1-mesa-dev \
+              libx11-dev libxext-dev libxrandr-dev libxcursor-dev libxi-dev \
+              libxfixes-dev libxss-dev libxtst-dev libxkbcommon-dev \
+              xvfb mesa-utils libgl1-mesa-dri
+          elif [ "$RUNNER_OS" = "macOS" ]; then
+            brew install ninja
+          fi
+
+      - name: Verify vendored dependencies
+        shell: bash
+        run: sh ci/verify_vendored.sh
+
+      - name: Configure ui-debug
+        shell: bash
+        run: cmake --preset ui-debug
+
+      - name: Build UI unit tests
+        shell: bash
+        run: cmake --build build/ui-debug --target retro_engine_ui_tests -j 4
+
+      - name: Run UI unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+          EXE=build/ui-debug/tools/ui_client/retro_engine_ui_tests
+          [ "$RUNNER_OS" = "Windows" ] && EXE="${EXE}.exe"
+          "$EXE"
+
+      - name: Build ui-release
+        shell: bash
+        run: |
+          cmake --preset ui-release
+          cmake --build build/ui-release --target retro_engine_ui -j 4
+
+      - name: Package UI
+        shell: bash
+        run: |
+          set -euo pipefail
+          PY=python3; [ "$RUNNER_OS" = "Windows" ] && PY=python
+          "$PY" scripts/package_ui.py --build-dir build/ui-release --version 0.2.1 --output-dir dist
+
+      # --- Linux-only: SDK + clean E2E under xvfb -------------------------
+      - name: Build PC SDK for E2E
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          cmake --preset pc-release
+          cmake --build build/pc-release -j 4
+          cmake --build build/pc-release --target sdk_package
+
+      - name: Clean UI E2E (SDK archive + UI package)
+        if: runner.os == 'Linux'
+        shell: bash
+        run: |
+          set -euo pipefail
+          SDK=$(ls dist/retro-engine-sdk-*-pc-linux-*.tar.gz | head -n 1)
+          UI=$(ls dist/retro-engine-ui-*.tar.gz | head -n 1)
+          python3 scripts/ui_e2e.py --sdk-archive "$SDK" --ui-package "$UI" \
+            --screenshot-dir dist/ui-screenshots
+
+      - name: Upload UI package
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-engine-ui-${{ runner.os }}
+          path: |
+            dist/retro-engine-ui-*.tar.gz
+            dist/retro-engine-ui-*.tar.gz.sha256
+            dist/retro-engine-ui-*.zip
+            dist/retro-engine-ui-*.zip.sha256
+            dist/retro-engine-ui-*.dmg
+            dist/retro-engine-ui-*.dmg.sha256
+          if-no-files-found: error
+
+      - name: Upload UI screenshots (Linux E2E)
+        if: runner.os == 'Linux'
+        uses: actions/upload-artifact@v4
+        with:
+          name: ui-e2e-screenshots
+          path: dist/ui-screenshots/*.png
+          if-no-files-found: warn
