@@ -34,8 +34,9 @@ jobs:
     runs-on: ubuntu-latest
 
     env:
-      N64_INST: ${{ runner.temp }}/n64-sdk/toolchain/opt/libdragon
-      LIBDRAGON_ROOT: ${{ runner.temp }}/n64-sdk/libdragon
+      N64_SDK: ${{ github.workspace }}/n64-sdk
+      N64_INST: ${{ github.workspace }}/n64-sdk/toolchain/opt/libdragon
+      LIBDRAGON_ROOT: ${{ github.workspace }}/n64-sdk/libdragon
 
     steps:
       - name: "Checkout (без submodules: N64 не тянет SDL3/PSn00bSDK)"
@@ -49,14 +50,14 @@ jobs:
       - name: Кэш pinned toolchain/libdragon
         uses: actions/cache@v4
         with:
-          path: ${{ runner.temp }}/n64-sdk
+          path: ${{ github.workspace }}/n64-sdk
           key: n64-sdk-${{ hashFiles('ci/n64-toolchain.sha256', 'ci/n64-libdragon.commit') }}
 
       - name: libdragon-toolchain (pinned deb + SHA-256)
         run: |
           set -euo pipefail
-          mkdir -p "$RUNNER_TEMP/n64-sdk"
-          cd "$RUNNER_TEMP/n64-sdk"
+          mkdir -p "$N64_SDK"
+          cd "$N64_SDK"
           if [ ! -x "$N64_INST/bin/n64tool" ]; then
             curl -L --retry 3 -o gcc-toolchain-mips64-x86_64.deb \
               https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
