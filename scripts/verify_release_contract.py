@@ -9,7 +9,7 @@
 #   4. w0_framebuffer_hash == canonical_w0_hash
 #   5. w1_pc_fps >= 60; w1_ps1_emulator_fps >= 30
 #   6. all_asset_validation_cases_pass; no_renderer_overflow_is_silent
-#   7. Saturn artifacts/map/golden
+#   7. Saturn artifacts/map/golden; N64 ROM/DFS/budgets (S45–46)
 #   8. SDK: архивы + sidecar SHA-256, sdk_manifest.json, public headers,
 #      checksums.sha256 и clean consumer smoke (find_package RetroPolyEngine)
 #   9. UI: retro-engine-ui-* archive, ui_manifest.json, components,
@@ -61,6 +61,7 @@ W1_BENCH = os.path.join(REPO_ROOT, "build", "pc-release", "game",
                         "rotating_cube")
 SATURN_DIR = os.path.join(REPO_ROOT, "build", "saturn-release", "src",
                           "hal", "saturn")
+N64_DIR = os.path.join(REPO_ROOT, "build", "n64-release", "src", "hal", "n64")
 SATURN_REQUIRED = ["hello_triangle.elf", "hello_triangle.bin",
                    "hello_triangle.iso", "hello_triangle.cue",
                    "hello_triangle.map"]
@@ -343,7 +344,7 @@ def _sdk_platform(path, sdk_dir=None):
         except (OSError, ValueError):
             pass
     base = os.path.basename(path or "")
-    for platform in ("ps1", "saturn", "pc"):
+    for platform in ("ps1", "saturn", "n64", "pc"):
         if "-%s-" % platform in base:
             return platform
     return "pc"
@@ -418,7 +419,10 @@ def _assert_sdk_archive(contract, archive):
         if (".git" in parts or "bios" in parts or "roms" in parts or
                 "secrets" in parts or "cmakefiles" in parts):
             forbidden.append(name)
-        if low.endswith((".rom", ".bios", ".iso", ".cue", ".elf", ".bin")):
+        if low.endswith((".rom", ".bios", ".iso", ".cue", ".bin")):
+            forbidden.append(name)
+        elif low.endswith(".elf") and not (
+                "/lib/n64/" in low or "/rsp/" in low):
             forbidden.append(name)
     ok = (expected == actual and not missing and not forbidden)
     return ok, {"path": archive, "sha256": actual, "expected": expected,
@@ -670,6 +674,69 @@ def assert_ui_archives(contract, archives):
     return ok, {"archives": details}
 
 
+def assert_n64_artifacts(contract):
+    """S45–46: ROM/DFS/budgets + alias-пара для hello_triangle/rotating_cube."""
+    required = contract.get("release", {}).get(
+        "required_artifacts_n64", [])
+    missing = [name for name in required
+               if not os.path.isfile(os.path.join(N64_DIR, name))]
+    budgets_script = os.path.join(REPO_ROOT, "scripts",
+                                  "verify_n64_budgets.py")
+    rc, out, err = run([sys.executable, budgets_script,
+                        "--artifacts", N64_DIR], timeout=300)
+    budget_report = {}
+    if rc == 0:
+        try:
+            budget_report = json.loads(out)
+        except ValueError:
+            budget_report = {}
+    ok = not missing and rc == 0 and budget_report.get("ok") is True
+    return ok, {"artifacts_dir": N64_DIR, "missing": missing,
+                "budgets_exit": rc,
+                "budgets_ok": budget_report.get("ok"),
+                "roms": budget_report.get("roms"),
+                "dfs": budget_report.get("dfs"),
+                "tail": (err if err else out)[-1200:]}
+
+
+def _find_n64_sdk(args, tempdir):
+    if args.sdk_archive_n64:
+        archive = os.path.abspath(args.sdk_archive_n64)
+        return _extract_sdk(archive, os.path.join(tempdir, "sdk_n64")), archive
+    candidates = sorted(glob.glob(os.path.join(
+        DIST_DIR, "retro-engine-sdk-*-n64-*.tar.gz")))
+    if candidates:
+        return _extract_sdk(candidates[-1],
+                            os.path.join(tempdir, "sdk_n64")), candidates[-1]
+    return None, None
+
+
+def assert_ui_smoke_n64(contract, ui_archive, n64_sdk_archive, skip):
+    """UI client: New Project target N64 → build .z64 (без запуска эмулятора)."""
+    if skip:
+        return True, {"skipped": True}
+    if ui_archive is None or not os.path.isfile(ui_archive):
+        return False, {"error": "native UI archive not found",
+                       "archive": ui_archive}
+    tempdir = tempfile.mkdtemp(prefix="rpe_ui_n64_gate_")
+    try:
+        sdk_dir, archive = _find_n64_sdk(
+            argparse.Namespace(sdk_archive_n64=n64_sdk_archive), tempdir)
+        if sdk_dir is None:
+            return False, {"error": "N64 SDK archive not found for UI smoke"}
+        cmd = [sys.executable, UI_SMOKE_SCRIPT,
+               "--sdk-dir", sdk_dir, "--ui-package", ui_archive,
+               "--platform", "n64", "--no-run"]
+        rc, out, err = run(cmd, timeout=900)
+        ok = rc == 0 and "[smoke] PASS" in out
+        return ok, {"exit_code": rc,
+                    "sdk_archive": os.path.basename(archive),
+                    "ui_archive": os.path.basename(ui_archive),
+                    "ok": ok, "tail": (err if err else out)[-1200:]}
+    finally:
+        shutil.rmtree(tempdir, ignore_errors=True)
+
+
 def assert_release_payload(contract, payload_dir):
     """Проверяет dist/retro-engine-v<ver>/ (SDK+UI payload, S37–38)."""
     if payload_dir is None:
@@ -749,6 +816,8 @@ def main():
                         help="Путь к retro-engine-sdk-*.tar.gz/.zip")
     parser.add_argument("--ui-archive", default=None,
                         help="Путь к native retro-engine-ui-*.tar.gz")
+    parser.add_argument("--sdk-archive-n64", default=None,
+                        help="Путь к retro-engine-sdk-*-n64-*.tar.gz")
     parser.add_argument("--payload-dir", default=None,
                         help="Путь к dist/retro-engine-v<ver>/ (default: dist)")
     parser.add_argument("--skip-sdk-consumer", action="store_true",
@@ -794,6 +863,17 @@ def main():
         contract, sdk_dir, args.skip_build_checks or args.skip_sdk_consumer,
         sdk_platform)
 
+    n64_sdk_dir, n64_sdk_archive = _find_n64_sdk(args, sdk_temp)
+    results["sdk_n64_archive"] = (
+        _assert_sdk_archive(contract, n64_sdk_archive)
+        if n64_sdk_archive is not None
+        else (False, {"error": "N64 SDK archive not found"}))
+    results["sdk_n64_manifest"] = assert_sdk_manifest(contract, n64_sdk_dir)
+    results["sdk_n64_consumer"] = assert_sdk_consumer(
+        contract, n64_sdk_dir,
+        args.skip_build_checks or args.skip_sdk_consumer, "n64")
+    results["n64_artifacts"] = assert_n64_artifacts(contract)
+
     ui_archives = sorted(glob.glob(UI_ARCHIVE_GLOB))
     if args.ui_archive:
         ui_manifest_archive = os.path.abspath(args.ui_archive)
@@ -809,6 +889,9 @@ def main():
         contract, ui_manifest_archive)
     results["ui_smoke"] = assert_ui_smoke(
         contract, sdk_dir, ui_manifest_archive,
+        args.skip_build_checks or args.skip_ui_smoke)
+    results["ui_smoke_n64"] = assert_ui_smoke_n64(
+        contract, ui_manifest_archive, n64_sdk_archive,
         args.skip_build_checks or args.skip_ui_smoke)
 
     results["presets"] = assert_presets(contract)

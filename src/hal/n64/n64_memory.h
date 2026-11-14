@@ -49,10 +49,13 @@ constexpr uint32_t FS_STAGING_BYTES = 128u * 1024u;
 constexpr uint32_t ENGINE_ARENAS_BYTES =
     ASSET_ARENA_BYTES + FRAME_ARENA_BYTES + COMMAND_ARENA_BYTES + FS_STAGING_BYTES;
 
+/** S45–46 budget: engine peak ≤ 3.5 MiB, reserve ≥ 512 KiB (4 MiB base). */
+constexpr uint32_t RDRAM_PEAK_LIMIT_BYTES = 3584u * 1024u;
+constexpr uint32_t RDRAM_RESERVE_MIN_BYTES = 512u * 1024u;
+
 /** Остаток 4 MiB ledger: код/данные движка, libdragon и его boot-heap. */
-constexpr uint32_t CODE_DATA_SDK_RESERVE_BYTES = RDRAM_BASE_BYTES - CPU_STACK_BYTES -
-                                                 FRAMEBUFFER_BYTES - ZBUFFER_BYTES -
-                                                 ENGINE_ARENAS_BYTES;
+constexpr uint32_t CODE_DATA_SDK_RESERVE_BYTES =
+    RDRAM_BASE_BYTES - CPU_STACK_BYTES - FRAMEBUFFER_BYTES - ZBUFFER_BYTES - ENGINE_ARENAS_BYTES;
 
 static_assert(RENDER_FB_WIDTH == 320u && RENDER_FB_HEIGHT == 240u,
               "N64 reference VI must stay 320x240 (docs/N64.md)");
@@ -67,6 +70,11 @@ static_assert(ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES + ZBUFFE
               "N64 ledger exceeds 4 MiB base RDRAM");
 static_assert(CODE_DATA_SDK_RESERVE_BYTES >= 1024u * 1024u,
               "N64 ledger must leave at least 1 MiB for code/data/SDK");
+static_assert(ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES + ZBUFFER_BYTES <=
+                  RDRAM_PEAK_LIMIT_BYTES,
+              "N64 engine peak must stay below 3.5 MiB (S45–46 budget)");
+static_assert(CODE_DATA_SDK_RESERVE_BYTES >= RDRAM_RESERVE_MIN_BYTES,
+              "N64 ledger must reserve at least 512 KiB (S45–46 budget)");
 
 /**
  * Линейная арена с учётом пикового использования.

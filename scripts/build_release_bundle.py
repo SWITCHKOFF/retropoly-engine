@@ -3,27 +3,30 @@
 # ============================================================================
 # RetroPolyEngine — scripts/build_release_bundle.py (Спринт 37–38)
 #
-# Собирает публичный payload v0.2.1 из готовых архивов SDK/UI и отчёта gate:
+# Собирает публичный payload v0.3.0 из готовых архивов SDK/UI и отчёта gate:
 #
-#   dist/retro-engine-v0.2.1/
+#   dist/retro-engine-v0.3.0/
 #     sdk/                        # распакованный PC SDK
+#     sdk/platforms/n64/          # распакованный N64 SDK (S45–46)
 #     ui/                         # распакованный UI client (host)
 #     demos/                      # OPTIONAL: PC/PS1/Saturn demo-образы
 #     checksums.sha256            # все файлы payload (кроме себя)
 #     release_contract_report.json
 #     README.md LICENSE LEGAL.md
-#   dist/retro-engine-v0.2.1.tar.gz (+ .sha256)
+#   dist/retro-engine-v0.3.0.tar.gz (+ .sha256)
 #
 # Demo-образы не могут подменить SDK/UI: без sdk/ и ui/ сборка падает.
 #
 # Пример:
 #   python3 scripts/build_release_bundle.py \
-#       --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-#       --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+#       --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+#       --sdk-archive-n64 dist/retro-engine-sdk-0.3.0-n64-mips64.tar.gz \
+#       --ui-archive dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz \
 #       --report release_contract_report.json
 # ============================================================================
 import argparse
 import datetime as _dt
+import glob
 import gzip
 import json
 import os
@@ -199,6 +202,8 @@ def main():
                         help="Версия (default: ci/normative_contracts.yaml)")
     parser.add_argument("--output-dir", default=DIST_DIR)
     parser.add_argument("--sdk-archive", default=None)
+    parser.add_argument("--sdk-archive-n64", default=None,
+                        help="N64 SDK archive → sdk/platforms/n64")
     parser.add_argument("--ui-archive", default=None)
     parser.add_argument("--report", default=DEFAULT_REPORT)
     parser.add_argument("--demos-dir", default=None,
@@ -222,9 +227,22 @@ def main():
 
     sdk_archive = find_archive(version, "sdk", args.sdk_archive,
                                host_os, host_arch)
+    n64_candidates = sorted(glob.glob(os.path.join(
+        DIST_DIR, "retro-engine-sdk-%s-n64-*.tar.gz" % version)))
+    n64_archive = (os.path.abspath(args.sdk_archive_n64)
+                   if args.sdk_archive_n64 else
+                   (n64_candidates[0] if n64_candidates else None))
+    if n64_archive is not None and not os.path.isfile(n64_archive):
+        raise SystemExit("N64 SDK archive not found: %s" % n64_archive)
+    if "n64" in contract.get("release", {}).get("supported_targets", []) and \
+            n64_archive is None:
+        raise SystemExit("N64 SDK archive is required by the release contract "
+                         "(pass --sdk-archive-n64)")
     ui_archive = find_archive(version, "ui", args.ui_archive,
                               host_os, host_arch)
-    for archive in (sdk_archive, ui_archive):
+    for archive in (sdk_archive, n64_archive, ui_archive):
+        if archive is None:
+            continue
         ok, detail = verify_sidecar(archive)
         if not ok:
             raise SystemExit("checksum sidecar failed: %s" %
@@ -260,6 +278,12 @@ def main():
         ui_root = extract(ui_archive, os.path.join(tempdir, "ui"), "ui")
         shutil.copytree(sdk_root, os.path.join(bundle_dir, "sdk"))
         shutil.copytree(ui_root, os.path.join(bundle_dir, "ui"))
+        if n64_archive is not None:
+            n64_root = extract(n64_archive,
+                               os.path.join(tempdir, "sdk_n64"), "sdk")
+            target = os.path.join(bundle_dir, "sdk", "platforms", "n64")
+            os.makedirs(os.path.dirname(target), exist_ok=True)
+            shutil.copytree(n64_root, target)
     finally:
         if not args.keep_temp:
             shutil.rmtree(tempdir, ignore_errors=True)
@@ -276,6 +300,8 @@ def main():
     checksum_count = release_payload.write_checksums(bundle_dir)
     ok, details = release_payload.validate_payload(bundle_dir, contract)
     details["sdk_archive"] = os.path.basename(sdk_archive)
+    details["sdk_archive_n64"] = (os.path.basename(n64_archive)
+                                  if n64_archive else None)
     details["ui_archive"] = os.path.basename(ui_archive)
     details["host"] = "%s-%s" % (host_os, host_arch)
     details["demos"] = demos
@@ -288,6 +314,7 @@ def main():
     result = {"ok": True, "bundle": bundle_dir,
               "version": version, "host": details["host"],
               "sdk_archive": details["sdk_archive"],
+              "sdk_archive_n64": details["sdk_archive_n64"],
               "ui_archive": details["ui_archive"],
               "demos": demos, "checksum_entries": checksum_count,
               "archive": None}

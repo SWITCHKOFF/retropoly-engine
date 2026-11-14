@@ -249,10 +249,10 @@ v0.3.0 (Nintendo 64): детальные планы S39–46 — §13.3.
 | `regression.yml` | Спринт 7–8 | pc-debug unit + `pc-debug-render` под `xvfb-run` (renderer integration) |
 | `build-ps1.yml` | Спринт 13–14 | Pinned PSn00bSDK v0.24 + sha256; ps1-release; upload artifacts |
 | `build-saturn.yml` | Спринт 21–22 | Pinned Jo Engine v2026.2 + sha256; saturn-release; bootable ISO/CUE artifacts |
-| `build-n64.yml` | Спринт 39–42 | Pinned libdragon/toolchain + sha256; n64-release; `.z64` + DFS + map + sha256; проверка heap; эмулятор в CI не запускается |
+| `build-n64.yml` | Спринт 39–46 | Pinned libdragon/toolchain + sha256; n64-release; hello_triangle/rotating_cube `.z64` + DFS + map + sha256; бюджеты/asset pipeline/heap; эмулятор в CI не запускается |
 | `coverage.yml` | Спринт 15–16 | pc-coverage → lcov → Codecov (порог core/ > 70%) |
 | `release.yml` | Спринт 37–38 | Тег v*: reusable SDK/UI workflows → gate v2 (consumer/UI E2E, negative-tests) → **draft** GitHub Release только при `all_ok: true`; public publish — вручную |
-| `sdk-package.yml` | Спринт 33–34 | SDK-архивы PC/PS1/Saturn + clean consumer smoke (готов); N64-пакет — S45–46 |
+| `sdk-package.yml` | Спринт 33–34 | SDK-архивы PC/PS1/Saturn/N64 + clean consumer smoke |
 | `ui-client.yml` | Спринт 35–36 | UI matrix: core-тесты, ui-release package, Linux clean E2E |
 | `docs.yml` | Спринт 19–20 | Doxygen → GitHub Pages (по тегу) (готов) |
 | `issue-triage.yml` | Спринт 19–20 | Автолейбл «needs-info» без шаблона (готов) |
@@ -550,7 +550,7 @@ N64 S39–46 — следующий этап разработки (§13.3).
 | [plans/sprint_39_40.md](plans/sprint_39_40.md) | 39–40 | 77–80 | 08.02–07.03.2027 | Исследование, toolchain/libdragon, backend skeleton, CI | 56.7 ч |
 | [plans/sprint_41_42.md](plans/sprint_41_42.md) | 41–42 | 81–84 | 08.03–04.04.2027 | HAL N64: VI, input, ROM/DFS, память | 61.7 ч |
 | [plans/sprint_43_44.md](plans/sprint_43_44.md) | 43–44 | 85–88 | 05.04–02.05.2027 | RSP-микрокод, RDP, аппаратный Z-буфер, текстуры/TMEM | 67.5 ч |
-| [plans/sprint_45_46.md](plans/sprint_45_46.md) | 45–46 | 89–92 | 03.05–30.05.2027 | hello_triangle/rotating_cube, бюджеты, SDK/UI | 56.7 ч |
+| [plans/sprint_45_46.md](plans/sprint_45_46.md) | 45–46 | 89–92 | 03.05–30.05.2027 | hello_triangle/rotating_cube, бюджеты, SDK/UI (закрыт локально) | 56.7 ч |
 
 Σ E ≈ **242.5 ч**. 8 спринтов = 16 недель; при 10–15 ч/нед доступно
 160–240 ч: план сходится только у верхней границы темпа; 95%-сценарий
@@ -582,7 +582,7 @@ N64 S39–46 — следующий этап разработки (§13.3).
 - Релиз — **draft-only**; любая публикация — не ранее **v0.9.x**
   (ADR-013); v0.2.x остаются withdrawn.
 
-**Статус (2026-11-14):** S39–44 реализованы локально. S39–42: pinned
+**Статус (2026-11-14):** S39–46 реализованы локально; v0.3.0 — draft. S39–42: pinned
 GCC 16.2.0 + libdragon `e356bf3`, `n64-release`, bootable `hello_n64.z64`
 с read-only DFS, ROM verifier PASS, 60-с gate/10-мин stress в gopher64
 1.2.1, host-тесты 46/46. S43–44: RSP T&L overlay (Q16.16, 512 слотов),
@@ -593,7 +593,12 @@ CPU-fallback hash идентичен, W1 4 куба/48 tri @ ≈59 FPS в softwa
 benchmark YAML и скриншот. PC regression — см. ctest pc-debug.
 Remote CI — после push; baseline эмулятора gopher64 1.2.1
 (mupen64plus не грузит libdragon IPL3 r5+, mupen64plus-core#1185).
-S45–46 — демо/бюджеты, N64 SDK/UI и draft v0.3.0.
+S45–46 — `hello_triangle`/`rotating_cube` ROM, `asset_converter
+--platform n64`, бюджеты/W0/W1, N64 SDK (`find_package` +
+`n64_rsp_tnl`), UI target N64 (import/build/run gopher64), payload
+`sdk/platforms/n64` + `demos/n64`, contract asserts и negative-tests;
+60-с gate и 10-мин stress в gopher64 1.2.1. Публикация — только draft
+до v0.9.x.
 
 ## 14. Реестр рисков (операционный)
 

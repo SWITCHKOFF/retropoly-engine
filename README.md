@@ -12,12 +12,14 @@ VDP2 NBG1 bitmap-фон с VBlank-scroll (S27–30); 6-button pad и 60 Гц
 demo-образы, но не готовый SDK и UI-клиент — см.
 [docs/RELEASING.md](docs/RELEASING.md).
 
-v0.3.0 — Nintendo 64 (S39–46, development): pinned libdragon + GCC
+v0.3.0 — Nintendo 64 (S39–46, **draft**): pinned libdragon + GCC
 16.2.0 mips64-elf, bootable `.z64` и CI без эмулятора — S39–40; HAL
 VI/input/read-only DFS/память — S41–42; RSP T&L + RSP dot-lighting,
-RDPQ с аппаратным Z, CI8/TMEM-полосы и W0/W1 — S43–44; демо/SDK/UI —
-S45–46. N64 пока **development**; публикация отложена до v0.9.x
-(release freeze).
+RDPQ с аппаратным Z, CI8/TMEM-полосы и W0/W1 — S43–44; S45–46 —
+отдельные ROM `hello_triangle`/`rotating_cube`, `asset_converter
+--platform n64`, N64 SDK + UI target N64 и release payload
+`sdk/` + `sdk/platforms/n64/` + `ui/` + `demos/n64`. Публикация
+отложена до v0.9.x (release freeze).
 
 **Любая публикация релизов проекта отложена до v0.9.x (release freeze).**
 v0.2.1 — release candidate: SDK+UI payload и release gate v2 готовы, но
@@ -27,7 +29,7 @@ maintainer + агент. Подробности — [docs/RELEASING.md](docs/REL
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
-## Release candidate v0.2.1 (не опубликован)
+## Draft v0.3.0 (не опубликован; v0.2.1 withdrawn)
 
 Публичного GitHub Release сейчас нет. Те же артефакты можно собрать
 локально/в CI:
@@ -38,21 +40,24 @@ cmake --preset pc-release && cmake --build --preset pc-release
 cmake --build build/pc-release --target sdk_package
 cmake --preset ui-release
 cmake --build build/ui-release --target retro_engine_ui
-python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
+python3 scripts/package_ui.py --build-dir build/ui-release --version 0.3.0
 
 # Проверить gate и собрать payload (см. docs/RELEASING.md)
 xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60 --skip-payload
 python3 scripts/build_release_bundle.py \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+  --sdk-archive-n64 dist/retro-engine-sdk-0.3.0-n64-mips64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz \
   --report release_contract_report.json
 python3 scripts/verify_release_contract.py --payload-only
 ```
 
-Будущий payload: `retro-engine-v0.2.1.tar.gz` (`sdk/` + `ui/` + optional
-`demos/`) + отдельные SDK/UI-архивы PC/PS1/Saturn, checksums и отчёты gate.
-Поддерживаемые hosts/targets v0.2.1: SDK — Linux x86_64, Windows x86_64,
-macOS arm64; target PC/PS1/Saturn. Полный гайд:
+Будущий payload: `retro-engine-v0.3.0.tar.gz` (`sdk/` +
+`sdk/platforms/n64/` + `ui/` + optional `demos/n64`) + отдельные
+SDK/UI-архивы PC/PS1/Saturn/N64, checksums и отчёты gate.
+Поддерживаемые hosts/targets v0.3.0: SDK — Linux x86_64, Windows x86_64,
+macOS arm64; target PC/PS1/Saturn/N64. Release notes:
+[docs/RELEASE_NOTES_v0.3.0.md](docs/RELEASE_NOTES_v0.3.0.md). Полный гайд:
 [docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
 
 ## Сборка из исходников
@@ -74,7 +79,7 @@ cmake --build --preset pc-release
 
 > Без `--recursive` SDL3/googletest не подтянутся — см. [docs/BUILDING.md](docs/BUILDING.md).
 
-## SDK (v0.2.1)
+## SDK (v0.3.0)
 
 Движок собирается как устанавливаемый SDK с публичными заголовками,
 CMake package, примерами и checksums (S33–34):
@@ -94,15 +99,19 @@ target_link_libraries(game PRIVATE RetroPolyEngine::retro_engine)
 #include <retro_engine/retro_engine.h>
 ```
 
-Пакеты: `dist/retro-engine-sdk-<version>-{pc,ps1,saturn}-<arch>.{tar.gz,zip}`;
-consumer smoke — `scripts/sdk_consumer_smoke.py`; полное руководство —
+Пакеты: `dist/retro-engine-sdk-<version>-{pc,ps1,saturn}-<arch>.{tar.gz,zip}`
+и `retro-engine-sdk-<version>-n64-mips64.{tar.gz,zip}` (N64 SDK требует
+внешний `N64_INST` + pinned libdragon; в manifest — цель
+`RetroPolyEngine::n64_rsp_tnl`). Consumer smoke —
+`scripts/sdk_consumer_smoke.py`; полное руководство —
 [docs/SDK.md](docs/SDK.md), границы API — [ADR-011](docs/adr/ADR-011-public-sdk-api.md).
 
-## UI client (v0.2.1)
+## UI client (v0.3.0)
 
 Отдельный launcher/editor (SDL3 + Dear ImGui, MIT): создание/открытие
-проекта, target PC/PS1/Saturn, импорт ассетов через SDK
-`asset_converter`, сборка CMake/Ninja и запуск target'а/эмулятора.
+проекта, target PC/PS1/Saturn/N64, импорт ассетов через SDK
+`asset_converter` (для N64 — `--platform n64`, 64×64 CI8+CLUT),
+сборка CMake/Ninja и запуск target'а/эмулятора (N64 — gopher64).
 
 ![UI client: проект](screenshots/ui_project.png)
 
@@ -115,7 +124,7 @@ cmake --build --preset ui-debug --target retro_engine_ui_tests
 # release-пакет
 cmake --preset ui-release
 cmake --build --preset ui-release --target retro_engine_ui
-python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
+python3 scripts/package_ui.py --build-dir build/ui-release --version 0.3.0
 ```
 
 Пакет: `dist/retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip}`;
@@ -149,7 +158,7 @@ python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
 | [docs/RetroEngine_Engineering_Documentation_v1.43.md](docs/RetroEngine_Engineering_Documentation_v1.43.md) | Каноническая инженерная спецификация MVP (нормативная) |
 | [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md) | Слои движка, пайплайн рендера, ассет-пайплайн, платформенные контракты |
 | [docs/BUILDING.md](docs/BUILDING.md) | Установка тулчейна, канонические пресеты, запуск PC/PS1/Saturn/N64, troubleshooting |
-| [docs/SDK.md](docs/SDK.md) | SDK: install/export, `find_package`, примеры, пакеты PC/PS1/Saturn, manifest/checksums |
+| [docs/SDK.md](docs/SDK.md) | SDK: install/export, `find_package`, примеры, пакеты PC/PS1/Saturn/N64, manifest/checksums |
 | [docs/UI_CLIENT.md](docs/UI_CLIENT.md) | UI client: установка, project/target/import/build/run, диагностика, упаковка |
 | [docs/SATURN.md](docs/SATURN.md) | Saturn: первоисточники, toolchain, разрешение, память, ввод, эмулятор |
 | [docs/N64.md](docs/N64.md) | N64: reference-факты, toolchain/libdragon, ROM/CRC, memory ledger, DFS, input, RSP T&L/RDP/Z/TMEM, gopher64 gate |
@@ -172,7 +181,8 @@ python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
 | [docs/DEVELOPMENT_PLAN.md](docs/DEVELOPMENT_PLAN.md) | Операционный план: вехи M0–M8, PERT, критический путь, гейты G1–G13 |
 | [docs/plans/README.md](docs/plans/README.md) | Детальные планы спринтов (`docs/plans/sprint_NN.md`) |
 | [docs/RELEASING.md](docs/RELEASING.md) | Релизная политика: обязательные SDK + UI client, gate v2, статус v0.2.0 |
-| [docs/RELEASE_NOTES_v0.2.1.md](docs/RELEASE_NOTES_v0.2.1.md) | DRAFT release notes v0.2.1 (release candidate withdrawn; не опубликованы) |
+| [docs/RELEASE_NOTES_v0.2.1.md](docs/RELEASE_NOTES_v0.2.1.md) | DRAFT release notes v0.2.1 (withdrawn; не опубликованы) |
+| [docs/RELEASE_NOTES_v0.3.0.md](docs/RELEASE_NOTES_v0.3.0.md) | DRAFT release notes v0.3.0 (N64; draft/frozen) |
 
 ## Скриншоты
 
@@ -198,6 +208,13 @@ TMEM-полосы, bilinear; gopher64 1.2.1):
 | n64 render S43–44 |
 |---|
 | ![n64-render-s43-44](screenshots/n64_render_s43_44.png) |
+
+N64 S45–46 (v0.3.0 draft): hello_triangle и W1 rotating_cube,
+overlay FPS/frame/RDRAM/TMEM/TNL/RDP; gopher64 1.2.1:
+
+| n64 hello_triangle | n64 rotating_cube |
+|---|---|
+| ![n64-hello](screenshots/n64_hello_triangle.png) | ![n64-cube](screenshots/n64_rotating_cube.png) |
 
 UI client:
 
@@ -252,13 +269,13 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] N64 S39–40: libdragon/toolchain, bootable `.z64`, CI, docs/N64.md, ADR-014
 - [x] N64 S41–42: HAL VI/input/DFS/память, render skeleton, gopher64 gate
 - [x] N64 S43–44: RSP T&L + RSP lighting, RDPQ/Z/TMEM, W0/W1, gopher64 gate
-- [ ] N64 S45–46: hello_triangle/rotating_cube, бюджеты, SDK/UI (v0.3.0 draft)
+- [x] N64 S45–46: hello_triangle/rotating_cube, бюджеты, N64 SDK/UI, draft v0.3.0
 - [ ] Публикация отложена до v0.9.x (release freeze); v0.2.1 Release удалён/отозван
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
 [docs/RELEASING.md](docs/RELEASING.md). Любая публикация релизов отложена до
-**v0.9.x**; разработка продолжается, следующий milestone — N64 **v0.3.0**
-(S39–46). Планы — [sprint_33_34](docs/plans/sprint_33_34.md),
+**v0.9.x**; N64 **v0.3.0** (S39–46) собран как draft. Следующий milestone —
+Jaguar v0.4.0 (S47+). Планы — [sprint_33_34](docs/plans/sprint_33_34.md),
 [sprint_35_36](docs/plans/sprint_35_36.md),
 [sprint_37_38](docs/plans/sprint_37_38.md),
 [sprint_39_40](docs/plans/sprint_39_40.md),

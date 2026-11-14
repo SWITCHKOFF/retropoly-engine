@@ -9,7 +9,7 @@
 
 project:
   name: RetroPolyEngine
-  version: 0.2.1
+  version: 0.3.0
 
 presets:
   canonical:
@@ -93,7 +93,7 @@ sdk:
   archive_naming: "retro-engine-sdk-<version>-<platform>[-<os>]-<arch>.{tar.gz,zip}"
   umbrella_header: include/retro_engine/retro_engine.h
   public_include_dir: include/retro_engine
-  platforms: [pc, ps1, saturn]
+  platforms: [pc, ps1, saturn, n64]
   targets:
     - RetroPolyEngine::retro_engine
     - RetroPolyEngine::hal
@@ -127,6 +127,7 @@ sdk:
     - include/retro_engine/hal/pc
     - include/retro_engine/hal/ps1
     - include/retro_engine/hal/saturn
+    - include/retro_engine/hal/n64
   consumer:
     project: tests/sdk/consumer
     cmake_package: RetroPolyEngine
@@ -152,7 +153,7 @@ ui:
   package_name: retro-engine-ui
   archive_naming: "retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip,dmg}"
   manifest: ui_manifest.json
-  sdk_series: "0.2"
+  sdk_series: "0.3"
   required_files:
     - retro-engine-ui
     - assets/DejaVuSans.ttf
@@ -200,6 +201,7 @@ release:
     - pc
     - ps1
     - saturn
+    - n64
   # Layout dist/retro-engine-v<ver>/ (scripts/build_release_bundle.py).
   payload_required_entries:
     - sdk
@@ -227,6 +229,7 @@ release:
     - pc_libraries
     - ps1_libraries
     - saturn_libraries
+    - n64_sdk
     - cmake_package_config
     - asset_converter
     - examples
@@ -253,6 +256,16 @@ release:
     - hello_triangle.iso
     - hello_triangle.cue
     - hello_triangle.map
+  required_artifacts_n64:
+    - hello_triangle.z64
+    - hello_triangle.z64.sha256
+    - hello_triangle_n64.map
+    - rotating_cube.z64
+    - rotating_cube.z64.sha256
+    - rotating_cube_n64.map
+    - retro_n64.dfs
+    - retro_n64.dfs.txt
+  n64_payload_sdk_dir: sdk/platforms/n64
 
 saturn:
   preset: saturn-release
@@ -289,10 +302,11 @@ platforms:
   # RSP/RDP/Z/TMEM — S43–44. Бюджет — 4 MiB base; Expansion Pak
   # определяется, но арены не растут (policy v0.3.0).
   n64:
-    status: development
+    status: release-draft
     milestone: v0.3.0
     preset: n64-release
-    target: hello_n64
+    targets: [hello_triangle, rotating_cube]
+    aliases: [hello_n64, retro_n64]
     toolchain:
       compiler: mips64-elf-gcc 16.2.0
       libdragon_commit: e356bf3f56f7afbf7e5246329562f145965cfdfc
@@ -343,6 +357,8 @@ platforms:
       code_data_sdk_reserve_bytes: 1570816
       tmem_bytes: 4096
       z_bits: 18
+      runtime_peak_rdram_bytes: 966492
+      runtime_peak_limit_bytes: 3670016
       rom_max_bytes: 67108864
       heap: forbidden
     render:
@@ -371,7 +387,15 @@ platforms:
         behind: "0x569949c5"
       w1_triangles: 48
       w1_fps_emulator: 59
-      benchmark: docs/benchmarks/n64_render_s43_44.yaml
+      demos: [hello_triangle, rotating_cube]
+      runtime_peak_rdram_bytes: 966492
+      roms: [hello_triangle.z64, rotating_cube.z64]
+      benchmark: docs/benchmarks/n64_hello_triangle_v0_3_0.yaml
+    sdk:
+      packaged: true
+      sdk_manifest: sdk/platforms/n64/sdk_manifest.json
+      ucode_library: lib/n64/mips64/libretro_engine_n64_ucode.a
+      example: examples/hello_triangle_n64
     filesystem:
       type: dragonfs
       image: retro_n64.dfs
@@ -410,7 +434,7 @@ platforms:
         cstick: INPUT_AXIS_RIGHTX/RIGHTY
         analog_lr: INPUT_AXIS_L2/R2
     renderer:
-      skeleton: s41_42
+      demos: s45_46
       width: 320
       height: 240
       bitdepth: 16
@@ -425,7 +449,7 @@ platforms:
     boundaries:
       audio: false
       filesystem: read_only_dfs
-      renderer: skeleton_s41_42
+      renderer: s45_46
       sdk_ui: s45_46
       expansion_pak: detect_only
 

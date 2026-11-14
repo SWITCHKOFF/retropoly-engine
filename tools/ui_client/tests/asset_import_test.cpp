@@ -41,7 +41,7 @@ TEST(AssetImportTest, ImportsMeshAndTexture)
         GTEST_SKIP() << "asset_converter not built";
     }
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Pc,
                                           "hello_triangle", "hello_triangle");
 
     AssetImportResult mesh =
@@ -66,13 +66,29 @@ TEST(AssetImportTest, ImportsMeshAndTexture)
     EXPECT_EQ(project.assets.size(), 2u);
 }
 
+TEST(AssetImportTest, ImportsN64TextureAt64x64)
+{
+    if (!isRegularFile(RPE_TEST_ASSET_CONVERTER)) {
+        GTEST_SKIP() << "asset_converter not built";
+    }
+    TempDir dir;
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::N64,
+                                          "hello_triangle_n64", "hello_triangle_n64");
+    AssetImportResult texture =
+        importAsset(dir.str(), &project, converterSdk(), sourceAsset("texture.png"), Lang::Ru);
+    ASSERT_TRUE(texture.ok) << texture.error << "\n" << texture.log;
+    EXPECT_EQ(texture.entry.type, AssetType::Texture);
+    EXPECT_EQ(texture.entry.width, 64u);
+    EXPECT_EQ(texture.entry.height, 64u);
+}
+
 TEST(AssetImportTest, RemoveDeletesOutputAndEntry)
 {
     if (!isRegularFile(RPE_TEST_ASSET_CONVERTER)) {
         GTEST_SKIP() << "asset_converter not built";
     }
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Pc,
                                           "hello_triangle", "hello_triangle");
     AssetImportResult imported =
         importAsset(dir.str(), &project, converterSdk(), sourceAsset("cube.gltf"), Lang::Ru);
@@ -88,7 +104,7 @@ TEST(AssetImportTest, RemoveDeletesOutputAndEntry)
 TEST(AssetImportTest, RejectsUnsupportedExtensionAndMalformedOutput)
 {
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Pc,
                                           "hello_triangle", "hello_triangle");
     AssetImportResult result =
         importAsset(dir.str(), &project, converterSdk(), "notes.txt", Lang::Ru);
@@ -106,7 +122,7 @@ TEST(AssetImportTest, RejectsUnsupportedExtensionAndMalformedOutput)
 TEST(AssetImportTest, RejectsTraversalOnRemove)
 {
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Pc,
                                           "hello_triangle", "hello_triangle");
     AssetEntry asset;
     asset.source = "assets/source/cube.gltf";

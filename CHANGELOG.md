@@ -2,10 +2,32 @@
 
 Все заметные изменения этого проекта документируются в этом файле в стиле [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/); версионирование — [SemVer](https://semver.org/lang/ru/). Правило: обновление CHANGELOG — на каждом sprint review (docs/DEVELOPMENT_PLAN.md §1, п. 2).
 
-## [Unreleased]
+## [0.3.0] — draft (не опубликовано; release freeze)
 
 ### Added
 
+- Спринт 45–46 — N64 v0.3.0 (draft): отдельные ROM `hello_triangle.z64`
+  (TRIANGLE.MSH + TEX0.TEX, интерактивная камера stick/D-pad/A-reset) и
+  `rotating_cube.z64` (W1 4 куба/48 tri, fixed camera, RSP light);
+  алиасы `hello_n64`/`retro_n64`. `asset_converter --platform n64`
+  (детерминированный 64×64 CI8 + 256-entry CLUT; `.mesh`/`.tex` v1
+  не меняются), `scripts/verify_n64_assets.py` и
+  `scripts/verify_n64_budgets.py` (ROM/DFS ≤ 32 MiB, TMEM, peak RDRAM).
+  Overlay: mode, RSP/CPU + light, frame/FPS, peak RDRAM, TMEM,
+  TNL/RDP µs, draw calls, W0-hash. N64 SDK: `sdk_package --platform
+  n64`, `find_package`, `RetroPolyEngine::n64_rsp_tnl`, clean consumer
+  `examples/hello_triangle_n64` → `.z64`; `sdk-package.yml` job
+  `sdk-n64`. UI target N64: platform/settings/emulator (gopher64),
+  New Project → import (64×64) → Build → Run; `--smoke-platform n64`.
+  Release: payload `sdk/platforms/n64/` + `demos/n64`, contract asserts
+  и negative-tests для N64; `release.yml` — pinned N64 build → gate →
+  **draft only** (ADR-013). Версия 0.3.0 (CMake/VERSION/UI), бенчмарк
+  `docs/benchmarks/n64_hello_triangle_v0_3_0.yaml`, скриншоты
+  `screenshots/n64_{hello_triangle,rotating_cube}.png`, `docs/N64.md`
+  / BUILDING / SDK / UI_CLIENT / RELEASING. 60-с gate: hello 101 836 мс /
+  6 000 кадров, rotating 106 892 мс / 6 300 кадров, 59 FPS; 10-мин
+  stress 613 361 мс / 36 600 кадров без ERROR. Публикация не
+  выполняется: draft до v0.9.x.
 - N64 (v0.3.0, S39–46) — детальные планы: toolchain/libdragon, HAL,
   RSP/RDP, hello_triangle и draft-релиз; любая публикация релизов
   отложена до v0.9.x.

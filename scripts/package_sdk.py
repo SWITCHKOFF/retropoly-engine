@@ -123,6 +123,8 @@ def platform_defaults(name):
         os_name, arch = "ps1", "mips"
     elif name == "saturn":
         os_name, arch = "saturn", "sh2"
+    elif name == "n64":
+        os_name, arch = "n64", "mips64"
     else:
         raise SystemExit("unknown platform: %s" % name)
     return os_name, arch
@@ -136,7 +138,7 @@ def read_version(build_dir):
         match = re.search(r"CMAKE_PROJECT_VERSION:STATIC=([0-9.]+)", text)
         if match:
             return match.group(1)
-    return "0.2.1"
+    return "0.3.0"
 
 
 def stage_install(build_dir, stage_dir, config):
@@ -182,8 +184,9 @@ def write_version_txt(stage_dir, args, git_commit, git_describe, git_date,
         f.write("build_type=%s\n" % args.build_type)
         f.write("compiler=%s\n" % compiler.get("banner", ""))
         f.write("cxx_standard=c++14\n")
-        f.write("endianness=little\n")
-        f.write("pointer_bits=%s\n" % ("64" if sys.maxsize > 2**32 else "32"))
+        f.write("endianness=%s\n" % ("big" if args.platform == "n64" else "little"))
+        f.write("pointer_bits=%s\n" % ("64" if args.platform == "n64" or sys.maxsize > 2**32
+                                        else "32"))
 
 
 def write_readme(stage_dir, args):
@@ -217,7 +220,7 @@ target_link_libraries(app PRIVATE RetroPolyEngine::retro_engine)
 ```
 
 Публичный API: `include/retro_engine/retro_engine.h`; внутренние заголовки
-(`render/*`, `hal/pc|ps1|saturn/*`) в SDK не поставляются. Полная
+(`render/*`, `hal/pc|ps1|saturn|n64/*`) в SDK не поставляются. Полная
 документация — `docs/SDK.md` в репозитории движка.
 
 ## Проверка целостности
@@ -227,6 +230,17 @@ sha256sum -c checksums.sha256
 ```
 """.format(version=args.version, platform=args.platform, arch=args.arch,
            sdk_path="/path/to/retro-engine-sdk")
+    if args.platform == "n64":
+        body += (
+            "\n## N64\n\n"
+            "Экспортируйте `N64_INST` (pinned libdragon toolchain) и соберите "
+            "пример с toolchain-файлом:\n\n"
+            "```sh\n"
+            "cmake -S examples/hello_triangle_n64 -B build -G Ninja \\\n"
+            "  -DCMAKE_TOOLCHAIN_FILE=$PWD/cmake/n64-toolchain.cmake \\\n"
+            "  -DCMAKE_PREFIX_PATH=$PWD\n"
+            "cmake --build build   # hello_triangle_n64.z64\n"
+            "```\n")
     with open(target, "w", encoding="utf-8", newline="\n") as f:
         f.write(body)
 
@@ -235,7 +249,7 @@ def write_examples_root(stage_dir):
     cmake = """cmake_minimum_required(VERSION 3.25)
 project(retro_engine_sdk_examples LANGUAGES CXX)
 find_package(RetroPolyEngine CONFIG REQUIRED)
-foreach(_example hello_triangle rotating_cube hello_triangle_ps1 hello_triangle_saturn)
+foreach(_example hello_triangle rotating_cube hello_triangle_ps1 hello_triangle_saturn hello_triangle_n64)
     if(EXISTS "${CMAKE_CURRENT_SOURCE_DIR}/examples/${_example}/CMakeLists.txt")
         add_subdirectory("examples/${_example}")
     endif()
@@ -324,6 +338,7 @@ def assert_layout(stage_dir, args):
         "include/retro_engine/hal/pc",
         "include/retro_engine/hal/ps1",
         "include/retro_engine/hal/saturn",
+        "include/retro_engine/hal/n64",
     ]
     for rel in forbidden_headers:
         if os.path.exists(os.path.join(stage_dir, rel)):
@@ -359,15 +374,16 @@ def build_manifest(stage_dir, args, git_commit, git_describe, git_date, dirty,
         "compiler_banner": compiler.get("banner", ""),
         "abi": {
             "cxx_standard": "c++14",
-            "endianness": "little",
-            "pointer_bits": 64 if sys.maxsize > 2**32 else 32,
+            "endianness": "big" if args.platform == "n64" else "little",
+            "pointer_bits": 64 if args.platform == "n64" or sys.maxsize > 2**32 else 32,
         },
         "public_header": "include/retro_engine/retro_engine.h",
         "targets": [
             "RetroPolyEngine::retro_engine",
             "RetroPolyEngine::hal",
             "RetroPolyEngine::log",
-        ],
+        ] + (["RetroPolyEngine::n64_rsp_tnl"]
+             if args.platform == "n64" else []),
         "components": {
             name: (name != "asset_converter" or args.platform == "pc")
             for name in COMPONENTS_REQUIRED
@@ -464,7 +480,7 @@ def main():
     parser = argparse.ArgumentParser(description="RetroPolyEngine SDK packager")
     parser.add_argument("--build-dir", required=True,
                         help="build/<preset> с установленными целями")
-    parser.add_argument("--platform", choices=["pc", "ps1", "saturn"],
+    parser.add_argument("--platform", choices=["pc", "ps1", "saturn", "n64"],
                         default="pc")
     parser.add_argument("--arch", default=None)
     parser.add_argument("--version", default=None)

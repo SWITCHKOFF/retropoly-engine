@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 // RetroPolyEngine — tools/asset_converter/texture_converter.cpp
 //
-// PNG/JPG/TGA/BMP → .tex v1: stb_image → RGBA8 → Median Cut (CI8 ≤255) →
-// палитра RGB555+STP (bit layout §1.2.5: R[4:0]|G[9:5]|B[14:10]|STP[15]).
+// PNG/JPG/TGA/BMP → .tex v1: stb_image → RGBA8 → (N64: nearest 64×64) →
+// Median Cut (CI8 ≤255) → палитра RGB555+STP (bit layout §1.2.5:
+// R[4:0]|G[9:5]|B[14:10]|STP[15]).
 // Сериализация — побайтово LE (никаких struct→bytes кастов).
 //
 // Политика слота 0 (фиксируется в docs/ASSETS.md, неделя 19 — «entry 0 —
@@ -10,6 +11,11 @@
 // «transparent black» — запись {0,0,0,0}/слово 0x0000, CI8-индекс 0 никогда
 // не входит в payload пикселей (квантование переходит на слоты 1..255);
 // STP всех слотов = 0 (MVP-прозрачность выключена, §8.2).
+//
+// S45–46: `--platform n64` даёт детерминированный N64-таргет: вход
+// 64/128/256 приводится nearest-downsample к 64×64 ДО квантования, затем
+// CI8 + 256-entry CLUT (RGBA5551 при загрузке в RDP). Формат .tex v1 не
+// меняется; тайлы/TMEM-полосы и TLUT формируются на runtime (render_n64).
 #include "texture_converter.h"
 
 #include <stdint.h>
@@ -58,14 +64,44 @@ uint16_t pack_palette_word(const uint8_t entry[4])
     const uint8_t r5 = channel8_to_5(entry[0]);
     const uint8_t g5 = channel8_to_5(entry[1]);
     const uint8_t b5 = channel8_to_5(entry[2]);
-    const bool stp = false; // MVP: прозрачность выключена (§8.2)
+    const bool stp = false;  // MVP: прозрачность выключена (§8.2)
     return (uint16_t)((r5 & 0x1Fu) | ((g5 & 0x1Fu) << 5) | ((b5 & 0x1Fu) << 10) |
                       (stp ? 0x8000u : 0u));
 }
 
-} // namespace
+/**
+ * Детерминированный nearest-downsample RGBA8 в квадрат @p target.
+ *
+ * @param src Исходный RGBA8.
+ * @param width Высота/ширина исходника.
+ * @param target Целевая сторона (64 для N64).
+ * @param out Выход RGBA8 target×target.
+ */
+void nearest_downsample(const uint8_t* src, int width, int target, std::vector<uint8_t>* out)
+{
+    out->resize((size_t)target * (size_t)target * 4u);
+    for (int y = 0; y < target; ++y) {
+        const int sy = (y * width) / target;
+        for (int x = 0; x < target; ++x) {
+            const int sx = (x * width) / target;
+            const uint8_t* in = src + ((size_t)sy * (size_t)width + (size_t)sx) * 4u;
+            uint8_t* dst = out->data() + ((size_t)y * (size_t)target + (size_t)x) * 4u;
+            dst[0] = in[0];
+            dst[1] = in[1];
+            dst[2] = in[2];
+            dst[3] = in[3];
+        }
+    }
+}
 
-bool convert_texture(const char* input_path, const char* output_path, uint32_t* out_error_code)
+/**
+ * Общий путь конвертации.
+ *
+ * @param target_dim 0 — сохранить исходный размер (64/128/256);
+ *                   >0 — nearest-downsample к target_dim×target_dim (N64).
+ */
+bool convert_texture_impl(const char* input_path, const char* output_path, int target_dim,
+                          uint32_t* out_error_code)
 {
     uint32_t diag = CONVERT_OK;
 
@@ -86,7 +122,8 @@ bool convert_texture(const char* input_path, const char* output_path, uint32_t* 
         return false;
     }
 
-    // 2) MVP §8.2: стороны ∈ {64,128,256}.
+    // 2) MVP §8.2: стороны ∈ {64,128,256}; target_dim дополнительно
+    // ограничивает N64-таргет (64×64), сохраняя v1-совместимость.
     const int allowed_dims[3] = {64, 128, 256};
     bool dims_ok = false;
     for (int d = 0; d < 3; ++d) {
@@ -99,12 +136,21 @@ bool convert_texture(const char* input_path, const char* output_path, uint32_t* 
         return false;
     }
 
+    std::vector<uint8_t> downsampled;
+    const uint8_t* source = image;
+    if (target_dim > 0 && width > target_dim) {
+        nearest_downsample(image, width, target_dim, &downsampled);
+        source = downsampled.data();
+        width = target_dim;
+        height = target_dim;
+    }
+
     // 3) Квантование RGBA8 → CI8 + палитра (слот 0 reserved).
     const uint32_t pixel_count = (uint32_t)width * (uint32_t)height;
     std::vector<uint8_t> indices((size_t)pixel_count, 0u);
     std::vector<uint8_t> palette((size_t)QUANTIZER_PALETTE_BYTES, 0u);
     uint8_t palette_used = 0u;
-    if (!color_quantize_median_cut(image, pixel_count, indices.data(), palette.data(),
+    if (!color_quantize_median_cut(source, pixel_count, indices.data(), palette.data(),
                                    &palette_used)) {
         stbi_image_free(image);
         diag = CONVERT_ERR_ALLOCATION;
@@ -150,4 +196,17 @@ bool convert_texture(const char* input_path, const char* output_path, uint32_t* 
 
     if (out_error_code != nullptr) *out_error_code = CONVERT_OK;
     return true;
+}
+
+}  // namespace
+
+bool convert_texture(const char* input_path, const char* output_path, uint32_t* out_error_code)
+{
+    return convert_texture_impl(input_path, output_path, 0, out_error_code);
+}
+
+bool convert_texture_n64(const char* input_path, const char* output_path, uint32_t* out_error_code)
+{
+    // N64 runtime: CI8 + 256-entry CLUT, тайлы ≤64×64 (TMEM-полоса 2 KiB).
+    return convert_texture_impl(input_path, output_path, 64, out_error_code);
 }

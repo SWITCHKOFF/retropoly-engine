@@ -28,7 +28,7 @@ std::string createFakePcSdk(const TempDir& dir)
     writeFile(root + "/include/retro_engine/version.h", "#pragma once\n");
     writeFile(root + "/lib/cmake/RetroPolyEngine/RetroPolyEngineConfig.cmake", "# fake\n");
     writeFile(root + "/checksums.sha256", "\n");
-    writeFile(root + "/VERSION.txt", "version=0.2.1\n");
+    writeFile(root + "/VERSION.txt", "version=0.3.0\n");
     writeFile(root + "/templates/project/CMakeLists.txt", "project(fake)\n");
     std::filesystem::create_directories(root + "/tools");
     if (isRegularFile(RPE_TEST_ASSET_CONVERTER)) {
@@ -54,7 +54,7 @@ std::string createFakePcSdk(const TempDir& dir)
     writeFile(root + "/examples/hello_triangle/assets/triangle.mesh", "fake");
     const std::string manifest =
         "{\"schema\":1,\"package\":\"retro-engine-sdk\",\"name\":\"RetroPolyEngine\","
-        "\"version\":\"0.2.1\",\"git_commit\":\"deadbeef\","
+        "\"version\":\"0.3.0\",\"git_commit\":\"deadbeef\","
         "\"commit_date\":\"2026-11-13T00:00:00+00:00\",\"platform\":\"pc\","
         "\"os\":\"linux\",\"arch\":\"x86_64\",\"build_type\":\"Release\","
         "\"compiler\":{\"id\":\"GNU\",\"version\":\"13.0\"},"
@@ -77,9 +77,11 @@ std::string createFakeCrossSdk(const TempDir& dir, const std::string& platform)
     writeFile(root + "/include/retro_engine/version.h", "#pragma once\n");
     writeFile(root + "/lib/cmake/RetroPolyEngine/RetroPolyEngineConfig.cmake", "# fake\n");
     writeFile(root + "/checksums.sha256", "\n");
-    writeFile(root + "/VERSION.txt", "version=0.2.1\n");
+    writeFile(root + "/VERSION.txt", "version=0.3.0\n");
     writeFile(root + "/templates/project/CMakeLists.txt", "project(fake)\n");
-    const std::string example = platform == "ps1" ? "hello_triangle_ps1" : "hello_triangle_saturn";
+    const std::string example = platform == "ps1"   ? "hello_triangle_ps1"
+                                : platform == "n64" ? "hello_triangle_n64"
+                                                    : "hello_triangle_saturn";
     const std::string target = example;
     writeFile(root + "/examples/" + example + "/main.cpp", "int main() { return 0; }\n");
     if (platform == "ps1") {
@@ -88,17 +90,23 @@ std::string createFakeCrossSdk(const TempDir& dir, const std::string& platform)
                   "project(fake_ps1 LANGUAGES CXX)\n"
                   "find_package(RetroPolyEngine CONFIG REQUIRED)\n"
                   "psn00bsdk_add_executable(hello_triangle_ps1 GPREL main.cpp)\n");
-    } else {
+    } else if (platform == "saturn") {
         writeFile(root + "/examples/" + example + "/jo_bridge.c", "/* fake */\n");
         writeFile(root + "/examples/" + example + "/CMakeLists.txt",
                   "cmake_minimum_required(VERSION 3.25)\n"
                   "project(fake_saturn LANGUAGES C CXX ASM)\n"
                   "find_package(RetroPolyEngine CONFIG REQUIRED)\n"
                   "add_executable(hello_triangle_saturn main.cpp jo_bridge.c)\n");
+    } else {
+        writeFile(root + "/examples/" + example + "/CMakeLists.txt",
+                  "cmake_minimum_required(VERSION 3.25)\n"
+                  "project(fake_n64 LANGUAGES C CXX ASM)\n"
+                  "find_package(RetroPolyEngine CONFIG REQUIRED)\n"
+                  "add_executable(hello_triangle_n64 main.cpp)\n");
     }
     const std::string manifest =
         "{\"schema\":1,\"package\":\"retro-engine-sdk\",\"name\":\"RetroPolyEngine\","
-        "\"version\":\"0.2.1\",\"git_commit\":\"deadbeef\","
+        "\"version\":\"0.3.0\",\"git_commit\":\"deadbeef\","
         "\"commit_date\":\"2026-11-13T00:00:00+00:00\",\"platform\":\"" +
         platform +
         "\","
@@ -272,6 +280,29 @@ TEST_F(AppCoreTest, CreatesSaturnProjectFromSdkTemplate)
     EXPECT_NE(cmake.find("src/main.cpp src/jo_bridge.c"), std::string::npos);
     EXPECT_TRUE(isRegularFile(projects_.str() + "/saturn_project/src/jo_bridge.c"));
     unsetEnv("JO_ENGINE_ROOT");
+}
+
+TEST_F(AppCoreTest, CreatesN64ProjectFromSdkTemplate)
+{
+    TempDir n64_sdk;
+    createFakeCrossSdk(n64_sdk, "n64");
+    setEnv("N64_INST", "/fake/n64");
+    core_.mutableSettings().sdk_n64 = n64_sdk.str();
+    core_.refreshTargets();
+
+    NewProjectOptions options;
+    options.name = "n64_project";
+    options.location = projects_.str();
+    options.platform = Platform::N64;
+    std::string error;
+    ASSERT_TRUE(core_.newProject(options, &error)) << error;
+    const std::string cmake = readFile(projects_.str() + "/n64_project/CMakeLists.txt");
+    EXPECT_NE(cmake.find("add_executable(hello_triangle_n64 src/main.cpp)"), std::string::npos);
+    const ProjectLoadResult loaded = loadProject(projects_.str() + "/n64_project", Lang::Ru);
+    ASSERT_TRUE(loaded.ok) << loaded.error;
+    EXPECT_EQ(loaded.project.platform, Platform::N64);
+    EXPECT_EQ(loaded.project.target, "hello_triangle_n64");
+    unsetEnv("N64_INST");
 }
 
 TEST_F(AppCoreTest, CurrentSdkPrefersProjectPath)

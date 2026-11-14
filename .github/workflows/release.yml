@@ -152,10 +152,37 @@ jobs:
           isoinfo -i hello_triangle.iso -f | grep -q '/TEX0.TEX;1'
           isoinfo -i hello_triangle.iso -f | grep -q '/TEX1.TEX;1'
 
+      - name: N64 toolchain + libdragon (pinned)
+        run: |
+          set -euo pipefail
+          mkdir -p "$RUNNER_TEMP/n64-sdk"
+          cd "$RUNNER_TEMP/n64-sdk"
+          curl -L --retry 3 -o gcc-toolchain-mips64-x86_64.deb             https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
+          sha256sum -c "$GITHUB_WORKSPACE/ci/n64-toolchain.sha256"
+          dpkg-deb -x gcc-toolchain-mips64-x86_64.deb toolchain
+          export N64_INST="$RUNNER_TEMP/n64-sdk/toolchain/opt/libdragon"
+          PIN="$(grep -E '^[0-9a-f]{40}$' ci/n64-libdragon.commit | head -n 1)"
+          git config --global advice.detachedHead false
+          git clone --filter=blob:none https://github.com/DragonMinded/libdragon.git libdragon
+          git -C libdragon checkout "$PIN"
+          make -C libdragon -j"$(nproc)"
+          make -C libdragon install
+          make -C libdragon tools-install
+          echo "N64_INST=$N64_INST" >> "$GITHUB_ENV"
+          echo "LIBDRAGON_ROOT=$RUNNER_TEMP/n64-sdk/libdragon" >> "$GITHUB_ENV"
+
+      - name: Build n64-release (hello_triangle + rotating_cube)
+        run: |
+          cmake --preset n64-release
+          cmake --build --preset n64-release
+          python3 scripts/verify_n64_budgets.py \
+            --artifacts build/n64-release/src/hal/n64 \
+            --output "$RUNNER_TEMP/n64_budgets.json"
+
       - name: Prepare optional demo images
         run: |
           set -euo pipefail
-          mkdir -p dist/demos/pc dist/demos/ps1 dist/demos/saturn
+          mkdir -p dist/demos/pc dist/demos/ps1 dist/demos/saturn dist/demos/n64
           cp build/pc-release/game/hello_triangle \
              build/pc-release/game/rotating_cube dist/demos/pc/
           cp build/ps1-release/src/hal/ps1/RETRO.bin \
@@ -167,15 +194,26 @@ jobs:
              build/saturn-release/src/hal/saturn/hello_triangle.cue \
              build/saturn-release/src/hal/saturn/hello_triangle.map \
              dist/demos/saturn/
+          cp build/n64-release/src/hal/n64/hello_triangle.z64 \
+             build/n64-release/src/hal/n64/hello_triangle.z64.sha256 \
+             build/n64-release/src/hal/n64/rotating_cube.z64 \
+             build/n64-release/src/hal/n64/rotating_cube.z64.sha256 \
+             build/n64-release/src/hal/n64/hello_triangle_n64.map \
+             build/n64-release/src/hal/n64/rotating_cube_n64.map \
+             build/n64-release/src/hal/n64/retro_n64.dfs \
+             build/n64-release/src/hal/n64/retro_n64.dfs.txt \
+             dist/demos/n64/
 
       - name: Release contract v2 (build checks)
         run: |
           set -euo pipefail
           SDK="$(ls dist/retro-engine-sdk-*-pc-linux-*.tar.gz | head -n 1)"
+          SDK_N64="$(ls dist/retro-engine-sdk-*-n64-*.tar.gz | head -n 1)"
           UI="$(ls dist/retro-engine-ui-*-linux-*.tar.gz | head -n 1)"
           xvfb-run -a python3 scripts/verify_release_contract.py \
             --w1-seconds 60 --skip-payload \
-            --sdk-archive "$SDK" --ui-archive "$UI" \
+            --sdk-archive "$SDK" --sdk-archive-n64 "$SDK_N64" \
+            --ui-archive "$UI" \
             --output release_contract_report.json
 
       - name: Clean-room UI E2E (SDK archive + UI package)
@@ -191,9 +229,11 @@ jobs:
         run: |
           set -euo pipefail
           SDK="$(ls dist/retro-engine-sdk-*-pc-linux-*.tar.gz | head -n 1)"
+          SDK_N64="$(ls dist/retro-engine-sdk-*-n64-*.tar.gz | head -n 1)"
           UI="$(ls dist/retro-engine-ui-*-linux-*.tar.gz | head -n 1)"
           python3 scripts/build_release_bundle.py \
-            --sdk-archive "$SDK" --ui-archive "$UI" \
+            --sdk-archive "$SDK" --sdk-archive-n64 "$SDK_N64" \
+            --ui-archive "$UI" \
             --report release_contract_report.json \
             --demos-dir dist/demos
 

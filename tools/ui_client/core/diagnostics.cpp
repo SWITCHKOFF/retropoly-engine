@@ -91,6 +91,16 @@ DiagnosticsReport collectDiagnostics(const Project* project, const std::string& 
             add(&report, DiagnosticSeverity::Warning, trf(lang, "diag.missing_emulator", "Saturn"));
         }
     }
+    if (project != nullptr && project->platform == Platform::N64) {
+        if (environmentValue("N64_INST").empty()) {
+            add(&report, DiagnosticSeverity::Error, tr(lang, "diag.n64_toolchain"));
+        }
+        const std::string emulator =
+            project->emulator_path.empty() ? settings.emulator_n64 : project->emulator_path;
+        if (emulator.empty() || !isRegularFile(emulator)) {
+            add(&report, DiagnosticSeverity::Warning, trf(lang, "diag.missing_emulator", "N64"));
+        }
+    }
     return report;
 }
 

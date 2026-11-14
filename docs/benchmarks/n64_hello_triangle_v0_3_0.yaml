@@ -1,0 +1,213 @@
+# SPDX-License-Identifier: MIT
+# RetroPolyEngine — docs/benchmarks/n64_hello_triangle_v0_3_0.yaml
+#
+# S45–46 / v0.3.0 (draft): N64 hello_triangle + rotating_cube (W1).
+# Числа сравнимы только внутри этого снапшота. Reference environment (G12):
+# gopher64 1.2.1 (software RDRAM/RDP), Xvfb + llvmpipe Vulkan, 8 MiB RDRAM.
+# Release остаётся draft/frozen (ADR-013): публикация — не ранее v0.9.x.
+
+schema: n64-reference-v1
+date: 2026-11-14
+sprint: S45–46
+release: v0.3.0-draft
+engine_version: 0.3.0
+
+reference_environment:
+  host:
+    os: Linux
+    arch: x86_64
+    display: "Xvfb 800x600x24"
+    gpu: "llvmpipe (LLVM 20.1.2, Vulkan)"
+  emulator:
+    name: gopher64
+    version: 1.2.1
+    sha256: "4822cbb76298b59f4df65560f285acd29c3e8fd7cb714637794ddd15d6132369"
+    settings:
+      disable_expansion_pak: false
+      overclock: false
+      screen: 320x240
+      region: NTSC
+    command: >-
+      xvfb-run -a -s "-screen 0 800x600x24" gopher64
+      --disable-expansion-pak false --overclock false <rom>.z64
+  build:
+    preset: n64-release
+    platform: PLATFORM_N64
+    compiler: "mips64-elf-gcc 16.2.0"
+    libdragon: "e356bf3f56f7afbf7e5246329562f145965cfdfc"
+    libdragon_license: MIT
+    toolchain_manifest: ci/n64-toolchain.sha256
+    libdragon_manifest: ci/n64-libdragon.commit
+  memory:
+    rdram_reported_bytes: 8388608
+    ledger_base_bytes: 4194304
+    engine_arenas_bytes: 2097152
+    stack_bytes: 65536
+    framebuffers_bytes: 307200
+    z_buffer_bytes: 153600
+    code_data_sdk_reserve_bytes: 1570816
+    runtime_peak_rdram_bytes: 966492
+    runtime_peak_limit_bytes: 3670016
+    runtime_reserve_bytes: 524288
+    heap: forbidden
+
+artifacts:
+  hello_triangle:
+    rom: hello_triangle.z64
+    rom_bytes: 376832
+    rom_sha256: 58ba67c24421b2c19e6e803ab7456d4fefc2ef33e649ecb25fda0d3d6b73d1d2
+    elf: hello_triangle_n64.elf
+    elf_bytes: 1510132
+    sections: {text: 270204, data: 14396, bss: 2934132}
+    map: hello_triangle_n64.map
+  rotating_cube:
+    rom: rotating_cube.z64
+    rom_bytes: 360448
+    rom_sha256: e6d84935663f65d8ce64ac8516d705d18757bc3b63873fc122cdef4275b24f2d
+    elf: rotating_cube_n64.elf
+    elf_bytes: 1505032
+    sections: {text: 264100, data: 14252, bss: 2967908}
+    map: rotating_cube_n64.map
+  dfs:
+    image: retro_n64.dfs
+    bytes: 68864
+    sha256: b9c07471b0c570b7a091aec353610eea451cf556e786c127d964af5b236ff06d
+    files: [CUBE.MSH, TEX0.TEX, TRIANGLE.MSH]
+  aliases:
+    hello_n64.z64: hello_triangle.z64
+    retro_n64.z64: rotating_cube.z64
+
+asset_pipeline:
+  converter: tools/asset_converter
+  n64_flag: "--platform n64"
+  output_format: ".tex v1 (CI8 + 256-entry CLUT; 64×64)"
+  determinism: byte-identical repeated conversion
+  mesh_format: ".mesh v1 unchanged (same bytes with/without --platform n64)"
+  texture_example:
+    source: assets/source/texture.png
+    output_sha256: b05a986f2adce701b28b0d16a450f7c58b2731817cb39ba10b17bab08e856c8e
+    width: 64
+    height: 64
+
+render:
+  resolution: 320x240
+  pixel_format: RGBA5551
+  refresh_hz: 60
+  depth:
+    api: rdpq_attach(FMT_RGBA16)
+    buffer_bytes: 153600
+    internal_bits: 18
+    clear: 0xFFFC
+  rsp:
+    overlay: src/hal/n64/rsp_tnl.S
+    transform: "4x4 * vec4, Q16.16, 512 slots"
+    lighting: "dot(n,L) on RSP; ambient/color scale on CPU"
+    sync: "rspq_wait + D-cache invalidate"
+  tmem:
+    total_bytes: 4096
+    texture_area_bytes: 2048
+    tlut_bytes: 512
+    strip_64x64_ci8: 2560
+    strips_64x64: 2
+  texture:
+    source: "TEX0.TEX 256×256 → 64×64 nearest (runtime); --platform n64 emits 64×64"
+    format: CI8 + 256-entry TLUT (RGB555+STP → RGBA5551)
+    filter_textured: bilinear
+    filter_untextured: point
+
+workloads:
+  hello_triangle:
+    demo: hello_triangle
+    mesh: TRIANGLE.MSH
+    triangles_scene: 1
+    rdp_triangles_per_frame: 9
+    camera: "orbit: stick X/Y yaw/pitch, D-pad Up/Down distance, A reset"
+    frame_window: 60
+    sample_internal_time_ms: 21603
+    frame_us_avg: 16716
+    fps: 59
+    breakdown_us:
+      begin: 13161
+      submit: 583
+      end: 2758
+      light: 2
+      tnl: 447
+      rdp: 1642
+      detach: 16
+    gate: ">= 30 FPS (target 60 on hardware); stable 60 s"
+  rotating_cube:
+    demo: rotating_cube
+    name: w1_four_cubes
+    cubes: 4
+    triangles_scene: 48
+    rdp_triangles_per_frame: 66..72
+    camera: fixed
+    frame_window: 60
+    sample_internal_time_ms: 106892
+    frame_us_avg: 16716
+    fps: 59
+    breakdown_us:
+      begin: 2003
+      submit: 2637
+      end: 10352
+      light: 1525
+      tnl: 1840
+      rdp: 4173
+      detach: 21
+    gate: ">= 30 FPS (W1 gate); target 60 on hardware"
+
+tnl_benchmark:
+  triangles_48: {cpu_us: 992, rsp_us: 824}
+  triangles_256: {cpu_us: 4727, rsp_us: 2662}
+
+w0_golden:
+  framebuffer: 320x240
+  hash: "FNV-1a-32 over RGB"
+  cases:
+    visible:    {hash: "0x9e92e718", submitted: 1, cull: 0, clip: 0}
+    backface:   {hash: "0x569949c5", submitted: 1, cull: 1, clip: 0}
+    near_cross: {hash: "0x569949c5", submitted: 1, cull: 1, clip: 1}
+    far_cross:  {hash: "0x569949c5", submitted: 1, cull: 1, clip: 2}
+    behind:     {hash: "0x569949c5", submitted: 1, cull: 1, clip: 3}
+  cpu_fallback_visible_hash: "0x9e92e718"
+  stable_between_runs: true
+
+acceptance:
+  hello_60s:
+    internal_time_ms: 101836
+    frames: 6000
+    errors: 0
+  rotating_60s:
+    internal_time_ms: 106892
+    frames: 6300
+    errors: 0
+  stress_10min:
+    demo: rotating_cube
+    internal_time_ms: 613361
+    frames: 36600
+    errors: 0
+    pending: 0
+    code: 0
+  budgets:
+    rom_engine_budget_bytes: 33554432
+    rom_cartridge_max_bytes: 67108864
+    dfs_max_bytes: 33554432
+    cpu_stack_bytes: 65536
+    tmem_bytes: 4096
+    runtime_peak_rdram_bytes: 966492
+    runtime_peak_limit_bytes: 3670016
+    heap: forbidden
+  rdram_4mib_base:
+    command: "gopher64 --disable-expansion-pak true"
+    rotating_cube: "boot + W0/light/Z + W1 59 FPS PASS"
+  host_tests: n64_hal_tests
+  screenshots:
+    - screenshots/n64_hello_triangle.png
+    - screenshots/n64_rotating_cube.png
+
+notes:
+  - "gopher64 — software RDP; 320×240 + bilinear + lighting укладываются в gate >=30 FPS."
+  - "W1 (4 куба/48 tri) — та же нагрузка, что PC/PS1/Saturn reference; камера фиксированная."
+  - "CPU T&L fallback — аварийный режим; W0 visible hash совпадает с RSP-путём."
+  - "ROM/DFS — далеко ниже 32 MiB бюджета; heap в src/hal/n64 запрещён."
+  - "v0.3.0 — draft/frozen; публикация не ранее v0.9.x (ADR-013)."

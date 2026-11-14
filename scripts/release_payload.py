@@ -3,7 +3,7 @@
 # ============================================================================
 # RetroPolyEngine — scripts/release_payload.py (Спринт 37–38)
 #
-# Общая проверка release payload v0.2.1:
+# Общая проверка release payload v0.3.0:
 #   dist/retro-engine-v<ver>/
 #     sdk/                         # установленный PC SDK (headers/libs/config)
 #     ui/                          # пакет UI client для host-платформы
@@ -40,7 +40,7 @@ FORBIDDEN_FILE_SUFFIXES = (
 FORBIDDEN_FILE_NAMES = {
     "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", ".env",
 }
-DEMO_ONLY_SUFFIXES = (".iso", ".cue", ".bin", ".elf", ".map")
+DEMO_ONLY_SUFFIXES = (".iso", ".cue", ".bin", ".elf", ".map", ".z64")
 
 
 def sha256_file(path):
@@ -140,6 +140,10 @@ def _forbidden_entries(root, forbidden_dir_parts=None):
                 forbidden.append("file: " + rel)
                 continue
             if lower.endswith(DEMO_ONLY_SUFFIXES) and not rel.startswith("demos/"):
+                # SDK-артефакты (debug ELF/map) — не demo-образы; N64 ucode
+                # поставляется как lib/n64/mips64/rsp/rsp_tnl.elf/.map.
+                if rel.startswith("sdk/") and lower.endswith((".elf", ".map")):
+                    continue
                 forbidden.append("non-demo image: " + rel)
     return sorted(set(forbidden))
 
@@ -182,7 +186,7 @@ def validate_payload(payload_dir, contract, require_report=True):
             details["failed"].append("sdk version mismatch: %s != %s" %
                                      (sdk_manifest.get("version"),
                                       expected_version))
-        if sdk_manifest.get("platform") not in ("pc", "ps1", "saturn"):
+        if sdk_manifest.get("platform") not in ("pc", "ps1", "saturn", "n64"):
             details["failed"].append("sdk platform invalid: %s" %
                                      sdk_manifest.get("platform"))
 
@@ -218,6 +222,35 @@ def validate_payload(payload_dir, contract, require_report=True):
         "ui/LEGAL.md",
         "ui/README-ui.md",
     ]
+    n64_rel = release_contract.get("n64_payload_sdk_dir",
+                                   "sdk/platforms/n64")
+    n64_dir = os.path.join(payload_dir, n64_rel.replace("/", os.sep))
+    if release_contract.get("supported_targets") and \
+            "n64" in release_contract.get("supported_targets", []):
+        required_files += [
+            n64_rel + "/sdk_manifest.json",
+            n64_rel + "/checksums.sha256",
+            n64_rel + "/lib/n64/mips64/libretro_engine_n64_ucode.a",
+            n64_rel + "/examples/hello_triangle_n64/CMakeLists.txt",
+        ]
+        n64_manifest, n64_error = _read_json(
+            os.path.join(n64_dir, "sdk_manifest.json"))
+        if n64_error:
+            details["failed"].append("n64 sdk_manifest.json: " + n64_error)
+        else:
+            details["n64_sdk_version"] = n64_manifest.get("version")
+            details["n64_sdk_platform"] = n64_manifest.get("platform")
+            if n64_manifest.get("version") != expected_version:
+                details["failed"].append("n64 sdk version mismatch: %s != %s" %
+                                         (n64_manifest.get("version"),
+                                          expected_version))
+            if n64_manifest.get("platform") != "n64":
+                details["failed"].append("n64 sdk platform invalid: %s" %
+                                         n64_manifest.get("platform"))
+        n64_checksums_ok, n64_checksums = verify_checksums(n64_dir)
+        details["n64_sdk_checksums"] = n64_checksums
+        if not n64_checksums_ok:
+            details["failed"].append("n64 sdk checksums invalid")
     missing_files = [rel for rel in required_files
                      if not os.path.isfile(os.path.join(payload_dir, rel))]
     ui_binary = ["ui/retro-engine-ui", "ui/retro-engine-ui.exe"]

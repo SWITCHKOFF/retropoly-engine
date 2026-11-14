@@ -38,7 +38,8 @@ struct RunPlan
     std::vector<std::string> argv;
     std::string working_directory;
     bool uses_emulator = false;
-    std::string cue_path;
+    std::string cue_path; /**< PS1/Saturn .cue (обратная совместимость). */
+    std::string image_path; /**< .cue или N64 .z64. */
 };
 
 /** Эффективный каталог сборки: <project build_dir>/<platform>. */

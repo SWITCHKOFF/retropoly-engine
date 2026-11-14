@@ -23,7 +23,8 @@ enum class Platform
 {
     Pc,
     Ps1,
-    Saturn
+    Saturn,
+    N64
 };
 
 /** Код платформы для JSON/CLI ("pc"/"ps1"/"saturn"). */

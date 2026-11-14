@@ -391,11 +391,12 @@ cmake --build --preset n64-release
 
 Артефакты `build/n64-release/src/hal/n64/`:
 
-- `hello_n64.z64` — bootable `.z64` (canonical demo);
-- `hello_n64.map` — linker map;
-- `hello_n64.z64.sha256` — SHA-256 (`sha256sum -c`);
-- `retro_n64.z64` — те же байты под engine-именем;
-- `retro_n64.elf` + `retro_n64.sym` — ELF и символы;
+- `hello_triangle.z64` — ROM hello_triangle (интерактивная камера);
+- `rotating_cube.z64` — ROM rotating_cube / W1 (fixed camera);
+- `*_n64.map` + `*.z64.sha256` — linker map и SHA-256 (`sha256sum -c`);
+- `hello_n64.z64` / `retro_n64.z64` — alias'ы (`hello_triangle` /
+  `rotating_cube`) для совместимости S39–44;
+- `retro_n64.elf` + `retro_n64.sym` — ELF и символы rotating_cube;
 - `retro_n64.dfs` + `retro_n64.dfs.txt` — read-only DFS (`CUBE.MSH`,
   `TEX0.TEX`, `TRIANGLE.MSH`) и listing;
 - `rsp_tnl.elf/.map` + `.text/.data` objects — RSP T&L overlay S43–44.
@@ -404,9 +405,15 @@ cmake --build --preset n64-release
 
 ```sh
 python3 scripts/verify_n64_rom.py \
-  build/n64-release/src/hal/n64/hello_n64.z64
+  build/n64-release/src/hal/n64/hello_triangle.z64
+python3 scripts/verify_n64_rom.py \
+  build/n64-release/src/hal/n64/rotating_cube.z64
+python3 scripts/verify_n64_budgets.py \
+  --artifacts build/n64-release/src/hal/n64
+python3 scripts/verify_n64_assets.py \
+  --converter build/pc-debug/tools/asset_converter/asset_converter
 python3 scripts/verify_n64_no_heap.py
-"$N64_INST/bin/dumpdfs" -l build/n64-release/src/hal/n64/hello_n64.z64
+"$N64_INST/bin/dumpdfs" -l build/n64-release/src/hal/n64/hello_triangle.z64
 ```
 
 Ожидается `RESULT: PASS`, `entry 0x80000400`,
@@ -426,10 +433,10 @@ xvfb-run -a -s "-screen 0 800x600x24" \
   env GOPHER64_BIN=$PWD/gopher64 scripts/run_n64.sh
 ```
 
-Gate: 60 с, тёмно-синий экран `(0,0,32)`, строки `BOOT OK / S41-42`,
-`DFS OK MESH 600 TEX 66068`, memory overlay, heartbeat
-`frame=… time=…` каждые ~5 с, input-лог `[n64_input] pad0 press …`,
-без RSP-crash; 10-минутный stress — ручной. mupen64plus не использовать:
+Gate: 60 с, 320×240 overlay (FPS/frame time, peak RDRAM, TMEM,
+TNL/RDP), heartbeat `demo=… frame=… time=…` каждые ~5 с, input-лог
+`[n64_input] pad0 press …`, без RSP-crash; 10-минутный stress — ручной.
+mupen64plus не использовать:
 libdragon IPL3 r5+ не загружается (mupen64plus-core#1185). CI
 (`.github/workflows/build-n64.yml`) собирает ROM, проверяет
 header/ELF/sha256/DFS и запрет heap, но эмулятор не запускает. Полный

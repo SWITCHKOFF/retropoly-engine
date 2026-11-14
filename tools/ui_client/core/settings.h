@@ -24,10 +24,12 @@ struct AppSettings
     std::string sdk_pc;         /**< Явный путь к PC SDK. */
     std::string sdk_ps1;        /**< Явный путь к PS1 SDK. */
     std::string sdk_saturn;     /**< Явный путь к Saturn SDK. */
+    std::string sdk_n64;        /**< Явный путь к N64 SDK. */
     std::string cmake_path;     /**< Пусто — искать в PATH. */
     std::string ninja_path;     /**< Пусто — искать в PATH. */
     std::string emulator_ps1;   /**< DuckStation (или совместимый). */
     std::string emulator_saturn;/**< Mednafen. */
+    std::string emulator_n64;   /**< gopher64 (pinned 1.2.1). */
     std::string theme = "dark"; /**< dark|light. */
     Lang language = Lang::Ru;
     std::vector<std::string> recent_projects; /**< Абсолютные пути к .rpeproject. */
@@ -54,7 +56,7 @@ void removeRecentProject(AppSettings* settings, const std::string& project_file)
 /** Явный путь SDK для платформы ("" если не задан). */
 std::string sdkPathForPlatform(const AppSettings& settings, int platform_index);
 
-/** Изменить путь SDK для платформы (0=pc, 1=ps1, 2=saturn). */
+/** Изменить путь SDK для платформы (0=pc, 1=ps1, 2=saturn, 3=n64). */
 void setSdkPathForPlatform(AppSettings* settings, int platform_index, const std::string& path);
 
 }  // namespace ui

@@ -57,15 +57,19 @@ def main():
     parser = argparse.ArgumentParser(description="RetroPolyEngine UI smoke")
     parser.add_argument("--sdk-dir", default=None)
     parser.add_argument("--sdk-archive", default=None)
+    parser.add_argument("--pc-sdk-dir", default=None,
+                        help="PC SDK для asset_converter (N64 import)")
     parser.add_argument("--ui-package", default=None,
                         help="архив UI package (ui/) вместо --ui-binary")
     parser.add_argument("--ui-binary", default=None)
     parser.add_argument("--samples", default=None)
     parser.add_argument("--work-dir", default=None)
     parser.add_argument("--screenshot-dir", default=None)
-    parser.add_argument("--platform", choices=["pc", "ps1", "saturn"],
+    parser.add_argument("--platform", choices=["pc", "ps1", "saturn", "n64"],
                         default="pc")
     parser.add_argument("--run-seconds", type=int, default=2)
+    parser.add_argument("--emulator", default=None,
+                        help="эмулятор для smoke-run (PS1/Saturn/N64)")
     parser.add_argument("--no-run", action="store_true")
     parser.add_argument("--timeout", type=int, default=900)
     args = parser.parse_args()
@@ -95,6 +99,8 @@ def main():
         raise SystemExit("UI binary not found")
     if samples is None and args.platform == "pc":
         samples = os.path.join(REPO_ROOT, "assets", "source")
+    if samples is None and args.platform == "n64" and args.pc_sdk_dir:
+        samples = os.path.join(REPO_ROOT, "assets", "source")
     if samples is None:
         samples = os.path.join(tempdir, "empty-samples")
         os.makedirs(samples, exist_ok=True)
@@ -110,12 +116,16 @@ def main():
                "--run-seconds", str(args.run_seconds)]
     if args.no_run:
         command.append("--no-run")
+    if args.emulator:
+        command += ["--emulator", os.path.abspath(args.emulator)]
     if args.screenshot_dir:
         os.makedirs(args.screenshot_dir, exist_ok=True)
         command += ["--screenshot-dir", os.path.abspath(args.screenshot_dir)]
 
     env = dict(os.environ)
     env["RPE_UI_CONFIG_DIR"] = config_dir
+    if args.pc_sdk_dir:
+        env["RPE_SDK_PC"] = os.path.abspath(args.pc_sdk_dir)
     env.pop("SDL_VIDEODRIVER", None)
     launcher = command
     if sys.platform.startswith("linux"):
@@ -150,6 +160,23 @@ def main():
         binary = os.path.join(project, "build", "pc", "hello_triangle")
         if not os.path.isfile(binary) and not os.path.isfile(binary + ".exe"):
             raise SystemExit("UI smoke: built hello_triangle not found")
+    if args.platform == "n64":
+        if args.pc_sdk_dir:
+            imported = glob.glob(os.path.join(project, "assets", "build", "*.tex"))
+            for tex in imported:
+                data = open(tex, "rb").read(12)
+                if len(data) >= 12:
+                    width = data[8] | (data[9] << 8)
+                    height = data[10] | (data[11] << 8)
+                    if (width, height) != (64, 64):
+                        raise SystemExit("UI smoke: N64 import not 64x64: %s (%dx%d)" %
+                                         (tex, width, height))
+        rom = os.path.join(project, "build", "n64", "hello_triangle_n64.z64")
+        if not os.path.isfile(rom):
+            matches = glob.glob(os.path.join(project, "build", "n64", "**", "*.z64"),
+                                recursive=True)
+            if not matches:
+                raise SystemExit("UI smoke: built N64 .z64 not found")
     if not os.path.isfile(os.path.join(project, ".rpeproject")):
         raise SystemExit("UI smoke: .rpeproject not found")
 

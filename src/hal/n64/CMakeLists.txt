@@ -1,15 +1,20 @@
 # ============================================================================
 # HAL Nintendo 64 — libdragon (pinned commit) + mips64-elf-gcc 16.2.0.
-# Реализация: Спринты 39–42 (docs/plans/sprint_39_40.md,
-# sprint_41_42.md), ADR-014.
+# Реализация: Спринты 39–46 (docs/plans/sprint_39_40.md … sprint_45_46.md),
+# ADR-014/ADR-015.
 #
 # Топология:
 #   rpe_n64_libdragon   — imported static libdragon.a (SYSTEM headers);
 #   rpe_n64_libdragonsys— imported static libdragonsys.a;
-#   retro_engine_hal    — N64 HAL: lifecycle/input/FS/память/render skeleton;
-#   retro_n64           — bootable ELF (VI 320×240 + RDPQ + DFS);
+#   retro_engine_hal    — N64 HAL: lifecycle/input/FS/память/render;
+#   hello_triangle_n64  — bootable ELF hello_triangle (S45–46);
+#   rotating_cube_n64   — bootable ELF rotating_cube/W1 (S45–46);
 #   retro_n64.dfs       — read-only DragonFS (mkdfs, deterministic);
-#   hello_n64.z64       — ROM (n64tool + TOC + ELF + DFS).
+#   hello_triangle.z64  — ROM (n64tool + TOC + ELF + DFS);
+#   rotating_cube.z64   — ROM (W1-сцена, тот же DFS).
+#
+# Алиасы совместимости: hello_n64.z64 = hello_triangle.z64,
+# retro_n64.z64 = rotating_cube.z64, retro_n64.elf/.map/.sym = rotating.
 #
 # Сборка — только через пресет n64-release:
 #   export N64_INST=/path/to/libdragon-toolchain
@@ -56,9 +61,9 @@ target_include_directories(retro_engine_hal PRIVATE
     "${RPE_PUBLIC_API_INCLUDE_DIR}"
     "${N64_INCLUDEDIR}")
 target_compile_definitions(retro_engine_hal PRIVATE PLATFORM_N64=1)
-# libdragon/newlib линкуются только финальным ROM-таргетом: static HAL не
+# libdragon/newlib линкуются только финальными ROM-таргетами: static HAL не
 # нуждается в них на этапе архива, а install(EXPORT) не должен ссылаться на
-# machine-specific imported libdragon. N64 SDK (S45–46) потребует внешний
+# machine-specific imported libdragon. N64 SDK (S45–46) требует внешний
 # N64_INST, как PS1 требует PSn00bSDK.
 target_link_libraries(retro_engine_hal PRIVATE retro_engine_log)
 
@@ -108,35 +113,24 @@ add_custom_command(
 set_source_files_properties("${RPE_N64_UCODE_TEXT_OBJ}" "${RPE_N64_UCODE_DATA_OBJ}"
     PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
 
-# --- Bootable ELF ----------------------------------------------------------
-add_executable(retro_n64 main_n64.cpp
+# SDK (S45–46): RSP overlay поставляется отдельной статической библиотекой —
+# consumer-пример линкует RetroPolyEngine::n64_rsp_tnl, не зная деталей
+# генерации ucode. Символы rpe_tnl_{text,data}_start/_end глобальны.
+add_library(retro_engine_n64_ucode STATIC
     "${RPE_N64_UCODE_TEXT_OBJ}" "${RPE_N64_UCODE_DATA_OBJ}")
-retro_engine_apply_flags(retro_n64)
-target_include_directories(retro_n64 PRIVATE
-    "${CMAKE_SOURCE_DIR}/src"
-    "${RPE_PUBLIC_INCLUDE_DIR}"
-    "${RPE_PUBLIC_API_INCLUDE_DIR}"
-    "${N64_INCLUDEDIR}")
-target_compile_definitions(retro_n64 PRIVATE PLATFORM_N64=1)
-target_link_libraries(retro_n64 PRIVATE
-    "-Wl,--start-group"
-    retro_engine
-    retro_engine_hal
-    retro_engine_log
-    rpe_n64_libdragon
-    rpe_n64_libdragonsys
-    c
-    m
-    gcc
-    "-Wl,--end-group")
-target_link_directories(retro_n64 PRIVATE "${N64_LIBDIR}")
-
-set(RPE_N64_ELF "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.elf")
-set(RPE_N64_MAP "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.map")
-set(RPE_N64_SYM "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.sym")
-set(RPE_N64_STRIPPED "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.elf.stripped")
-set(RPE_N64_Z64 "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.z64")
-set(RPE_N64_Z64_SHA "${RPE_N64_Z64}.sha256")
+add_library(RetroPolyEngine::n64_rsp_tnl ALIAS retro_engine_n64_ucode)
+set_target_properties(retro_engine_n64_ucode PROPERTIES
+    OUTPUT_NAME retro_engine_n64_ucode
+    EXPORT_NAME n64_rsp_tnl
+    LINKER_LANGUAGE C)
+install(TARGETS retro_engine_n64_ucode
+        EXPORT RetroPolyEngineTargets
+        ARCHIVE DESTINATION "${RPE_SDK_LIBDIR}")
+# Исходник/карта overlay — для аудита SDK; MIPS-инструменты не требуются.
+install(FILES "${CMAKE_CURRENT_SOURCE_DIR}/rsp_tnl.S"
+              "${RPE_N64_UCODE_MAP}"
+        DESTINATION "${RPE_SDK_LIBDIR}/rsp")
+install(FILES "${RPE_N64_UCODE_ELF}" DESTINATION "${RPE_SDK_LIBDIR}/rsp")
 
 # --- S41–42: read-only DFS image (mkdfs) -----------------------------------
 # Ассеты — committed versioned-артефакты (PS1/Saturn используют те же байты);
@@ -185,94 +179,173 @@ add_custom_command(
     COMMENT "n64: retro_n64.dfs (deterministic mkdfs) + listing"
     VERBATIM)
 
-set_target_properties(retro_n64 PROPERTIES
-    OUTPUT_NAME "retro_n64"
-    SUFFIX ".elf"
-    RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
+# --- Demo executables: hello_triangle + rotating_cube (S45–46) --------------
+# Один main_n64.cpp, две специализации: RPE_N64_DEMO_HELLO=1 — TRIANGLE.MSH
+# с интерактивной камерой; =0 — W1-сцена 4 куба + RSP-lighting.
+function(rpe_n64_add_demo demo_target demo_hello elf_name rom_name)
+    add_executable(${demo_target} main_n64.cpp
+        "${RPE_N64_UCODE_TEXT_OBJ}" "${RPE_N64_UCODE_DATA_OBJ}")
+    retro_engine_apply_flags(${demo_target})
+    target_include_directories(${demo_target} PRIVATE
+        "${CMAKE_SOURCE_DIR}/src"
+        "${RPE_PUBLIC_INCLUDE_DIR}"
+        "${RPE_PUBLIC_API_INCLUDE_DIR}"
+        "${N64_INCLUDEDIR}")
+    target_compile_definitions(${demo_target} PRIVATE
+        PLATFORM_N64=1
+        RPE_N64_DEMO_HELLO=${demo_hello})
+    target_link_libraries(${demo_target} PRIVATE
+        "-Wl,--start-group"
+        retro_engine
+        retro_engine_hal
+        retro_engine_log
+        rpe_n64_libdragon
+        rpe_n64_libdragonsys
+        c
+        m
+        gcc
+        "-Wl,--end-group")
+    target_link_directories(${demo_target} PRIVATE "${N64_LIBDIR}")
 
-# n64.ld — linker script libdragon; --wrap __do_global_ctors — раскрутка
-# static-конструкторов (n64.mk); --gc-sections — компактный ROM.
-target_link_options(retro_n64 PRIVATE
-    "-Wl,-Tn64.ld"
-    "-Wl,--gc-sections"
-    "-Wl,--wrap=__do_global_ctors"
-    "-Wl,-Map,${RPE_N64_MAP}")
+    set_target_properties(${demo_target} PROPERTIES
+        OUTPUT_NAME "${elf_name}"
+        SUFFIX ".elf"
+        RUNTIME_OUTPUT_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}")
 
-# Map-файл создаёт линкер как побочный продукт; объявляем его явно, чтобы
-# Ninja знал правило для alias-цели hello_n64. Копирование туда-обратно
-# проверяет существование (pull) и не маскирует сбой линковки.
+    # n64.ld — linker script libdragon; --wrap __do_global_ctors — раскрутка
+    # static-конструкторов (n64.mk); --gc-sections — компактный ROM.
+    set(map "${CMAKE_CURRENT_BINARY_DIR}/${elf_name}.map")
+    target_link_options(${demo_target} PRIVATE
+        "-Wl,-Tn64.ld"
+        "-Wl,--gc-sections"
+        "-Wl,--wrap=__do_global_ctors"
+        "-Wl,-Map,${map}")
+
+    # Map-файл создаёт линкер как побочный продукт; объявляем его явно, чтобы
+    # Ninja знал правило; pull-by-copy проверяет существование.
+    add_custom_command(
+        OUTPUT "${map}"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${map}" "${map}.tmp"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${map}.tmp" "${map}"
+        COMMAND "${CMAKE_COMMAND}" -E remove "${map}.tmp"
+        DEPENDS ${demo_target}
+        COMMENT "n64: ${elf_name}.map (linker map)"
+        VERBATIM)
+
+    set(elf "${CMAKE_CURRENT_BINARY_DIR}/${elf_name}.elf")
+    set(sym "${CMAKE_CURRENT_BINARY_DIR}/${elf_name}.sym")
+    set(stripped "${CMAKE_CURRENT_BINARY_DIR}/${elf_name}.elf.stripped")
+    set(rom "${CMAKE_CURRENT_BINARY_DIR}/${rom_name}")
+    set(rom_sha "${rom}.sha256")
+
+    # ROM: n64sym → strip → n64elfcompress → n64tool (TOC + ELF + DFS).
+    add_custom_command(
+        OUTPUT "${rom}"
+        BYPRODUCTS "${sym}" "${stripped}"
+        WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+        COMMAND "${CMAKE_COMMAND}" -E env "N64_INST=${N64_INST}"
+                "${N64_BINDIR}/n64sym" "${elf_name}.elf" "${elf_name}.sym"
+        COMMAND "${CMAKE_COMMAND}" -E copy "${elf_name}.elf" "${elf_name}.elf.stripped"
+        COMMAND "${N64_BINDIR}/mips64-elf-strip" -s "${elf_name}.elf.stripped"
+        COMMAND "${CMAKE_COMMAND}" -E env "N64_INST=${N64_INST}"
+                "${N64_BINDIR}/n64elfcompress" -o "." -c 1 "${elf_name}.elf.stripped"
+        COMMAND "${N64_BINDIR}/n64tool"
+                --title "RETRO POLYENGINE"
+                --category N
+                --region E
+                --toc
+                --output "${rom_name}"
+                --align 256 "${elf_name}.elf.stripped"
+                --align 8 "${elf_name}.sym"
+                --align 16 "retro_n64.dfs"
+                --align 8
+        DEPENDS ${demo_target} "${RPE_N64_DFS}"
+        COMMENT "n64: ${rom_name} (IPL3 + ELF + TOC + DFS)"
+        VERBATIM)
+
+    add_custom_command(
+        OUTPUT "${rom_sha}"
+        COMMAND "${CMAKE_COMMAND}"
+                "-DINPUT=${rom}"
+                "-DOUTPUT=${rom_sha}"
+                -P "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
+        DEPENDS "${rom}" "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
+        COMMENT "n64: ${rom_name}.sha256"
+        VERBATIM)
+
+    set(RPE_N64_ALL_ARTIFACTS ${RPE_N64_ALL_ARTIFACTS}
+        "${rom}" "${rom_sha}" "${map}" PARENT_SCOPE)
+endfunction()
+
+rpe_n64_add_demo(hello_triangle_n64 1 hello_triangle_n64 hello_triangle.z64)
+rpe_n64_add_demo(rotating_cube_n64 0 rotating_cube_n64 rotating_cube.z64)
+
+# --- Back-compat aliases (docs/N64.md §3.2 / CI S39–44) ---------------------
+set(RPE_N64_HELLO_Z64 "${CMAKE_CURRENT_BINARY_DIR}/hello_triangle.z64")
+set(RPE_N64_HELLO_MAP "${CMAKE_CURRENT_BINARY_DIR}/hello_triangle_n64.map")
+set(RPE_N64_HELLO_ALIAS "${CMAKE_CURRENT_BINARY_DIR}/hello_n64.z64")
+set(RPE_N64_HELLO_ALIAS_MAP "${CMAKE_CURRENT_BINARY_DIR}/hello_n64.map")
+set(RPE_N64_HELLO_ALIAS_SHA "${RPE_N64_HELLO_ALIAS}.sha256")
+
 add_custom_command(
-    OUTPUT "${RPE_N64_MAP}"
-    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_MAP}" "${RPE_N64_MAP}.tmp"
-    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_MAP}.tmp" "${RPE_N64_MAP}"
-    COMMAND "${CMAKE_COMMAND}" -E remove "${RPE_N64_MAP}.tmp"
-    DEPENDS retro_n64
-    COMMENT "n64: retro_n64.map (linker map)"
-    VERBATIM)
-
-# --- ROM: n64sym → strip → n64elfcompress → n64tool ------------------------
-# Повторяет n64.mk (pinned libdragon) без Makefile-обвязки. N64_INST нужен
-# n64sym/n64elfcompress для поиска toolchain (они не имеют --prefix).
-add_custom_command(
-    OUTPUT "${RPE_N64_Z64}"
-    BYPRODUCTS "${RPE_N64_SYM}" "${RPE_N64_STRIPPED}"
-    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
-    COMMAND "${CMAKE_COMMAND}" -E env "N64_INST=${N64_INST}"
-            "${N64_BINDIR}/n64sym" "retro_n64.elf" "retro_n64.sym"
-    COMMAND "${CMAKE_COMMAND}" -E copy "retro_n64.elf" "retro_n64.elf.stripped"
-    COMMAND "${N64_BINDIR}/mips64-elf-strip" -s "retro_n64.elf.stripped"
-    COMMAND "${CMAKE_COMMAND}" -E env "N64_INST=${N64_INST}"
-            "${N64_BINDIR}/n64elfcompress" -o "." -c 1 "retro_n64.elf.stripped"
-    COMMAND "${N64_BINDIR}/n64tool"
-            --title "RETRO POLYENGINE"
-            --category N
-            --region E
-            --toc
-            --output "retro_n64.z64"
-            --align 256 "retro_n64.elf.stripped"
-            --align 8 "retro_n64.sym"
-            --align 16 "retro_n64.dfs"
-            --align 8
-    DEPENDS retro_n64 "${RPE_N64_DFS}"
-    COMMENT "n64: hello_n64.z64 (IPL3 + ELF + TOC + DFS)"
-    VERBATIM)
-
-add_custom_command(
-    OUTPUT "${RPE_N64_Z64_SHA}"
+    OUTPUT "${RPE_N64_HELLO_ALIAS}" "${RPE_N64_HELLO_ALIAS_MAP}"
+           "${RPE_N64_HELLO_ALIAS_SHA}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_HELLO_Z64}" "${RPE_N64_HELLO_ALIAS}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_HELLO_MAP}" "${RPE_N64_HELLO_ALIAS_MAP}"
     COMMAND "${CMAKE_COMMAND}"
-            "-DINPUT=${RPE_N64_Z64}"
-            "-DOUTPUT=${RPE_N64_Z64_SHA}"
+            "-DINPUT=${RPE_N64_HELLO_ALIAS}"
+            "-DOUTPUT=${RPE_N64_HELLO_ALIAS_SHA}"
             -P "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
-    DEPENDS "${RPE_N64_Z64}" "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
-    COMMENT "n64: retro_n64.z64.sha256"
+    DEPENDS "${RPE_N64_HELLO_Z64}" "${RPE_N64_HELLO_MAP}"
+            "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
+    COMMENT "n64: hello_n64.z64/.map/.sha256 alias (hello_triangle)"
     VERBATIM)
 
-# --- hello_n64.* alias (release/demo naming, docs/N64.md) ------------------
-set(RPE_N64_HELLO_Z64 "${CMAKE_CURRENT_BINARY_DIR}/hello_n64.z64")
-set(RPE_N64_HELLO_MAP "${CMAKE_CURRENT_BINARY_DIR}/hello_n64.map")
-set(RPE_N64_HELLO_SHA "${RPE_N64_HELLO_Z64}.sha256")
+set(RPE_N64_CUBE_Z64 "${CMAKE_CURRENT_BINARY_DIR}/rotating_cube.z64")
+set(RPE_N64_CUBE_MAP "${CMAKE_CURRENT_BINARY_DIR}/rotating_cube_n64.map")
+set(RPE_N64_ENGINE_ALIAS "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.z64")
+set(RPE_N64_ENGINE_ALIAS_MAP "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.map")
+set(RPE_N64_ENGINE_ALIAS_SHA "${RPE_N64_ENGINE_ALIAS}.sha256")
+set(RPE_N64_ENGINE_ELF "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.elf")
+set(RPE_N64_ENGINE_SYM "${CMAKE_CURRENT_BINARY_DIR}/retro_n64.sym")
 
 add_custom_command(
-    OUTPUT "${RPE_N64_HELLO_Z64}" "${RPE_N64_HELLO_MAP}" "${RPE_N64_HELLO_SHA}"
-    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_Z64}" "${RPE_N64_HELLO_Z64}"
-    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_MAP}" "${RPE_N64_HELLO_MAP}"
+    OUTPUT "${RPE_N64_ENGINE_ALIAS}" "${RPE_N64_ENGINE_ALIAS_MAP}"
+           "${RPE_N64_ENGINE_ALIAS_SHA}" "${RPE_N64_ENGINE_ELF}"
+           "${RPE_N64_ENGINE_SYM}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_CUBE_Z64}" "${RPE_N64_ENGINE_ALIAS}"
+    COMMAND "${CMAKE_COMMAND}" -E copy "${RPE_N64_CUBE_MAP}" "${RPE_N64_ENGINE_ALIAS_MAP}"
+    COMMAND "${CMAKE_COMMAND}" -E copy
+            "${CMAKE_CURRENT_BINARY_DIR}/rotating_cube_n64.elf" "${RPE_N64_ENGINE_ELF}"
+    COMMAND "${CMAKE_COMMAND}" -E copy
+            "${CMAKE_CURRENT_BINARY_DIR}/rotating_cube_n64.sym" "${RPE_N64_ENGINE_SYM}"
     COMMAND "${CMAKE_COMMAND}"
-            "-DINPUT=${RPE_N64_HELLO_Z64}"
-            "-DOUTPUT=${RPE_N64_HELLO_SHA}"
+            "-DINPUT=${RPE_N64_ENGINE_ALIAS}"
+            "-DOUTPUT=${RPE_N64_ENGINE_ALIAS_SHA}"
             -P "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
-    DEPENDS "${RPE_N64_Z64}" "${RPE_N64_MAP}" "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
-    COMMENT "n64: hello_n64.z64/.map/.sha256 alias"
+    DEPENDS "${RPE_N64_CUBE_Z64}" "${RPE_N64_CUBE_MAP}"
+            "${CMAKE_CURRENT_BINARY_DIR}/rotating_cube_n64.elf"
+            "${CMAKE_CURRENT_BINARY_DIR}/rotating_cube_n64.sym"
+            "${CMAKE_SOURCE_DIR}/cmake/sha256_file.cmake"
+    COMMENT "n64: retro_n64.* aliases (rotating_cube)"
     VERBATIM)
 
 add_custom_target(n64_rom ALL
-    DEPENDS "${RPE_N64_Z64}" "${RPE_N64_Z64_SHA}"
-            "${RPE_N64_HELLO_Z64}" "${RPE_N64_HELLO_MAP}" "${RPE_N64_HELLO_SHA}"
+    DEPENDS ${RPE_N64_ALL_ARTIFACTS}
+            "${RPE_N64_HELLO_ALIAS}" "${RPE_N64_HELLO_ALIAS_MAP}"
+            "${RPE_N64_HELLO_ALIAS_SHA}"
+            "${RPE_N64_ENGINE_ALIAS}" "${RPE_N64_ENGINE_ALIAS_MAP}"
+            "${RPE_N64_ENGINE_ALIAS_SHA}" "${RPE_N64_ENGINE_ELF}"
+            "${RPE_N64_ENGINE_SYM}"
             "${RPE_N64_DFS}" "${RPE_N64_DFS_TXT}")
 add_custom_target(hello_n64 DEPENDS "${RPE_N64_HELLO_Z64}")
+add_custom_target(rotating_cube DEPENDS "${RPE_N64_CUBE_Z64}")
+add_custom_target(hello_triangle DEPENDS "${RPE_N64_HELLO_Z64}")
 
 # Артефакты:
-#   build/n64-release/src/hal/n64/retro_n64.elf
-#   build/n64-release/src/hal/n64/retro_n64.map
-#   build/n64-release/src/hal/n64/retro_n64.z64 (+ .sha256)
+#   build/n64-release/src/hal/n64/hello_triangle_n64.elf
+#   build/n64-release/src/hal/n64/rotating_cube_n64.elf
+#   build/n64-release/src/hal/n64/hello_triangle.z64 (+ .sha256)
+#   build/n64-release/src/hal/n64/rotating_cube.z64 (+ .sha256)
+#   build/n64-release/src/hal/n64/hello_n64.z64 / retro_n64.z64 (aliases)
 #   build/n64-release/src/hal/n64/retro_n64.dfs (+ .txt listing)
-#   build/n64-release/src/hal/n64/hello_n64.z64/.map/.sha256

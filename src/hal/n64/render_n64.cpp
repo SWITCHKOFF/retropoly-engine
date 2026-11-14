@@ -33,8 +33,11 @@
 namespace {
 
 constexpr uint32_t N64_MAX_TEXTURES = RENDER_TEXTURE_MAX;
-constexpr uint32_t N64_TEXTURE_MAX_DIM = 64u; // TMEM-политика S43–44
-constexpr uint32_t N64_OVERLAY_VERTICES = 512u;
+constexpr uint32_t N64_TEXTURE_MAX_DIM = 64u;  // TMEM-политика S43–44
+// Overlay: 2048 вершин — две строки публичного Render_OverlayText (3×5
+// шрифт) укладываются без overflow; demo использует rdpq-шрифт, но SDK
+// consumer должен работать через публичный API.
+constexpr uint32_t N64_OVERLAY_VERTICES = 2048u;
 constexpr uint32_t N64_STRIP_MAX_KEY = N64_MAX_TEXTURES * 8u + 1u;
 
 struct TextureSlot
@@ -48,14 +51,13 @@ struct TextureSlot
 
 struct PendingTriangle
 {
-    union
-    {
-        n64::TnlVertex tnl[3];   /**< RSP-путь: view-space + attrs. */
-        RpeN64RdpVertex rdp[3];  /**< CPU-путь / после конверсии. */
+    union {
+        n64::TnlVertex tnl[3]; /**< RSP-путь: view-space + attrs. */
+        RpeN64RdpVertex rdp[3]; /**< CPU-путь / после конверсии. */
     } data;
     uint32_t tnl_slot; /**< Индекс TNL-слота (RSP-путь). */
-    uint16_t key;      /**< 0 — untextured; 1+handle*8+strip. */
-    bool rsp;          /**< true — вершины в data.tnl, ждут RSP. */
+    uint16_t key; /**< 0 — untextured; 1+handle*8+strip. */
+    bool rsp; /**< true — вершины в data.tnl, ждут RSP. */
 };
 
 bool s_backend_ready = false;
@@ -68,11 +70,15 @@ bool s_projection_valid = false;
 
 uint32_t s_pending_count = 0u;
 uint32_t s_draw_calls = 0u;
+uint32_t s_last_frame_draw_calls = 0u;
 uint32_t s_tnl_failures_seen = 0u;
 uint32_t s_overlay_count = 0u;
 uint32_t s_last_tnl_us = 0u;
 uint32_t s_last_rdp_us = 0u;
+uint32_t s_tmem_bytes_used = 0u;
 char s_text_overlay[512] = {};
+int32_t s_text_overlay_x = 8;
+int32_t s_text_overlay_y = 8;
 
 PendingTriangle s_pending[RPE_N64_TNL_MAX_SLOTS];
 RpeN64RdpVertex s_overlay[N64_OVERLAY_VERTICES];
@@ -112,7 +118,6 @@ bool fail_frame(const char* what)
     return false;
 }
 
-
 bool screen_from_clip(const int32_t clip[4], const n64::TnlVertex& attr, bool textured,
                       uint32_t tex_w, uint32_t tex_h, RpeN64RdpVertex* out)
 {
@@ -145,9 +150,8 @@ uint16_t make_key(TextureHandle handle, uint32_t strip)
 bool enqueue_rdp(const RpeN64RdpVertex v[3], uint16_t key)
 {
     if (s_pending_count >= RPE_N64_TNL_MAX_SLOTS) {
-        Log_Message(LOG_LEVEL_ERROR, "n64_render",
-                    "TNL batch overflow: %u triangles (key=%u)", (unsigned)s_pending_count,
-                    (unsigned)key);
+        Log_Message(LOG_LEVEL_ERROR, "n64_render", "TNL batch overflow: %u triangles (key=%u)",
+                    (unsigned)s_pending_count, (unsigned)key);
         return false;
     }
     PendingTriangle& pending = s_pending[s_pending_count];
@@ -162,9 +166,8 @@ bool enqueue_rdp(const RpeN64RdpVertex v[3], uint16_t key)
 bool enqueue_rsp(const n64::TnlVertex v[3], uint16_t key, const RpeN64TnlSlot* matrix)
 {
     if (s_pending_count >= RPE_N64_TNL_MAX_SLOTS) {
-        Log_Message(LOG_LEVEL_ERROR, "n64_render",
-                    "TNL batch overflow: %u triangles (key=%u)", (unsigned)s_pending_count,
-                    (unsigned)key);
+        Log_Message(LOG_LEVEL_ERROR, "n64_render", "TNL batch overflow: %u triangles (key=%u)",
+                    (unsigned)s_pending_count, (unsigned)key);
         return false;
     }
 
@@ -176,7 +179,8 @@ bool enqueue_rsp(const n64::TnlVertex v[3], uint16_t key, const RpeN64TnlSlot* m
         return false;
     }
     n64::tnl_vertices_to_slot(v, input);
-    if (!rpe_n64_tnl_transform(index, matrix)) {        Log_Message(LOG_LEVEL_ERROR, "n64_render", "TNL transform enqueue failed (slot %u)",
+    if (!rpe_n64_tnl_transform(index, matrix)) {
+        Log_Message(LOG_LEVEL_ERROR, "n64_render", "TNL transform enqueue failed (slot %u)",
                     (unsigned)index);
         return false;
     }
@@ -214,13 +218,12 @@ bool draw_group(uint16_t key)
         }
         const uint32_t sx = strip * strip_w;
         const uint32_t sw = (sx + strip_w <= tex->width) ? strip_w : (tex->width - sx);
-        if (sw == 0u ||
-            !rpe_n64_rdp_upload_texture_strip(tex->pixels, tex->palette, tex->width,
-                                              tex->height, sx, sw)) {
+        if (sw == 0u || !rpe_n64_rdp_upload_texture_strip(tex->pixels, tex->palette, tex->width,
+                                                          tex->height, sx, sw)) {
             Log_Message(LOG_LEVEL_ERROR, "n64_render",
                         "TMEM strip upload failed: handle=%u strip=%u (%ux%u)",
-                        (unsigned)(handle_index + 1u), (unsigned)strip,
-                        (unsigned)tex->width, (unsigned)tex->height);
+                        (unsigned)(handle_index + 1u), (unsigned)strip, (unsigned)tex->width,
+                        (unsigned)tex->height);
             return false;
         }
     }
@@ -281,13 +284,13 @@ bool hal_render_backend_init(uint32_t width, uint32_t height)
     s_projection_valid = false;
     s_rsp_active = rpe_n64_tnl_available();
     s_fallback_logged = false;
+    s_tmem_bytes_used = 0u;
     reset_frame_state();
 
     Log_Message(LOG_LEVEL_INFO, "n64_render",
                 "backend init: 320x240, Z RGBA16, %s, TNL slots=%u, TMEM texture=%u B",
                 s_rsp_active ? "RSP T&L" : "CPU fallback (RSP unavailable)",
-                (unsigned)rpe_n64_tnl_slot_capacity(),
-                (unsigned)RPE_N64_TMEM_TEXTURE_BYTES);
+                (unsigned)rpe_n64_tnl_slot_capacity(), (unsigned)RPE_N64_TMEM_TEXTURE_BYTES);
     return true;
 }
 
@@ -301,6 +304,7 @@ void hal_render_backend_shutdown(void)
     s_rsp_active = false;
     s_pending_count = 0u;
     s_overlay_count = 0u;
+    s_tmem_bytes_used = 0u;
 }
 
 void hal_render_backend_set_camera(const Mat4* view, const Mat4* proj)
@@ -355,8 +359,7 @@ bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_
     uint32_t th = (h > N64_TEXTURE_MAX_DIM) ? N64_TEXTURE_MAX_DIM : h;
     if (tw < 8u || !is_pow2(tw) || !is_pow2(th)) {
         Log_Message(LOG_LEVEL_ERROR, "n64_render",
-                    "create_texture %ux%u: N64 requires pow2, 8..64 (target %ux%u)", w, h, tw,
-                    th);
+                    "create_texture %ux%u: N64 requires pow2, 8..64 (target %ux%u)", w, h, tw, th);
         return false;
     }
 
@@ -381,13 +384,17 @@ bool hal_render_backend_create_texture(TextureHandle handle, uint32_t w, uint32_
     const uint32_t strip = n64::tnl_texture_strip_width(tw, th);
     if (strip == 0u) {
         slot.valid = false;
-        Log_Message(LOG_LEVEL_ERROR, "n64_render", "create_texture: no TMEM strip for %ux%u",
-                    tw, th);
+        Log_Message(LOG_LEVEL_ERROR, "n64_render", "create_texture: no TMEM strip for %ux%u", tw,
+                    th);
         return false;
     }
+    const uint32_t tmem = n64::tnl_tmem_bytes(strip, th);
+    if (tmem > s_tmem_bytes_used) {
+        s_tmem_bytes_used = tmem;
+    }
     Log_Message(LOG_LEVEL_INFO, "n64_render",
-                "texture %u: %ux%u → %ux%u CI8, strips=%u×%u, TMEM=%u B", (unsigned)handle, w,
-                h, tw, th, (unsigned)strip, (unsigned)(tw / strip),
+                "texture %u: %ux%u → %ux%u CI8, strips=%u×%u, TMEM=%u B", (unsigned)handle, w, h,
+                tw, th, (unsigned)strip, (unsigned)(tw / strip),
                 (unsigned)n64::tnl_tmem_bytes(strip, th));
     return true;
 }
@@ -494,7 +501,7 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
         }
     }
     if (part_count == 0u) {
-        return true; // Полностью вне текстуры (не должно случаться при 0..1 UV).
+        return true;  // Полностью вне текстуры (не должно случаться при 0..1 UV).
     }
     if (s_pending_count + part_count > RPE_N64_TNL_MAX_SLOTS) {
         return fail_frame("TNL batch overflow: pending+parts exceeds capacity");
@@ -506,8 +513,7 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
         if (tex != nullptr) {
             // Полоса определяется по u-центру суб-треугольника (clip держит
             // суб-треугольник внутри одной полосы).
-            const float u_mid =
-                (parts[p].v[0].u + parts[p].v[1].u + parts[p].v[2].u) / 3.0f;
+            const float u_mid = (parts[p].v[0].u + parts[p].v[1].u + parts[p].v[2].u) / 3.0f;
             strip = (uint32_t)(u_mid * (float)tex->width) / strip_w;
             if (strip >= strip_count) {
                 strip = strip_count - 1u;
@@ -529,9 +535,8 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
             RpeN64RdpVertex rdp[3];
             bool screen_ok = true;
             for (uint32_t v = 0u; v < 3u; ++v) {
-                if (!screen_from_clip(clip[v], parts[p].v[v], tex != nullptr,
-                                      tex ? tex->width : 0u, tex ? tex->height : 0u,
-                                      &rdp[v])) {
+                if (!screen_from_clip(clip[v], parts[p].v[v], tex != nullptr, tex ? tex->width : 0u,
+                                      tex ? tex->height : 0u, &rdp[v])) {
                     screen_ok = false;
                     break;
                 }
@@ -552,8 +557,7 @@ bool hal_render_backend_draw_overlay(const HalRenderBackendOverlayVertex* vertic
     }
     if (s_overlay_count + count > N64_OVERLAY_VERTICES) {
         Log_Message(LOG_LEVEL_ERROR, "n64_render", "overlay overflow: %u + %u > %u",
-                    (unsigned)s_overlay_count, (unsigned)count,
-                    (unsigned)N64_OVERLAY_VERTICES);
+                    (unsigned)s_overlay_count, (unsigned)count, (unsigned)N64_OVERLAY_VERTICES);
         return false;
     }
     for (uint32_t i = 0u; i < count; ++i) {
@@ -584,9 +588,8 @@ void hal_render_backend_end_frame(void)
         rpe_n64_tnl_wait();
         const uint32_t failures = rpe_n64_tnl_failures();
         if (failures != s_tnl_failures_seen) {
-            Log_Message(LOG_LEVEL_ERROR, "n64_render",
-                        "RSP T&L failures: %u (total %u)", (unsigned)(failures - s_tnl_failures_seen),
-                        (unsigned)failures);
+            Log_Message(LOG_LEVEL_ERROR, "n64_render", "RSP T&L failures: %u (total %u)",
+                        (unsigned)(failures - s_tnl_failures_seen), (unsigned)failures);
             s_tnl_failures_seen = failures;
         }
         // Конверсия clip → screen для всех RSP-записей.
@@ -619,8 +622,7 @@ void hal_render_backend_end_frame(void)
                     clip[c] = n64::tnl_slot_component(*output, v * 4u + c);
                 }
                 if (!screen_from_clip(clip, pending.data.tnl[v], tex != nullptr,
-                                      tex ? tex->width : 0u, tex ? tex->height : 0u,
-                                      &rdp[v])) {
+                                      tex ? tex->width : 0u, tex ? tex->height : 0u, &rdp[v])) {
                     ok = false;
                     break;
                 }
@@ -666,7 +668,7 @@ void hal_render_backend_end_frame(void)
     }
 
     if (s_text_overlay[0] != '\0' && rpe_n64_rdp_begin_overlay_mode()) {
-        (void)rpe_n64_text_print(96, 88, s_text_overlay);
+        (void)rpe_n64_text_print(s_text_overlay_x, s_text_overlay_y, s_text_overlay);
     }
     s_last_rdp_us = (uint32_t)(rpe_n64_ticks_us() - rdp_start);
     if (s_overlay_count != 0u) {
@@ -681,6 +683,7 @@ void hal_render_backend_end_frame(void)
                     n64::RdpCommandBuffer::diag_string(n64::rdp_command_buffer().diag()));
     }
     rpe_n64_frame_end();
+    s_last_frame_draw_calls = s_draw_calls;
     s_frame_valid = false;
     s_pending_count = 0u;
 }
@@ -730,6 +733,21 @@ uint32_t hal_render_backend_last_rdp_us(void)
     return s_last_rdp_us;
 }
 
+uint32_t hal_render_backend_tmem_bytes_used(void)
+{
+    return s_tmem_bytes_used;
+}
+
+uint32_t hal_render_backend_pending_triangles(void)
+{
+    return s_pending_count;
+}
+
+uint32_t hal_render_backend_last_draw_calls(void)
+{
+    return s_last_frame_draw_calls;
+}
+
 void hal_render_backend_set_text_overlay(const char* text)
 {
     if (text == nullptr) {
@@ -740,4 +758,10 @@ void hal_render_backend_set_text_overlay(const char* text)
     const size_t copy = (length >= sizeof(s_text_overlay)) ? sizeof(s_text_overlay) - 1u : length;
     memcpy(s_text_overlay, text, copy);
     s_text_overlay[copy] = '\0';
+}
+
+void hal_render_backend_set_text_overlay_position(int32_t x, int32_t y)
+{
+    s_text_overlay_x = x;
+    s_text_overlay_y = y;
 }

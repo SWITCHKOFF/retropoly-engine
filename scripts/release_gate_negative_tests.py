@@ -8,6 +8,7 @@
 #   повреждённый checksum              → FAIL
 #   BIOS/ROM/секреты/build-каталог      → FAIL
 #   demo-образ вне demos/              → FAIL
+#   отсутствует/повреждён N64 SDK       → FAIL (S45–46)
 #   report all_ok: false               → FAIL
 #
 # Baseline (валидный payload) обязан пройти. Скрипт возвращает 0, только если
@@ -138,6 +139,22 @@ def case_demo_outside_demos(path):
     refresh_checksums(path)
 
 
+def case_missing_n64_sdk(path):
+    mutate_missing(os.path.join(path, "sdk", "platforms", "n64"))
+
+
+def case_n64_bad_checksum(path):
+    target = os.path.join(path, "sdk", "platforms", "n64", "VERSION.txt")
+    with open(target, "a", encoding="utf-8") as f:
+        f.write("\nmutation\n")
+
+
+def case_n64_rom_outside_demos(path):
+    with open(os.path.join(path, "hello_triangle.z64"), "wb") as f:
+        f.write(b"rom outside demos/\n")
+    refresh_checksums(path)
+
+
 def case_report_false(path):
     report_path = os.path.join(path, "release_contract_report.json")
     with open(report_path, "r", encoding="utf-8") as f:
@@ -165,6 +182,9 @@ CASES = [
     ("secrets", case_secrets, "forbidden"),
     ("build-dir", case_build_dir, "forbidden"),
     ("demo-outside-demos", case_demo_outside_demos, "non-demo"),
+    ("missing-n64-sdk", case_missing_n64_sdk, "n64"),
+    ("n64-bad-checksum", case_n64_bad_checksum, "n64"),
+    ("n64-rom-outside", case_n64_rom_outside_demos, "non-demo"),
     ("report-all-ok-false", case_report_false, "all_ok"),
     ("unexpected-top-level", case_unexpected_top_level, "unexpected"),
 ]

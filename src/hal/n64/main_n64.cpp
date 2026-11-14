@@ -1,17 +1,20 @@
 // SPDX-License-Identifier: MIT
 // RetroPolyEngine — src/hal/n64/main_n64.cpp
 //
-// N64 render-demo S43–44 (ADR-015): RSP T&L + RDP с аппаратным Z-буфером,
-// perspective-correct текстурами и TMEM-полосами.
+// N64 hello_triangle / rotating_cube (S45–46, ADR-014/ADR-015):
+// RSP T&L + RDP с аппаратным Z-буфером, perspective-correct текстурами и
+// TMEM-полосами. Один source — две специализации (RPE_N64_DEMO_HELLO):
+//   1 — hello_triangle: TRIANGLE.MSH + TEX0.TEX, интерактивная камера;
+//   0 — rotating_cube: W1-сцена 4 куба / 48 треугольников, fixed camera.
 //
 // Boot:
 //   Platform_Init (VI 320×240 16-bit + DFS + ассеты) → idempotence self-test
-//   → Render_Init → RSP T&L self-test (W0-векторы) → W0 5-case framebuffer
+//   → Render_Init → RSP T&L/lighting/Z self-tests → W0 5-case framebuffer
 //   hash → T&L benchmark CPU vs RSP (48/256 треугольников) → main loop.
 //
-// Main loop: 4 куба / 48 треугольников (W1-подобная нагрузка), вращение,
-// текстура 64×64 CI8 (2 полосы TMEM), overlay (RSP/CPU, frame, FPS).
-// C-Down переключает CPU T&L fallback для ручного gate (кадр/hash).
+// Main loop: 60 Hz VI, fixed-time animation по Platform_GetTimeMs, overlay
+// (RSP/CPU, frame/FPS, RDRAM, TMEM, TNL/RDP counters). C-Down переключает
+// CPU T&L fallback для ручного gate (кадр/hash); A в hello — сброс камеры.
 #include "hal/platform.h"
 
 #include "core/log/log.h"
@@ -29,22 +32,35 @@
 #include "render/texture.h"
 #include "retro_engine/version.h"
 
+#include <math.h>
 #include <stdio.h>
 #include <string.h>
 
+#ifndef RPE_N64_DEMO_HELLO
+#define RPE_N64_DEMO_HELLO 0
+#endif
+
 namespace {
 
+constexpr bool DEMO_HELLO = RPE_N64_DEMO_HELLO != 0;
 constexpr uint32_t W0_CASE_COUNT = 5u;
 constexpr uint32_t W1_CUBE_COUNT = 4u;
-constexpr uint32_t W1_TRIANGLES = W1_CUBE_COUNT * 12u; // 48
+constexpr uint32_t W1_TRIANGLES = W1_CUBE_COUNT * 12u;  // 48
 constexpr uint32_t BENCH_TRIANGLES_MAX = 256u;
 
 uint32_t s_frames = 0u;
 TextureHandle s_checker_texture = RENDER_TEXTURE_INVALID;
 TextureHandle s_cube_texture = RENDER_TEXTURE_INVALID;
 const MeshAsset* s_cube_mesh = nullptr;
+MeshAsset* s_triangle_mesh = nullptr;
 fixed_t s_angle = 0;
+uint32_t s_last_frame_ms = 0u;
+uint32_t s_demo_start_ms = 0u;
+fixed_t s_camera_yaw = 0;
+fixed_t s_camera_pitch = 0;
+fixed_t s_camera_distance = 0;
 bool s_prev_fallback_button = false;
+bool s_prev_reset_button = false;
 const bool s_show_overlay = true;
 
 uint8_t s_w0_pixels[64u * 64u];
@@ -100,10 +116,8 @@ bool tnl_self_test()
     }
 
     const float mvp[16] = {
-        1.2f, 0.0f, 0.0f, 0.75f,
-        0.0f, 0.9f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, -1.0f,
-        0.1f, 0.2f, 0.0f, 8.0f,
+        1.2f, 0.0f, 0.0f, 0.75f, 0.0f, 0.9f, 0.0f, 0.0f,
+        0.0f, 0.0f, 1.0f, -1.0f, 0.1f, 0.2f, 0.0f, 8.0f,
     };
     n64::TnlVertex verts[3] = {
         {1.0f, 2.0f, -5.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f},
@@ -151,13 +165,11 @@ bool tnl_self_test()
                 "self-test: RSP vs CPU max_error=%ld (tol=%ld) %s", (long)max_error,
                 (long)tolerance, max_error <= tolerance ? "PASS" : "FAIL");
     if (max_error > tolerance) {
-        Log_Message(LOG_LEVEL_ERROR, "n64_tnl",
-                    "RSP clip v0=(%ld,%ld,%ld,%ld) CPU (%ld,%ld,%ld,%ld)",
-                    (long)n64::tnl_slot_component(*out, 0u),
-                    (long)n64::tnl_slot_component(*out, 1u),
-                    (long)n64::tnl_slot_component(*out, 2u),
-                    (long)n64::tnl_slot_component(*out, 3u), (long)cpu[0][0], (long)cpu[0][1],
-                    (long)cpu[0][2], (long)cpu[0][3]);
+        Log_Message(
+            LOG_LEVEL_ERROR, "n64_tnl", "RSP clip v0=(%ld,%ld,%ld,%ld) CPU (%ld,%ld,%ld,%ld)",
+            (long)n64::tnl_slot_component(*out, 0u), (long)n64::tnl_slot_component(*out, 1u),
+            (long)n64::tnl_slot_component(*out, 2u), (long)n64::tnl_slot_component(*out, 3u),
+            (long)cpu[0][0], (long)cpu[0][1], (long)cpu[0][2], (long)cpu[0][3]);
     }
     return max_error <= tolerance;
 }
@@ -210,23 +222,23 @@ void set_w0_vertex(Vertex* v, fixed_t x, fixed_t y, fixed_t z)
 void build_w0_case(uint32_t case_id, Vertex v[3], Triangle* tri)
 {
     // Камера (0,0,5) смотрит −Z; near=1, far=100 (distance = 5 − z).
-    if (case_id == 0u) { // visible: z=-5 → distance 10
+    if (case_id == 0u) {  // visible: z=-5 → distance 10
         set_w0_vertex(&v[0], fixed_from_int(-2), fixed_from_int(-2), fixed_from_int(-5));
         set_w0_vertex(&v[1], fixed_from_int(2), fixed_from_int(-2), fixed_from_int(-5));
         set_w0_vertex(&v[2], fixed_from_int(0), fixed_from_int(2), fixed_from_int(-5));
-    } else if (case_id == 1u) { // backface: обратный winding
+    } else if (case_id == 1u) {  // backface: обратный winding
         set_w0_vertex(&v[0], fixed_from_int(-2), fixed_from_int(-2), fixed_from_int(-5));
         set_w0_vertex(&v[1], fixed_from_int(0), fixed_from_int(2), fixed_from_int(-5));
         set_w0_vertex(&v[2], fixed_from_int(2), fixed_from_int(-2), fixed_from_int(-5));
-    } else if (case_id == 2u) { // near-cross: z=4.5 → distance 0.5 < near
+    } else if (case_id == 2u) {  // near-cross: z=4.5 → distance 0.5 < near
         set_w0_vertex(&v[0], fixed_from_int(-2), fixed_from_int(-2), fixed_from_float(4.5f));
         set_w0_vertex(&v[1], fixed_from_int(2), fixed_from_int(-2), fixed_from_int(-5));
         set_w0_vertex(&v[2], fixed_from_int(0), fixed_from_int(2), fixed_from_int(-5));
-    } else if (case_id == 3u) { // far-cross: z=-96 → distance 101 > far
+    } else if (case_id == 3u) {  // far-cross: z=-96 → distance 101 > far
         set_w0_vertex(&v[0], fixed_from_int(-2), fixed_from_int(-2), fixed_from_int(-96));
         set_w0_vertex(&v[1], fixed_from_int(2), fixed_from_int(-2), fixed_from_int(-96));
         set_w0_vertex(&v[2], fixed_from_int(0), fixed_from_int(2), fixed_from_int(-96));
-    } else { // behind camera: z=6 → distance −1
+    } else {  // behind camera: z=6 → distance −1
         set_w0_vertex(&v[0], fixed_from_int(-2), fixed_from_int(-2), fixed_from_int(6));
         set_w0_vertex(&v[1], fixed_from_int(2), fixed_from_int(-2), fixed_from_int(6));
         set_w0_vertex(&v[2], fixed_from_int(0), fixed_from_int(2), fixed_from_int(6));
@@ -254,6 +266,92 @@ void w1_camera(Mat4* view, Mat4* proj)
     mat4_look_at(view, eye, target, up);
     mat4_perspective(proj, fixed_from_float(1.04719755f), fixed_from_float(4.0f / 3.0f),
                      fixed_from_int(1), fixed_from_int(100));
+}
+
+/** hello_triangle: орбитальная камера вокруг начала координат. */
+void hello_camera(Mat4* view, Mat4* proj)
+{
+    const float yaw = fixed_to_float(s_camera_yaw);
+    const float pitch = fixed_to_float(s_camera_pitch);
+    const float distance = fixed_to_float(s_camera_distance);
+    const float cp = cosf(pitch);
+    const Vec3 eye = vec3_make(fixed_from_float(distance * sinf(yaw) * cp),
+                               fixed_from_float(distance * sinf(pitch)),
+                               fixed_from_float(distance * cosf(yaw) * cp));
+    const Vec3 target = vec3_make(0, 0, 0);
+    const Vec3 up = vec3_make(0, FIXED_ONE, 0);
+    mat4_look_at(view, eye, target, up);
+    mat4_perspective(proj, fixed_from_float(1.04719755f), fixed_from_float(4.0f / 3.0f),
+                     fixed_from_int(1), fixed_from_int(100));
+}
+
+void hello_camera_reset()
+{
+    s_camera_yaw = 0;
+    s_camera_pitch = fixed_from_float(0.22f);
+    s_camera_distance = fixed_from_int(8);
+}
+
+/**
+ * Интерактивная камера hello-демо (60 Hz-независимо от FPS):
+ * stick X/Y — yaw/pitch, D-pad Up/Down — дистанция, A — reset.
+ */
+void update_hello_camera(uint32_t dt_ms)
+{
+    const int16_t axis_x = Input_GetPadAxis(0u, INPUT_AXIS_LEFTX);
+    const int16_t axis_y = Input_GetPadAxis(0u, INPUT_AXIS_LEFTY);
+    const fixed_t dt = fixed_from_float((float)dt_ms * 0.001f);
+    const fixed_t yaw_speed = fixed_from_float(1.8f);
+    const fixed_t pitch_speed = fixed_from_float(1.2f);
+
+    if (axis_x != 0) {
+        s_camera_yaw =
+            fixed_add(s_camera_yaw, fixed_mul(fixed_mul(fixed_from_int(axis_x), dt), yaw_speed));
+    }
+    if (axis_y != 0) {
+        s_camera_pitch = fixed_add(s_camera_pitch,
+                                   fixed_mul(fixed_mul(fixed_from_int(axis_y), dt), pitch_speed));
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_UP)) {
+        s_camera_distance = fixed_add(s_camera_distance, fixed_mul(dt, fixed_from_int(8)));
+    }
+    if (Input_IsPadButtonDown(0u, INPUT_PAD_DOWN)) {
+        s_camera_distance = fixed_sub(s_camera_distance, fixed_mul(dt, fixed_from_int(8)));
+    }
+    if (s_camera_distance < fixed_from_int(4)) {
+        s_camera_distance = fixed_from_int(4);
+    }
+    if (s_camera_distance > fixed_from_int(30)) {
+        s_camera_distance = fixed_from_int(30);
+    }
+    // pitch clamp ±80°.
+    const fixed_t pitch_limit = fixed_from_float(1.3962634f);
+    if (s_camera_pitch < fixed_from_float(-1.3962634f)) {
+        s_camera_pitch = fixed_from_float(-1.3962634f);
+    }
+    if (s_camera_pitch > pitch_limit) {
+        s_camera_pitch = pitch_limit;
+    }
+
+    const bool reset = Input_IsPadButtonDown(0u, INPUT_PAD_CROSS);
+    if (reset && !s_prev_reset_button) {
+        hello_camera_reset();
+    }
+    s_prev_reset_button = reset;
+}
+
+/** hello_triangle: один текстурированный треугольник + медленное вращение. */
+void draw_hello_scene(const Mat4& view, const Mat4& proj, fixed_t time_s)
+{
+    if (s_triangle_mesh == nullptr) {
+        return;
+    }
+    Render_SetCamera(&view, &proj);
+    Render_BindTexture(s_cube_texture);
+    Mat4 model;
+    mat4_rotate_y(&model, fixed_from_float(sinf(fixed_to_float(time_s)) * 0.6f));
+    Render_DrawMesh(s_triangle_mesh->vertices, s_triangle_mesh->vertex_count,
+                    s_triangle_mesh->indices, s_triangle_mesh->index_count, &model);
 }
 
 bool hash_framebuffer(uint32_t* out_hash_rgb, uint32_t* out_hash_rgba)
@@ -387,8 +485,7 @@ void run_w0_golden()
                     s_w0_results[case_id].name, (unsigned long)hash_rgb,
                     (unsigned long)kExpected[case_id], expected_ok ? "PASS" : "FAIL",
                     (unsigned)s_w0_results[case_id].submitted,
-                    (unsigned)s_w0_results[case_id].culled,
-                    (unsigned)s_w0_results[case_id].clipped,
+                    (unsigned)s_w0_results[case_id].culled, (unsigned)s_w0_results[case_id].clipped,
                     (unsigned)s_w0_results[case_id].depth_rejected);
     }
 
@@ -401,8 +498,7 @@ void run_w0_golden()
     hal_render_backend_set_cpu_fallback(false);
     Log_Message(cpu_ok && cpu_hash == rsp_hash ? LOG_LEVEL_INFO : LOG_LEVEL_ERROR, "n64_w0",
                 "fallback visible hash=%08lx rsp=%08lx %s", (unsigned long)cpu_hash,
-                (unsigned long)rsp_hash,
-                (cpu_ok && cpu_hash == rsp_hash) ? "PASS" : "FAIL");
+                (unsigned long)rsp_hash, (cpu_ok && cpu_hash == rsp_hash) ? "PASS" : "FAIL");
 }
 
 const n64::TnlVertex* bench_vertices()
@@ -436,10 +532,8 @@ BenchResult benchmark_tnl(uint32_t triangles)
     result.triangles = triangles;
 
     const float mvp[16] = {
-        1.0f, 0.0f, 0.0f, 0.0f,
-        0.0f, 1.0f, 0.0f, 0.0f,
-        0.0f, 0.0f, 1.0f, 1.0f,
-        0.0f, 0.0f, -10.0f, 0.0f,
+        1.0f, 0.0f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f,   0.0f,
+        0.0f, 0.0f, 1.0f, 1.0f, 0.0f, 0.0f, -10.0f, 0.0f,
     };
     n64::TnlMatrix matrix;
     if (!n64::tnl_matrix_from_mvp_gl(mvp, &matrix)) {
@@ -513,13 +607,11 @@ bool light_self_test()
         Log_Message(LOG_LEVEL_ERROR, "n64_light", "self-test: RSP T&L unavailable");
         return false;
     }
-    const float normals[3][3] = {{0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f},
-                                 {0.0f, 0.0f, -1.0f}};
+    const float normals[3][3] = {{0.0f, 0.0f, 1.0f}, {1.0f, 0.0f, 0.0f}, {0.0f, 0.0f, -1.0f}};
     const float light[3] = {0.0f, 0.0f, 1.0f};
     n64::TnlVertex verts[3];
     for (uint32_t v = 0u; v < 3u; ++v) {
-        verts[v] = n64::TnlVertex{normals[v][0], normals[v][1], normals[v][2], 0, 0,
-                                  1,               1,               1,               1};
+        verts[v] = n64::TnlVertex{normals[v][0], normals[v][1], normals[v][2], 0, 0, 1, 1, 1, 1};
     }
     RpeN64TnlSlot matrix_slot;
     make_dot_matrix(light, &matrix_slot);
@@ -586,7 +678,13 @@ bool light_cube_enqueue(const MeshAsset* mesh, fixed_t angle, uint32_t slot_base
             const Vertex& src = mesh->vertices[(idx < vertex_count) ? idx : 0u];
             verts[v] = n64::TnlVertex{fixed_to_float((int32_t)src.nx * 516),
                                       fixed_to_float((int32_t)src.ny * 516),
-                                      fixed_to_float((int32_t)src.nz * 516), 0, 0, 1, 1, 1, 1};
+                                      fixed_to_float((int32_t)src.nz * 516),
+                                      0,
+                                      0,
+                                      1,
+                                      1,
+                                      1,
+                                      1};
         }
         RpeN64TnlSlot* input = rpe_n64_tnl_input_slot(slot);
         if (input == nullptr) {
@@ -642,8 +740,7 @@ void update_lighting()
         return;
     }
     for (uint32_t i = 0u; i < W1_CUBE_COUNT; ++i) {
-        if (!light_cube_enqueue(s_cube_mesh, s_angle + fixed_from_float((float)i * 0.7f),
-                                i * 8u)) {
+        if (!light_cube_enqueue(s_cube_mesh, s_angle + fixed_from_float((float)i * 0.7f), i * 8u)) {
             s_lighting_ok = false;
             return;
         }
@@ -682,33 +779,56 @@ void draw_w1_scene(const Mat4& view, const Mat4& proj)
 
 char s_overlay_text[512];
 
+/** Пиковый RDRAM engine-пула: арены + stack + framebuffers + Z (S45–46). */
+uint32_t engine_rdram_peak_bytes()
+{
+    const uint32_t fixed = n64::CPU_STACK_BYTES + n64::FRAMEBUFFER_BYTES + n64::ZBUFFER_BYTES;
+    return fixed + (uint32_t)(n64::asset_arena().peak() + n64::frame_arena().peak() +
+                              n64::command_arena().peak() + n64::fs_staging_arena().peak());
+}
+
 void draw_overlay()
 {
+    const uint32_t avg = (s_frame_us_count != 0u) ? (s_frame_us_acc / s_frame_us_count) : 0u;
     char* p = s_overlay_text;
-    p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p),
-                  "RPE N64 S43-44\n%s\n48 TRI / 4 CUBES\nTEX64 CI8 STRIPS\nZ 18BIT 320X240\n%s\n",
+    p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p), "RPE N64 S45-46 %s\n",
+                  DEMO_HELLO ? "HELLO" : "W1 4 CUBES");
+    p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p), "%s%s\n",
                   hal_render_backend_rsp_active() ? "RSP TNL+RDP" : "CPU TNL+RDP",
-                  s_lighting_ok ? "RSP LIGHT" : "MESH COLORS");
-    if (s_frame_us_count != 0u) {
-        const uint32_t avg = s_frame_us_acc / s_frame_us_count;
-        p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p),
-                      "FRAME %lu US / %lu FPS\n", (unsigned long)avg,
-                      (unsigned long)((avg != 0u) ? (1000000u / avg) : 0u));
-    }
+                  s_lighting_ok ? " | LIGHT" : "");
     p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p),
-                  "W0 HASH %08lx\n", (unsigned long)s_w0_results[0].hash);
+                  "FRAME %lu US / %lu FPS\n", (unsigned long)avg,
+                  (unsigned long)((avg != 0u) ? (1000000u / avg) : 0u));
+    p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p), "RDRAM %lu/%luK PEAK\n",
+                  (unsigned long)(engine_rdram_peak_bytes() / 1024u),
+                  (unsigned long)(n64::memory_rdram_size() / 1024u));
+    p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p), "TMEM %lu/%lu B\n",
+                  (unsigned long)hal_render_backend_tmem_bytes_used(),
+                  (unsigned long)RPE_N64_TMEM_BYTES);
+    p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p),
+                  "TNL %lu US RDP %lu US\n", (unsigned long)hal_render_backend_last_tnl_us(),
+                  (unsigned long)hal_render_backend_last_rdp_us());
+    p += snprintf(p, (size_t)(s_overlay_text + sizeof(s_overlay_text) - p), "DRAW %lu | W0 %08lx\n",
+                  (unsigned long)hal_render_backend_last_draw_calls(),
+                  (unsigned long)s_w0_results[0].hash);
+    hal_render_backend_set_text_overlay_position(8, DEMO_HELLO ? 8 : 88);
 }
 
 void log_heartbeat()
 {
     const n64::BootAssets& assets = n64::boot_assets();
     Log_Message(LOG_LEVEL_INFO, "n64_render",
-                "frame=%u time=%u ms tnl=%s draws=%u pending=%u overlay=%u assets=%u/%u",
-                (unsigned)s_frames, (unsigned)Platform_GetTimeMs(),
-                hal_render_backend_rsp_active() ? "RSP" : "CPU",
-                (unsigned)hal_render_backend_draw_call_count(),
-                (unsigned)rpe_n64_tnl_failures(), (unsigned)render_diagnostics().submitted,
-                assets.mesh_ok ? 1u : 0u, assets.texture_ok ? 1u : 0u);
+                "demo=%s frame=%u time=%u ms tnl=%s draws=%u pending=%u overlay=%u "
+                "assets=%u/%u tmem=%u/%u rdram_peak=%u/%u pend=%u code=%u",
+                DEMO_HELLO ? "hello_triangle" : "rotating_cube", (unsigned)s_frames,
+                (unsigned)Platform_GetTimeMs(), hal_render_backend_rsp_active() ? "RSP" : "CPU",
+                (unsigned)hal_render_backend_draw_call_count(), (unsigned)rpe_n64_tnl_failures(),
+                (unsigned)render_diagnostics().submitted, assets.mesh_ok ? 1u : 0u,
+                assets.texture_ok ? 1u : 0u, (unsigned)hal_render_backend_tmem_bytes_used(),
+                (unsigned)RPE_N64_TMEM_BYTES, (unsigned)engine_rdram_peak_bytes(),
+                (unsigned)n64::memory_rdram_size(),
+                (unsigned)hal_render_backend_pending_triangles(),
+                (unsigned)render_diagnostics().last_code);
 }
 
 }  // namespace
@@ -742,14 +862,23 @@ int main(void)
     }
 
     build_w0_checker();
-    s_checker_texture =
-        Render_CreateTexture(64u, 64u, s_w0_pixels, s_w0_palette);
+    s_checker_texture = Render_CreateTexture(64u, 64u, s_w0_pixels, s_w0_palette);
     const n64::BootAssets& assets = n64::boot_assets();
     if (assets.texture_ok && assets.texture != nullptr) {
         s_cube_texture = Render_CreateTexture(assets.texture->width, assets.texture->height,
                                               assets.texture->pixels, assets.texture->palette);
     }
     s_cube_mesh = assets.mesh;
+    if (DEMO_HELLO) {
+        uint32_t triangle_error = ASSET_ERR_OK;
+        if (!n64::assets_load_mesh("TRIANGLE.MSH", &s_triangle_mesh, &triangle_error) ||
+            s_triangle_mesh == nullptr) {
+            Log_Message(LOG_LEVEL_ERROR, "n64_hal",
+                        "boot: TRIANGLE.MSH unavailable (asset error %u), halt",
+                        (unsigned)triangle_error);
+            halt_forever();
+        }
+    }
     if (s_checker_texture == RENDER_TEXTURE_INVALID || s_cube_texture == RENDER_TEXTURE_INVALID ||
         s_cube_mesh == nullptr) {
         Log_Message(LOG_LEVEL_ERROR, "n64_hal", "boot: texture/mesh unavailable, halt");
@@ -758,13 +887,14 @@ int main(void)
 
     run_w0_golden();
     (void)z_self_test();
-    run_benchmarks();
+    if (!DEMO_HELLO) {
+        run_benchmarks();
+    }
 
-    Mat4 view;
-    Mat4 proj;
-    w1_camera(&view, &proj);
-
-    s_fps_start_ms = Platform_GetTimeMs();
+    hello_camera_reset();
+    s_last_frame_ms = Platform_GetTimeMs();
+    s_demo_start_ms = s_last_frame_ms;
+    s_fps_start_ms = s_last_frame_ms;
     for (;;) {
         (void)Platform_PumpEvents();
 
@@ -774,16 +904,45 @@ int main(void)
         }
         s_prev_fallback_button = fallback_button;
 
+        const uint32_t now_ms = Platform_GetTimeMs();
+        uint32_t dt_ms = now_ms - s_last_frame_ms;
+        s_last_frame_ms = now_ms;
+        if (dt_ms == 0u) {
+            dt_ms = 1u;
+        } else if (dt_ms > 100u) {
+            dt_ms = 100u;
+        }
+        const fixed_t time_s = fixed_from_float((float)(now_ms - s_demo_start_ms) * 0.001f);
+        // W1 reference: вращение ~90°/с; hello — медленный swing ±0.6 rad.
+        s_angle = DEMO_HELLO ? time_s : fixed_mul(time_s, fixed_from_float(1.5707963f));
+
+        if (DEMO_HELLO) {
+            update_hello_camera(dt_ms);
+        }
+
         const uint64_t loop_start = rpe_n64_ticks_us();
-        s_angle += fixed_from_float(0.02f);
-        update_lighting();
+        if (!DEMO_HELLO) {
+            update_lighting();
+        }
         s_light_us_acc += (uint32_t)(rpe_n64_ticks_us() - loop_start);
+
+        Mat4 view;
+        Mat4 proj;
+        if (DEMO_HELLO) {
+            hello_camera(&view, &proj);
+        } else {
+            w1_camera(&view, &proj);
+        }
 
         const uint64_t frame_start = rpe_n64_ticks_us();
         Render_BeginFrame();
         const uint64_t after_begin = rpe_n64_ticks_us();
         Render_Clear(0u, 0u, 32u);
-        draw_w1_scene(view, proj);
+        if (DEMO_HELLO) {
+            draw_hello_scene(view, proj, time_s);
+        } else {
+            draw_w1_scene(view, proj);
+        }
         if (s_show_overlay) {
             draw_overlay();
             hal_render_backend_set_text_overlay(s_overlay_text);
@@ -806,7 +965,8 @@ int main(void)
             const uint32_t fps = (elapsed_ms != 0u) ? (60000u / elapsed_ms) : 0u;
             const uint32_t avg_us = (elapsed_ms != 0u) ? ((elapsed_ms * 1000u) / 60u) : 0u;
             Log_Message(LOG_LEVEL_INFO, "n64_bench",
-                        "w1 frames=%u avg_us=%u fps=%u begin=%u submit=%u end=%u light=%u detach=%u tnl=%u rdp=%u draws=%u submitted=%u",
+                        "w1 frames=%u avg_us=%u fps=%u begin=%u submit=%u end=%u light=%u "
+                        "detach=%u tnl=%u rdp=%u draws=%u submitted=%u",
                         (unsigned)s_frames, (unsigned)avg_us, (unsigned)fps,
                         (unsigned)(s_begin_us_acc / s_frame_us_count),
                         (unsigned)(s_submit_us_acc / s_frame_us_count),
