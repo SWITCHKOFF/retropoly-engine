@@ -55,21 +55,21 @@ jobs:
 
       - name: libdragon-toolchain (pinned deb + SHA-256)
         run: |
-          set -euxo pipefail
+          set -euo pipefail
           mkdir -p "$N64_SDK"
           cd "$N64_SDK"
-          if [ ! -x "$N64_INST/bin/n64tool" ]; then
+          # deb содержит только mips64-elf toolchain; n64tool/mkdfs/dumpdfs
+          # ставит следующий шаг (libdragon tools-install).
+          if [ ! -x "$N64_INST/bin/mips64-elf-gcc" ]; then
             curl -L --retry 3 -o gcc-toolchain-mips64-x86_64.deb \
               https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
             sha256sum -c "$GITHUB_WORKSPACE/ci/n64-toolchain.sha256"
             rm -rf toolchain
             dpkg-deb -x gcc-toolchain-mips64-x86_64.deb toolchain
-            ls -l "$N64_INST/bin" | head -20
           else
             echo "toolchain cache hit: $N64_INST"
           fi
           test -x "$N64_INST/bin/mips64-elf-gcc"
-          test -x "$N64_INST/bin/n64tool"
 
       - name: libdragon (pinned commit → make install + tools-install)
         run: |
