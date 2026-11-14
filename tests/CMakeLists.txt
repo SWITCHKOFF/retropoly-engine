@@ -130,6 +130,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
     # -----------------------------------------------------------------------
     add_executable(n64_hal_tests
         n64/fake_n64_bridge.cpp
+        n64/fake_n64_render_bridge.cpp
         n64/n64_hal_test.cpp
         n64/n64_assets_test.cpp
         n64/n64_command_buffer_test.cpp
@@ -137,6 +138,8 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         n64/n64_input_test.cpp
         n64/n64_log_rate_test.cpp
         n64/n64_memory_test.cpp
+        n64/n64_render_math_test.cpp
+        n64/n64_render_backend_test.cpp
         "${CMAKE_SOURCE_DIR}/src/hal/n64/platform_n64.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/n64/render_n64.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_assets.cpp"
@@ -145,6 +148,7 @@ if(EXISTS "${CMAKE_SOURCE_DIR}/src/third_party/googletest/CMakeLists.txt")
         "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_log_rate.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/n64/n64_memory.cpp"
         "${CMAKE_SOURCE_DIR}/src/hal/n64/rdp_command.cpp"
+        "${CMAKE_SOURCE_DIR}/src/hal/n64/rsp_tnl.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/log/log.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/memory/memory_profiler.cpp"
         "${CMAKE_SOURCE_DIR}/src/core/math/fixed.cpp"

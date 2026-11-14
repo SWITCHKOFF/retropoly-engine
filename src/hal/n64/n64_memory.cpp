@@ -84,6 +84,7 @@ bool memory_init()
     register_arena(s_command_arena);
     register_arena(s_fs_arena);
     memory_profiler_register_static("n64_stack", MEMORY_PROFILER_RAM, CPU_STACK_BYTES);
+    memory_profiler_register_static("n64_zbuffer", MEMORY_PROFILER_RAM, ZBUFFER_BYTES);
     memory_profiler_register_static("n64_code_data_sdk", MEMORY_PROFILER_RAM,
                                     CODE_DATA_SDK_RESERVE_BYTES);
     memory_profiler_register_static("n64_framebuffers", MEMORY_PROFILER_VRAM, FRAMEBUFFER_BYTES);
@@ -139,10 +140,11 @@ bool memory_expansion_pak()
 bool memory_ledger_check()
 {
     const uint32_t rdram = memory_rdram_size();
-    const uint32_t ledger =
-        ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES + CODE_DATA_SDK_RESERVE_BYTES;
+    const uint32_t ledger = ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES +
+                            ZBUFFER_BYTES + CODE_DATA_SDK_RESERVE_BYTES;
 
-    if (ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES > RDRAM_BASE_BYTES) {
+    if (ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES + ZBUFFER_BYTES >
+        RDRAM_BASE_BYTES) {
         Log_Message(LOG_LEVEL_ERROR, "n64_mem", "ledger overflow: arenas+stack+fb exceed 4 MiB");
         return false;
     }
@@ -162,11 +164,11 @@ bool memory_ledger_check()
 void memory_log_stats()
 {
     Log_Message(LOG_LEVEL_INFO, "n64_mem",
-                "ledger: RDRAM=%u B (%s), arenas=%u, stack=%u, fb=%u, reserve=%u",
+                "ledger: RDRAM=%u B (%s), arenas=%u, stack=%u, fb=%u, zbuf=%u, reserve=%u",
                 static_cast<unsigned>(memory_rdram_size()),
                 memory_expansion_pak() ? "8 MiB expansion" : "4 MiB base",
                 static_cast<unsigned>(ENGINE_ARENAS_BYTES), static_cast<unsigned>(CPU_STACK_BYTES),
-                static_cast<unsigned>(FRAMEBUFFER_BYTES),
+                static_cast<unsigned>(FRAMEBUFFER_BYTES), static_cast<unsigned>(ZBUFFER_BYTES),
                 static_cast<unsigned>(CODE_DATA_SDK_RESERVE_BYTES));
     Log_Message(LOG_LEVEL_INFO, "n64_mem", "peak: asset=%u frame=%u command=%u fs=%u",
                 static_cast<unsigned>(asset_arena().peak()),

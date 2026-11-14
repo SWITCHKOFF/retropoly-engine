@@ -136,6 +136,23 @@ void rpe_n64_frame_end(void);
 bool rpe_n64_frame_active(void);
 
 /**
+ * Последний выведенный color-буфер (RGBA16, display surface).
+ *
+ * @param out_stride Выход: stride в байтах (может быть NULL).
+ * @param out_width Выход: ширина (может быть NULL).
+ * @param out_height Выход: высота (может быть NULL).
+ * @return указатель на пиксели или NULL (кадр ещё не выводился).
+ */
+void* rpe_n64_frame_color_buffer(uint32_t* out_stride, uint32_t* out_width,
+                                 uint32_t* out_height);
+
+/** wall-время последнего rpe_n64_frame_begin (display_get+attach), µs. */
+uint32_t rpe_n64_frame_begin_us(void);
+
+/** wall-время последнего rpe_n64_frame_end (detach_show/VI), µs. */
+uint32_t rpe_n64_frame_detach_us(void);
+
+/**
  * Вывод debug-текста в активный кадр (встроенный шрифт 8×8, id=1).
  *
  * @return true — текст поставлен; false — кадра нет/текст NULL.

@@ -1,5 +1,21 @@
 # Скриншоты (PC vs PS1 vs N64)
 
+## `n64_render_s43_44.png` — N64 renderer gate (Спринт 43–44)
+
+Pinned gopher64 1.2.1 (Xvfb/llvmpipe Vulkan, 320×240, 16-bit VI):
+4 вращающихся текстурированных куба (48 треугольников), RSP T&L +
+RSP dot-lighting, RDPQ с аппаратным Z (18-bit internal), CI8
+TMEM-полосы 32×64 + TLUT (2560 B), hardware bilinear. Overlay:
+`RPE N64 S43-44`, `RSP TNL+RDP`, `RSP LIGHT`, frame/FPS, W0 hash.
+W0 5/5 PASS (`9e92e718`/`569949c5`), CPU-fallback hash совпадает,
+Z self-test near-first/far-second PASS, W1 ≈59 FPS (16.9 ms).
+Подробности — [`../docs/N64.md`](../docs/N64.md) §6.1/§9.2,
+[`../docs/adr/ADR-015-n64-rsp-rdp.md`](../docs/adr/ADR-015-n64-rsp-rdp.md).
+
+Отличия от PC/PS1/Saturn: perspective-correct UV (не affine), hardware
+bilinear (не nearest), 16-bit output с D-pad/VI dither-политикой,
+аппаратный Z вместо Painter's; TMEM-полосы и downsample 256×256 → 64×64.
+
 ## `n64_boot_s41_42.png` — N64 HAL gate (Спринт 41–42)
 
 Скриншот boot-demo в pinned gopher64 1.2.1 (Xvfb/llvmpipe, 320×240,

@@ -13,10 +13,11 @@ demo-образы, но не готовый SDK и UI-клиент — см.
 [docs/RELEASING.md](docs/RELEASING.md).
 
 v0.3.0 — Nintendo 64 (S39–46, development): pinned libdragon + GCC
-16.2.0 mips64-elf, bootable `.z64` (VI 320×240 + RDPQ clear) и CI без
-эмулятора — S39–40; HAL VI/input/read-only DFS/память + render skeleton
-— S41–42; RSP/RDP/Z/TMEM — S43–44; демо/SDK/UI — S45–46. N64 пока
-**development**; публикация отложена до v0.9.x (release freeze).
+16.2.0 mips64-elf, bootable `.z64` и CI без эмулятора — S39–40; HAL
+VI/input/read-only DFS/память — S41–42; RSP T&L + RSP dot-lighting,
+RDPQ с аппаратным Z, CI8/TMEM-полосы и W0/W1 — S43–44; демо/SDK/UI —
+S45–46. N64 пока **development**; публикация отложена до v0.9.x
+(release freeze).
 
 **Любая публикация релизов проекта отложена до v0.9.x (release freeze).**
 v0.2.1 — release candidate: SDK+UI payload и release gate v2 готовы, но
@@ -151,13 +152,14 @@ python3 scripts/package_ui.py --build-dir build/ui-release --version 0.2.1
 | [docs/SDK.md](docs/SDK.md) | SDK: install/export, `find_package`, примеры, пакеты PC/PS1/Saturn, manifest/checksums |
 | [docs/UI_CLIENT.md](docs/UI_CLIENT.md) | UI client: установка, project/target/import/build/run, диагностика, упаковка |
 | [docs/SATURN.md](docs/SATURN.md) | Saturn: первоисточники, toolchain, разрешение, память, ввод, эмулятор |
-| [docs/N64.md](docs/N64.md) | N64: reference-факты, toolchain/libdragon, ROM/CRC policy, memory ledger, DFS, input mapping, gopher64 gate |
+| [docs/N64.md](docs/N64.md) | N64: reference-факты, toolchain/libdragon, ROM/CRC, memory ledger, DFS, input, RSP T&L/RDP/Z/TMEM, gopher64 gate |
 | [docs/adr/ADR-008-saturn-backend.md](docs/adr/ADR-008-saturn-backend.md) | Нормативное решение по Saturn backend |
 | [docs/adr/ADR-009-master-slave.md](docs/adr/ADR-009-master-slave.md) | Master+Slave SH-2: SPSC-синхронизация, workload, fallback |
 | [docs/adr/ADR-011-public-sdk-api.md](docs/adr/ADR-011-public-sdk-api.md) | Границы публичного SDK API и install/export |
 | [docs/adr/ADR-012-ui-client.md](docs/adr/ADR-012-ui-client.md) | UI client: SDL3 + Dear ImGui, `.rpeproject`, границы UI/SDK |
 | [docs/adr/ADR-013-release-freeze.md](docs/adr/ADR-013-release-freeze.md) | Release freeze: любая публикация релизов отложена до v0.9.x, draft-only workflow |
 | [docs/adr/ADR-014-n64-backend.md](docs/adr/ADR-014-n64-backend.md) | N64 backend: libdragon/toolchain, `.z64`, ROM header/CRC, gopher64 |
+| [docs/adr/ADR-015-n64-rsp-rdp.md](docs/adr/ADR-015-n64-rsp-rdp.md) | N64 renderer: RSP T&L, RDP/Z, TMEM-текстуры, W0/W1 |
 | [docs/API.md](docs/API.md) | Вводный обзор API: ECS, Renderer, Input, FileSystem, Math |
 | [docs/ASSETS.md](docs/ASSETS.md) | Байтовые форматы `.mesh`/`.tex` v1, CLI конвертера, загрузчики |
 | [docs/TESTING.md](docs/TESTING.md) | Пирамида тестов, запуск unit/integration/visual, QA-чек-листы |
@@ -189,6 +191,13 @@ N64 HAL S41–42 (DFS `CUBE.MSH`/`TEX0.TEX`, memory overlay, input):
 | n64 boot S41–42 |
 |---|
 | ![n64-boot-s41-42](screenshots/n64_boot_s41_42.png) |
+
+N64 renderer S43–44 (RSP T&L + lighting, RDP/Z, 4 текстурированных куба,
+TMEM-полосы, bilinear; gopher64 1.2.1):
+
+| n64 render S43–44 |
+|---|
+| ![n64-render-s43-44](screenshots/n64_render_s43_44.png) |
 
 UI client:
 
@@ -242,7 +251,8 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] Release gate v2: payload `sdk/`+`ui/`, checksums, negative-tests (S37–38)
 - [x] N64 S39–40: libdragon/toolchain, bootable `.z64`, CI, docs/N64.md, ADR-014
 - [x] N64 S41–42: HAL VI/input/DFS/память, render skeleton, gopher64 gate
-- [ ] N64 S43–46: RSP/RDP/Z/TMEM → hello_triangle (v0.3.0 draft)
+- [x] N64 S43–44: RSP T&L + RSP lighting, RDPQ/Z/TMEM, W0/W1, gopher64 gate
+- [ ] N64 S45–46: hello_triangle/rotating_cube, бюджеты, SDK/UI (v0.3.0 draft)
 - [ ] Публикация отложена до v0.9.x (release freeze); v0.2.1 Release удалён/отозван
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:

@@ -94,19 +94,17 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ра
 | [sprint_43_44.md](sprint_43_44.md) | 43–44 | 85–88 | 05.04–02.05.2027 | v0.3.0 | RSP-микрокод, RDP, аппаратный Z-буфер, текстуры | 67.5 ч |
 | [sprint_45_46.md](sprint_45_46.md) | 45–46 | 89–92 | 03.05–30.05.2027 | v0.3.0 | hello_triangle/rotating_cube, бюджеты, SDK/UI, draft v0.3.0 | 56.7 ч |
 
-> **Статус (2026-11-14):** S39–42 (N64 toolchain/libdragon, `n64-release`,
+> **Статус (2026-11-14):** S39–44 (N64 toolchain/libdragon, `n64-release`,
 > HAL VI/input/DFS/память, bootable `.z64` + DFS, `build-n64.yml`,
-> ADR-014, `docs/N64.md`) **реализованы локально**: pinned GCC 16.2.0 +
-> libdragon `e356bf3`, `hello_n64.z64` с `CUBE.MSH`/`TEX0.TEX` в
-> read-only DFS, ROM verifier PASS, 60-с gate и 10-минутный stress в
-> gopher64 1.2.1, N64 host-тесты 46/46 (+ASan), PC regression 335/335.
-> Remote CI green: `build-n64` push `43601517181` / PR `43601522296`,
-> `tests` `43601517320`, `build-pc` `43601517203`, `build-ps1`
-> `43601517201`, `build-saturn` `43601517188`, `sdk-package`
-> `43601517177`, `ui-client` `43601517161` (commit `4882e1d`).
-> Baseline эмулятора — **gopher64 1.2.1**
-> (mupen64plus не грузит libdragon IPL3 r5+, mupen64plus-core#1185; ares
-> без Linux-бинаря). S43–44 — RSP/RDP, Z-буфер, TMEM/текстуры; S45–46 —
+> ADR-014/015, `docs/N64.md`) **реализованы локально**: pinned GCC
+> 16.2.0 + libdragon `e356bf3`, `hello_n64.z64` с `CUBE.MSH`/`TEX0.TEX`
+> в read-only DFS, ROM verifier PASS, 60-с gate и 10-минутный stress в
+> gopher64 1.2.1, RSP T&L + RSP dot-lighting, RDPQ с аппаратным Z,
+> CI8/TMEM-полосы 32×64 (2560 B), bilinear, W0 5/5, W1 4 куба/48 tri
+> @ ≈59 FPS (gate ≥30), `n64_hal_tests` 61/61 (+ASan), benchmark YAML и
+> скриншот. Remote CI — после push. Baseline эмулятора — **gopher64
+> 1.2.1** (mupen64plus не грузит libdragon IPL3 r5+,
+> mupen64plus-core#1185; ares без Linux-бинаря). S45–46 —
 > hello_triangle/rotating_cube, W0/W1-бюджеты, N64 SDK/UI и draft
 > v0.3.0. Эмулятор в CI не запускается; visual/stress gate — ручной,
 > pinned emulator. До v0.9.x публикуются только draft-релизы.

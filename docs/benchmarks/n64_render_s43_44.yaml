@@ -1,0 +1,134 @@
+# SPDX-License-Identifier: MIT
+# RetroPolyEngine — docs/benchmarks/n64_render_s43_44.yaml
+#
+# S43–44: RSP T&L + RDP/Z/TMEM renderer. Числа сравнимы только внутри
+# этого снапшота (gopher64 1.2.1, Xvfb + llvmpipe Vulkan, 8 MiB RDRAM).
+# W1-подобная нагрузка: 4 куба × 12 треугольников = 48 (backface culling
+# уменьшает число фактических RDP-треугольников).
+
+schema: n64-reference-v1
+date: 2026-11-14
+sprint: S43–44
+release: v0.3.0-development
+
+emulator:
+  name: gopher64
+  version: 1.2.1
+  video: "Xvfb 800x600x24 + llvmpipe Vulkan (LLVM 20.1.2)"
+  settings:
+    disable_expansion_pak: false
+    overclock: false
+    screen: 320x240
+    region: NTSC
+  command: >-
+    xvfb-run -a -s "-screen 0 640x480x24" gopher64
+    --disable-expansion-pak false --overclock false hello_n64.z64
+
+build:
+  preset: n64-release
+  target: hello_n64
+  platform: PLATFORM_N64
+  toolchain: "mips64-elf-gcc 16.2.0"
+  libdragon: "e356bf3f56f7afbf7e5246329562f145965cfdfc"
+  rom:
+    hello_n64.z64: 360448
+    retro_n64.elf: 1493680
+    retro_n64.dfs: 68864
+  sections:
+    text_bytes: 263100
+    data_bytes: 14228
+    bss_bytes: 2906460
+
+render:
+  resolution: 320x240
+  pixel_format: RGBA5551
+  depth:
+    api: rdpq_attach(FMT_RGBA16)
+    buffer_bytes: 153600
+    internal_bits: 18
+    clear: 0xFFFC
+  rsp:
+    overlay: src/hal/n64/rsp_tnl.S
+    transform: "4x4 * vec4, Q16.16, 512 slots"
+    lighting: "dot(n,L) on RSP; ambient/color scale on CPU"
+    sync: "rspq_wait + D-cache invalidate"
+  tmem:
+    total_bytes: 4096
+    texture_area_bytes: 2048
+    tlut_bytes: 512
+    strip_64x64_ci8: 2560        # 32x64 texels + TLUT
+    strips_64x64: 2
+  texture:
+    source: "TEX0.TEX 256x256 -> 64x64 nearest"
+    format: CI8 + 256-entry TLUT (RGB555+STP -> RGBA5551)
+    filter_textured: bilinear
+    filter_untextured: point
+
+memory:
+  rdram_bytes: 8388608          # reference environment (Expansion Pak)
+  ledger_4mib_bytes: 4194304
+  engine_arenas_bytes: 2097152
+  stack_bytes: 65536
+  framebuffers_bytes: 307200
+  z_buffer_bytes: 153600
+  code_data_sdk_reserve_bytes: 1570816
+  heap: forbidden
+
+workload:
+  name: w1_four_cubes
+  cubes: 4
+  triangles_scene: 48
+  cubes_draws_per_frame: 72    # sub-triangles after 2 TMEM strips (last frame)
+  lighting_vertices: 96        # 4 cubes × 24 normal dots
+  frame_window: 60
+
+results:
+  frame_us_avg: 16883
+  fps: 59
+  breakdown_us:
+    begin: 1437                  # display_get/attach
+    submit: 2564                 # Render_DrawMesh/overlay submission
+    end: 10902                   # TNL wait + RDP groups + detach
+    light: 1691                  # RSP dot lighting
+    tnl: 1848                    # rspq_wait in end_frame
+    rdp: 3837                    # rdpq_triangle groups
+    detach: 21                   # rdpq_detach_show
+  gate: ">= 30 FPS (target 60; clean run ≈59 FPS in software RDP)"
+
+tnl_benchmark:
+  # RSP transform batches (no RDP), Q16.16; CPU = tnl_transform_clip_cpu.
+  triangles_48:
+    cpu_us: 993
+    rsp_us: 751
+  triangles_256:
+    cpu_us: 4768
+    rsp_us: 2281
+
+w0_golden:
+  framebuffer: 320x240
+  hash: FNV-1a-32 over RGB
+  cases:
+    visible:    { hash: "0x9e92e718", submitted: 1, cull: 0, clip: 0 }
+    backface:   { hash: "0x569949c5", submitted: 1, cull: 1, clip: 0 }
+    near_cross: { hash: "0x569949c5", submitted: 1, cull: 1, clip: 1 }
+    far_cross:  { hash: "0x569949c5", submitted: 1, cull: 1, clip: 2 }
+    behind:     { hash: "0x569949c5", submitted: 1, cull: 1, clip: 3 }
+  cpu_fallback_visible_hash: "0x9e92e718"
+  stable_between_runs: true
+
+self_tests:
+  rsp_tnl_vs_cpu_max_error_q16: 0
+  rsp_light_dot_vs_cpu_max_error_q16: 0
+  z_near_first_far_second_pixel: [255, 0, 0]
+  z_self_test: PASS
+  stress_n64_ms: 618375
+  stress_frames: 36900
+  rdram_4mib_base: true
+  n64_host_tests: 61
+
+screenshot: screenshots/n64_render_s43_44.png
+
+notes:
+  - "gopher64 — software RDP; bilinear + lighting укладываются в gate >=30 FPS."
+  - "На железе кадр укладывается в 60 Hz; point-фильтр снимает ~1 ms в software RDP."
+  - "CPU-fallback — аварийный режим; hash visible совпадает с RSP-путём."

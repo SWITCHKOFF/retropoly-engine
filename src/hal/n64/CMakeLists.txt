@@ -45,6 +45,8 @@ add_library(retro_engine_hal STATIC
     n64_log_rate.cpp
     n64_memory.cpp
     rdp_command.cpp
+    rsp_tnl.cpp
+    n64_render_bridge.c
     n64_bridge.c)
 
 retro_engine_apply_flags(retro_engine_hal)
@@ -60,8 +62,55 @@ target_compile_definitions(retro_engine_hal PRIVATE PLATFORM_N64=1)
 # N64_INST, как PS1 требует PSn00bSDK.
 target_link_libraries(retro_engine_hal PRIVATE retro_engine_log)
 
+# --- S43–44: RSP T&L overlay (rsp_tnl.S) -----------------------------------
+# Повторяет правило n64.mk для ucode: ассемблировать rsp-файл линкером с
+# rsp.ld, вырезать .text/.data в бинарники, обернуть их в ELF-объекты с
+# символами <name>_text_start/_end и <name>_data_start/_end (DEFINE_RSP_UCODE).
+set(RPE_N64_UCODE_BASE "${CMAKE_CURRENT_BINARY_DIR}/rsp_tnl")
+set(RPE_N64_UCODE_ELF "${RPE_N64_UCODE_BASE}.elf")
+set(RPE_N64_UCODE_MAP "${RPE_N64_UCODE_BASE}.map")
+set(RPE_N64_UCODE_TEXT_BIN "${RPE_N64_UCODE_BASE}.text.bin")
+set(RPE_N64_UCODE_DATA_BIN "${RPE_N64_UCODE_BASE}.data.bin")
+set(RPE_N64_UCODE_TEXT_OBJ "${RPE_N64_UCODE_BASE}.text.o")
+set(RPE_N64_UCODE_DATA_OBJ "${RPE_N64_UCODE_BASE}.data.o")
+
+add_custom_command(
+    OUTPUT "${RPE_N64_UCODE_TEXT_OBJ}" "${RPE_N64_UCODE_DATA_OBJ}"
+    BYPRODUCTS "${RPE_N64_UCODE_ELF}" "${RPE_N64_UCODE_MAP}"
+               "${RPE_N64_UCODE_TEXT_BIN}" "${RPE_N64_UCODE_DATA_BIN}"
+    COMMAND "${N64_BINDIR}/mips64-elf-gcc"
+            -march=mips1 -mabi=32 -Wa,--fatal-warnings
+            "-I${N64_INCLUDEDIR}"
+            -nostartfiles -Wl,-Trsp.ld -Wl,--gc-sections
+            "-Wl,-Map=${RPE_N64_UCODE_MAP}"
+            -o "rsp_tnl.elf" "${CMAKE_CURRENT_SOURCE_DIR}/rsp_tnl.S"
+    COMMAND "${N64_BINDIR}/mips64-elf-objcopy" -O binary -j .text
+            "rsp_tnl.elf" "rsp_tnl.text.bin"
+    COMMAND "${N64_BINDIR}/mips64-elf-objcopy" -O binary -j .data
+            "rsp_tnl.elf" "rsp_tnl.data.bin"
+    COMMAND "${N64_BINDIR}/mips64-elf-objcopy" -I binary -O elf32-bigmips -B mips4300
+            --redefine-sym _binary_rsp_tnl_text_bin_start=rpe_tnl_text_start
+            --redefine-sym _binary_rsp_tnl_text_bin_end=rpe_tnl_text_end
+            --redefine-sym _binary_rsp_tnl_text_bin_size=rpe_tnl_text_size
+            --set-section-alignment .data=8 --rename-section .text=.data
+            "rsp_tnl.text.bin" "rsp_tnl.text.o"
+    COMMAND "${N64_BINDIR}/mips64-elf-objcopy" -I binary -O elf32-bigmips -B mips4300
+            --redefine-sym _binary_rsp_tnl_data_bin_start=rpe_tnl_data_start
+            --redefine-sym _binary_rsp_tnl_data_bin_end=rpe_tnl_data_end
+            --redefine-sym _binary_rsp_tnl_data_bin_size=rpe_tnl_data_size
+            --set-section-alignment .data=8 --rename-section .text=.data
+            "rsp_tnl.data.bin" "rsp_tnl.data.o"
+    DEPENDS "${CMAKE_CURRENT_SOURCE_DIR}/rsp_tnl.S"
+    WORKING_DIRECTORY "${CMAKE_CURRENT_BINARY_DIR}"
+    COMMENT "n64: RSP T&L overlay (rsp_tnl.S → .text/.data objects)"
+    VERBATIM)
+
+set_source_files_properties("${RPE_N64_UCODE_TEXT_OBJ}" "${RPE_N64_UCODE_DATA_OBJ}"
+    PROPERTIES GENERATED TRUE EXTERNAL_OBJECT TRUE)
+
 # --- Bootable ELF ----------------------------------------------------------
-add_executable(retro_n64 main_n64.cpp)
+add_executable(retro_n64 main_n64.cpp
+    "${RPE_N64_UCODE_TEXT_OBJ}" "${RPE_N64_UCODE_DATA_OBJ}")
 retro_engine_apply_flags(retro_n64)
 target_include_directories(retro_n64 PRIVATE
     "${CMAKE_SOURCE_DIR}/src"

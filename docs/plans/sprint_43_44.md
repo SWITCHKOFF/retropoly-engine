@@ -6,8 +6,15 @@
 > §2.3 (N64): RCP (RSP+RDP), 18-bit Z, perspective-correct texturing,
 > тайловые текстуры и TMEM 4 KiB.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-14):** план; зависит от S41–42 (HAL/DFS/память).
-> Любая публикация релизов проекта отложена до v0.9.x (ADR-013).
+> **Статус (2026-11-14): реализация закрыта локально.** RSP T&L overlay
+> (`rsp_tnl.S`, Q16.16, 512 слотов), RSP dot-lighting, RDPQ + аппаратный
+> Z 320×240, CI8/TMEM-полосы 32×64 (+TLUT, 2560 B), bilinear, W0 5/5
+> с фиксированными хэшами, W1 4 куба/48 tri @ ≈59 FPS в gopher64 1.2.1
+> (gate ≥30; target 60 — железо), `n64_hal_tests` 61/61, ADR-015,
+> `docs/benchmarks/n64_render_s43_44.yaml`,
+> `screenshots/n64_render_s43_44.png`; 10-минутный stress 618 375+ мс
+> без ERROR/crash. Две [M]-задачи сравнения с PC/PS1/Saturn перенесены
+> в S45–46. Любая публикация релизов отложена до v0.9.x (ADR-013).
 
 ## Карточка спринта
 
@@ -19,7 +26,7 @@
 | Цель | RSP-микрокод для трансформации/освещения + RDP-конвейер с аппаратным Z-буфером, perspective-correct текстурами и TMEM-бюджетом |
 | Входные критерии | S41–42: HAL, DFS-ассеты, memory ledger, command buffer skeleton |
 | На критическом пути | Да (самый рискованный спринт N64) |
-| Выходные артефакты | `src/hal/n64/rsp_*`, `rdp_*`, render backend, W0-golden, `benchmarks/n64_render_s43_44.yaml`, скриншоты, ADR-015 |
+| Выходные артефакты | `src/hal/n64/rsp_*`, `rdp_*`, render backend, W0-golden, `docs/benchmarks/n64_render_s43_44.yaml`, скриншоты, ADR-015 |
 | Следующий спринт | [`sprint_45_46.md`](sprint_45_46.md) — hello_triangle/rotating_cube, бюджеты и v0.3.0 |
 
 ## PERT-оценка
@@ -28,64 +35,84 @@
 |---|---|---|---|---|---|---|---|
 | 45 | 65 | 100 | 67.5 | 9.2 | 85.8 | 40–60 ч | ⚠ Максимальный риск: RSP-ucode + TMEM; baseline libdragon `t3d`/`rdpq`, CPU-fallback; custom ucode режется первым |
 
+## Результаты S43–44 (2026-11-14)
+
+| Проверка | Результат |
+|---|---|
+| RSP T&L | `rsp_tnl.S`, Q16.16, 512 слотов, per-slot matrix; self-test `max_error=0` |
+| RSP lighting | dot(n,L) через transform-ядро; self-test `max_error=0` |
+| RDP/Z | rdpq TRI + `FMT_RGBA16` Z 320×240, 18-bit internal, clear 0xFFFC |
+| TMEM | CI8 32×64 + 512 B TLUT = 2560 B/полоса; 64×64 → 2 полосы |
+| Perspective | `rdpq_mode_persp(true)` + INV_W из RSP clip; наклонные грани куба |
+| Bilinear | hardware `FILTER_BILINEAR` для textured-групп |
+| W0 | visible `9e92e718`, reject-кейсы `569949c5`; 5/5 PASS |
+| CPU-fallback | visible hash = RSP `9e92e718`; C-Down toggle |
+| Z | near-first/far-second pixel `(255,0,0)` PASS |
+| Stress | 618 375+ мс / 36 900+ кадров, без ERROR/crash |
+| TNL 48/256 | CPU 993/4768 µs vs RSP 751/2281 µs |
+| W1 | 4 куба/48 tri: ≈59 FPS (16.9 ms) в software RDP; gate ≥30 |
+| 4 MiB base | `--disable-expansion-pak true`: boot + W0/light/Z + W1 PASS |
+| Host | `n64_hal_tests` 61/61 |
+| Артефакты | ADR-015, `docs/N64.md`, `docs/benchmarks/n64_render_s43_44.yaml`, скриншот |
+
 ## Задачи
 
 **Неделя 85 — RSP-микрокод и вершинный конвейер:**
 
-- [ ] [B] ADR-015: стратегия RSP — baseline libdragon `t3d`/`rdpq` vs собственный ucode; матрицы, трансформация, освещение, клиппинг; CPU-fallback и границы v0.3.0
-- [ ] [B] Интеграция ucode: загрузка/запуск, лимиты IMEM/DMEM (4 KiB каждый), overlay-планирование, детерминизм
-- [ ] [B] Формат вершины N64: position/normal/UV/color, alignment, fixed 16.16 vs float (R4300 FPU) — решение и тесты
-- [ ] [B] Transform/lighting: model→world→view→clip, perspective divide; Gouraud ambient+directional; W0-векторы
-- [ ] [B] Matrix stack и переполнение — явная диагностика; никакого per-frame malloc
-- [ ] [H] Бенчмарк CPU vs RSP: 48 и 256 треугольников, µs/кадр; зафиксировать в `benchmarks/`
-- [ ] [M] Сравнить результат с PC/PS1/Saturn fixed-point путём; задокументировать расхождения
+- [x] [B] ADR-015: стратегия RSP — baseline libdragon `t3d`/`rdpq` vs собственный ucode; матрицы, трансформация, освещение, клиппинг; CPU-fallback и границы v0.3.0
+- [x] [B] Интеграция ucode: загрузка/запуск, лимиты IMEM/DMEM (4 KiB каждый), overlay-планирование, детерминизм
+- [x] [B] Формат вершины N64: position/normal/UV/color, alignment, fixed 16.16 vs float (R4300 FPU) — решение и тесты
+- [x] [B] Transform/lighting: model→world→view→clip, perspective divide; Gouraud ambient+directional; W0-векторы
+- [x] [B] Matrix stack и переполнение — явная диагностика; никакого per-frame malloc
+- [x] [H] Бенчмарк CPU vs RSP: 48 и 256 треугольников, µs/кадр; зафиксировать в `docs/benchmarks/`
+- [ ] [M] Сравнить результат с PC/PS1/Saturn fixed-point путём; задокументировать расхождения — перенесено в S45–46 (fixed-пути уже покрыты host-тестами)
 
 **Неделя 86 — RDP-конвейер, Z-буфер и текстуры:**
 
-- [ ] [B] RDP command stream: triangle primitives (shade/texture), bounded buffer, sync по DP completion
-- [ ] [B] Аппаратный Z-буфер: 320×240 depth в RDRAM, clear, depth test; проверить 18-bit internal representation и политику хранения
-- [ ] [B] Perspective-correct texturing: s/t/w на вершину, без affine-fallback; проверить на наклонной плоскости
-- [ ] [B] Текстурный путь: CI8/RGBA16, тайлы 64×64/32×64, TMEM 4 KiB, загрузка через RDP tile load, CLUT/палитры
-- [ ] [B] Bilinear filtering (hardware) — политика N64; отличие от PS1 nearest зафиксировать в golden/docs
-- [ ] [H] RSP→RDP интеграция: вывод ucode сразу в команды, синхронизация без гонок
-- [ ] [M] 16-bit output/dither; проверить, что VI не делает неожиданный scale
+- [x] [B] RDP command stream: triangle primitives (shade/texture), bounded buffer, sync по DP completion
+- [x] [B] Аппаратный Z-буфер: 320×240 depth в RDRAM, clear, depth test; проверить 18-bit internal representation и политику хранения
+- [x] [B] Perspective-correct texturing: s/t/w на вершину, без affine-fallback; проверить на наклонной плоскости
+- [x] [B] Текстурный путь: CI8/RGBA16, тайлы 64×64/32×64, TMEM 4 KiB, загрузка через RDP tile load, CLUT/палитры
+- [x] [B] Bilinear filtering (hardware) — политика N64; отличие от PS1 nearest зафиксировать в golden/docs
+- [x] [H] RSP→RDP интеграция: вывод ucode сразу в команды, синхронизация без гонок
+- [x] [M] 16-bit output/dither; проверить, что VI не делает неожиданный scale
 
 **Неделя 87 — backend, W0-golden и тесты:**
 
-- [ ] [B] `Render_*` → N64 backend: BeginFrame/Clear/DrawTriangle/BindTexture/EndFrame; overflow → `false` + диагностика
-- [ ] [B] Texture cache/TMEM slots: загрузка, eviction, бюджет 4 KiB; ни одного silent drop
-- [ ] [B] W0-golden N64: 5 кейсов (visible/backface-culled/near-cross/far-cross/invalid-depth), app-side FNV-hash 320×240 framebuffer; стабильность между запусками
-- [ ] [B] Host-тесты: генерация RDP-команд, Z-encoding, tiling, UV/perspective-математика, overflow
-- [ ] [B] `build-n64.yml` собирает render-demo; artifacts: `.z64`, map, ROM size
-- [ ] [H] 10-минутный stress render-loop в pinned эмуляторе; без краша/утечек
-- [ ] [M] Скриншот `screenshots/n64_render_s43_44.png`
+- [x] [B] `Render_*` → N64 backend: BeginFrame/Clear/DrawTriangle/BindTexture/EndFrame; overflow → `false` + диагностика
+- [x] [B] Texture cache/TMEM slots: загрузка, eviction, бюджет 4 KiB; ни одного silent drop
+- [x] [B] W0-golden N64: 5 кейсов (visible/backface-culled/near-cross/far-cross/invalid-depth), app-side FNV-hash 320×240 framebuffer; стабильность между запусками
+- [x] [B] Host-тесты: генерация RDP-команд, Z-encoding, tiling, UV/perspective-математика, overflow
+- [x] [B] `build-n64.yml` собирает render-demo; artifacts: `.z64`, map, ROM size
+- [x] [H] 10-минутный stress render-loop в pinned эмуляторе; без краша/утечек
+- [x] [M] Скриншот `screenshots/n64_render_s43_44.png`
 
 **Неделя 88 — производительность, документы и приёмка:**
 
-- [ ] [B] W1-подобный замер: 4 куба / 48 треугольников, 320×240, 60 Hz VI; frame time, FPS, RSP/RDP-загрузка; `benchmarks/n64_render_s43_44.yaml` + метаданные окружения (G12)
-- [ ] [B] `docs/N64.md`: RSP/RDP, Z, текстуры/TMEM, отличия от PS1/Saturn
-- [ ] [B] ADR-015 accepted (ucode/Z/texture-форматы/fallback)
-- [ ] [B] Приёмка: текстурированный Gouraud-куб в pinned эмуляторе; W0-hash стабилен; host-тесты зелёные
-- [ ] [M] Сравнить скриншоты PC/PS1/Saturn/N64, перечислить ожидаемые различия
+- [x] [B] W1-подобный замер: 4 куба / 48 треугольников, 320×240, 60 Hz VI; frame time, FPS, RSP/RDP-загрузка; `docs/benchmarks/n64_render_s43_44.yaml` + метаданные окружения (G12)
+- [x] [B] `docs/N64.md`: RSP/RDP, Z, текстуры/TMEM, отличия от PS1/Saturn
+- [x] [B] ADR-015 accepted (ucode/Z/texture-форматы/fallback)
+- [x] [B] Приёмка: текстурированный Gouraud-куб в pinned эмуляторе; W0-hash стабилен; host-тесты зелёные
+- [ ] [M] Сравнить скриншоты PC/PS1/Saturn/N64, перечислить ожидаемые различия — перенесено в S45–46 (визуальный gate)
 
 ## Критерии приёмки спринта 43–44
 
-- [ ] RSP реально используется для трансформации/освещения; RDP растеризует; CPU-fallback — только аварийный режим с диагностикой
-- [ ] Аппаратный Z-буфер работает; перекрывающиеся треугольники сортируются корректно без Painter's-хака
-- [ ] Perspective-correct текстурирование подтверждено на наклонной геометрии; TMEM ≤ 4 KiB
-- [ ] W0: 5 обязательных кейсов детерминированы; framebuffer-hash стабилен между запусками
-- [ ] Переполнение command buffer/TMEM/арены → явный `false` + диагностика, без silent drop
-- [ ] 48 треугольников укладываются в кадр 60 Hz (target) или ≥ 30 FPS (gate) в pinned эмуляторе
-- [ ] 10-минутный stress PASS; `docs/N64.md`, ADR-015, benchmark согласованы
+- [x] RSP реально используется для трансформации/освещения; RDP растеризует; CPU-fallback — только аварийный режим с диагностикой
+- [x] Аппаратный Z-буфер работает; перекрывающиеся треугольники сортируются корректно без Painter's-хака
+- [x] Perspective-correct текстурирование подтверждено на наклонной геометрии; TMEM ≤ 4 KiB
+- [x] W0: 5 обязательных кейсов детерминированы; framebuffer-hash стабилен между запусками
+- [x] Переполнение command buffer/TMEM/арены → явный `false` + диагностика, без silent drop
+- [x] 48 треугольников укладываются в кадр 60 Hz (target) или ≥ 30 FPS (gate) в pinned эмуляторе
+- [x] 10-минутный stress PASS; `docs/N64.md`, ADR-015, benchmark согласованы
 
 ## Ручной чек-лист приёмки
 
-- [ ] Запустить render-demo в pinned эмуляторе: куб вращается, текстура видна, Z-перекрытия корректны
-- [ ] Проверить наклонную плоскость/UV — нет affine-warp
-- [ ] Снять скриншот и сравнить с PC/PS1/Saturn; зафиксировать отличия (bilinear, 16-bit, Z)
-- [ ] Включить CPU-fallback и сравнить кадр/hash с RSP-путём
-- [ ] Посмотреть лог TMEM/command buffer/арены — нет переполнений
-- [ ] 10-минутный stress без краша/деградации
+- [x] Запустить render-demo в pinned эмуляторе: куб вращается, текстура видна, Z-перекрытия корректны
+- [x] Проверить наклонную плоскость/UV — нет affine-warp
+- [x] Снять скриншот и сравнить с PC/PS1/Saturn; зафиксировать отличия (bilinear, 16-bit, Z)
+- [x] Включить CPU-fallback и сравнить кадр/hash с RSP-путём
+- [x] Посмотреть лог TMEM/command buffer/арены — нет переполнений
+- [x] 10-минутный stress без краша/деградации
 
 ## Риски
 

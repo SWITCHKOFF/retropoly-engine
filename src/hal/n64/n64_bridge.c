@@ -19,15 +19,24 @@
 #include <string.h>
 
 #include "hal/n64/n64_log_rate.h"
+#include "hal/n64/n64_render_bridge.h"
 
 #define RPE_N64_LOG_BUFFER 256
+#define RPE_N64_FB_WIDTH 320
+#define RPE_N64_FB_HEIGHT 240
 
 static bool s_core_ready = false;
 static bool s_fs_ready = false;
 static bool s_frame_active = false;
 static surface_t* s_frame_surface = NULL;
+static surface_t s_last_color_surface;
+static bool s_last_color_valid = false;
+static uint16_t s_zbuffer[RPE_N64_FB_WIDTH * RPE_N64_FB_HEIGHT] __attribute__((aligned(64)));
+static surface_t s_zbuffer_surface;
 static rdpq_font_t* s_debug_font = NULL;
 static uint32_t s_log_dropped_reported = 0u;
+static uint32_t s_frame_begin_us = 0u;
+static uint32_t s_frame_detach_us = 0u;
 
 static const char* n64_level_tag(int level)
 {
@@ -69,6 +78,9 @@ bool rpe_n64_core_init(void)
     s_log_dropped_reported = 0u;
     s_frame_active = false;
     s_frame_surface = NULL;
+    s_last_color_valid = false;
+    s_zbuffer_surface = surface_make_linear(s_zbuffer, FMT_RGBA16, RPE_N64_FB_WIDTH,
+                                            RPE_N64_FB_HEIGHT);
     s_core_ready = true;
     return true;
 }
@@ -87,11 +99,15 @@ void rpe_n64_core_shutdown(void)
         s_frame_surface = NULL;
     }
 
+    s_last_color_valid = false;
+
     if (s_debug_font != NULL) {
         rdpq_text_unregister_font(1);
         rdpq_font_free(s_debug_font);
         s_debug_font = NULL;
     }
+
+    rpe_n64_render_shutdown();
 
     joypad_close();
     // Дождаться RSP-очереди перед снятием overlay: повторный rdpq_init
@@ -328,14 +344,18 @@ bool rpe_n64_frame_begin(uint8_t r, uint8_t g, uint8_t b)
     if (!s_core_ready || s_frame_active) {
         return false;
     }
+    const uint64_t begin_start = get_ticks_us();
     s_frame_surface = display_get();
     if (s_frame_surface == NULL) {
         return false;
     }
-    rdpq_attach(s_frame_surface, NULL);
+    // S43–44: аппаратный Z-буфер 320×240 (RGBA16) + color surface.
+    rdpq_attach(s_frame_surface, &s_zbuffer_surface);
     const color_t clear = {(uint8_t)r, (uint8_t)g, (uint8_t)b, 0u};
     rdpq_clear(clear);
+    rdpq_clear_z(0xFFFCu);
     s_frame_active = true;
+    s_frame_begin_us = (uint32_t)(get_ticks_us() - begin_start);
     return true;
 }
 
@@ -346,6 +366,7 @@ void rpe_n64_frame_clear(uint8_t r, uint8_t g, uint8_t b)
     }
     const color_t clear = {(uint8_t)r, (uint8_t)g, (uint8_t)b, 0u};
     rdpq_clear(clear);
+    rdpq_clear_z(0xFFFCu);
 }
 
 void rpe_n64_frame_end(void)
@@ -353,7 +374,12 @@ void rpe_n64_frame_end(void)
     if (!s_frame_active) {
         return;
     }
+    // Сохраняем surface для readback (W0-hash) до display swap.
+    s_last_color_surface = *s_frame_surface;
+    s_last_color_valid = true;
+    const uint64_t detach_start = get_ticks_us();
     rdpq_detach_show();
+    s_frame_detach_us = (uint32_t)(get_ticks_us() - detach_start);
     s_frame_active = false;
     s_frame_surface = NULL;
 }
@@ -361,6 +387,34 @@ void rpe_n64_frame_end(void)
 bool rpe_n64_frame_active(void)
 {
     return s_frame_active;
+}
+
+uint32_t rpe_n64_frame_begin_us(void)
+{
+    return s_frame_begin_us;
+}
+
+uint32_t rpe_n64_frame_detach_us(void)
+{
+    return s_frame_detach_us;
+}
+
+void* rpe_n64_frame_color_buffer(uint32_t* out_stride, uint32_t* out_width,
+                                 uint32_t* out_height)
+{
+    if (!s_last_color_valid || s_last_color_surface.buffer == NULL) {
+        return NULL;
+    }
+    if (out_stride != NULL) {
+        *out_stride = s_last_color_surface.stride;
+    }
+    if (out_width != NULL) {
+        *out_width = s_last_color_surface.width;
+    }
+    if (out_height != NULL) {
+        *out_height = s_last_color_surface.height;
+    }
+    return s_last_color_surface.buffer;
 }
 
 bool rpe_n64_text_print(int x, int y, const char* text)

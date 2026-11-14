@@ -1,6 +1,6 @@
 # ADR-014: Nintendo 64 backend — toolchain, libdragon, ROM и эмулятор
 
-- **Статус:** Accepted (revision 2 — S41–42)
+- **Статус:** Accepted (revision 3 — S43–44; renderer decisions — ADR-015)
 - **Дата:** 2026-11-14
 - **Спринт:** 39–40 (недели 77–80), 41–42 (недели 81–84), веха v0.3.0
 - **Связанные документы:** [`../plans/sprint_39_40.md`](../plans/sprint_39_40.md),
@@ -183,6 +183,13 @@ Z/TMEM/текстуры — S43–44.
 **Debug-канал.** ISViewer/USB + rate limit 120 строк/с; при
 переполнении окна печатается счётчик dropped (диагностика не теряется
 молча).
+
+**Revision 3 — S43–44 (рендер).** RSP T&L overlay `rsp_tnl.S`, RDPQ
+с аппаратным Z 320×240, CI8/TMEM-полосы 32×64 + TLUT, bilinear,
+RSP dot-lighting, W0 5/5 и W1; детали и приёмка —
+[`ADR-015-n64-rsp-rdp.md`](ADR-015-n64-rsp-rdp.md). Z-буфер 150 KiB
+внесён в ledger, reserve уменьшен до 1 570 816 B; `n64_hal_tests` 61/61,
+PC regression 350/350.
 
 **Приёмка S41–42 (2026-11-14):** `n64_hal_tests` 46/46, ASan — чисто;
 `n64-release` + ROM verifier PASS; DFS-ассеты извлечены из ROM и

@@ -40,8 +40,10 @@ TEST_F(N64MemoryTest, LedgerFitsFourMiBBudget)
     EXPECT_EQ(n64::fs_staging_arena().capacity(), n64::FS_STAGING_BYTES);
     EXPECT_EQ(n64::ENGINE_ARENAS_BYTES, 2u * 1024u * 1024u);
 
+    EXPECT_EQ(n64::ZBUFFER_BYTES, 320u * 240u * 2u);
     const uint32_t ledger = n64::ENGINE_ARENAS_BYTES + n64::CPU_STACK_BYTES +
-                            n64::FRAMEBUFFER_BYTES + n64::CODE_DATA_SDK_RESERVE_BYTES;
+                            n64::FRAMEBUFFER_BYTES + n64::ZBUFFER_BYTES +
+                            n64::CODE_DATA_SDK_RESERVE_BYTES;
     EXPECT_EQ(ledger, n64::RDRAM_BASE_BYTES);
 }
 

@@ -1,6 +1,6 @@
 # ============================================================================
-# N64 CI — Спринты 39–42 (docs/plans/sprint_39_40.md, sprint_41_42.md),
-# ADR-014.
+# N64 CI — Спринты 39–44 (docs/plans/sprint_39_40.md, sprint_41_42.md,
+# sprint_43_44.md), ADR-014/ADR-015.
 #
 # Собирает pinned mips64-elf-gcc 16.2.0 + libdragon (commit e356bf3),
 # bootable .z64 с read-only DFS (mkdfs: CUBE.MSH/TEX0.TEX) через
@@ -10,6 +10,7 @@
 #
 # Structural checks:
 #   - ROM header/ELF/CRC-policy/sha256;
+#   - RSP T&L overlay artifacts (rsp_tnl.elf/.map);
 #   - DFS listing + побайтовое сравнение извлечённых ассетов;
 #   - запрет heap в src/hal/n64 (scripts/verify_n64_no_heap.py).
 #
@@ -116,6 +117,8 @@ jobs:
           test -s "$ART/hello_n64.z64"
           test -s "$ART/hello_n64.map"
           test -s "$ART/hello_n64.z64.sha256"
+          test -s "$ART/rsp_tnl.elf"
+          test -s "$ART/rsp_tnl.map"
           cmp "$ART/retro_n64.z64" "$ART/hello_n64.z64"
           file "$ART/retro_n64.elf" | grep -q 'MIPS'
           mips64-elf-readelf -h "$ART/retro_n64.elf" 2>/dev/null | grep -q '0x80000400' || \
@@ -233,4 +236,6 @@ jobs:
             build/n64-release/src/hal/n64/retro_n64.elf
             build/n64-release/src/hal/n64/retro_n64.dfs
             build/n64-release/src/hal/n64/retro_n64.dfs.txt
+            build/n64-release/src/hal/n64/rsp_tnl.elf
+            build/n64-release/src/hal/n64/rsp_tnl.map
           if-no-files-found: error

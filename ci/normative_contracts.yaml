@@ -328,20 +328,50 @@ platforms:
     memory:
       # Ledger фиксирован static_assert'ами src/hal/n64/n64_memory.h.
       rdram_base_bytes: 4194304
+      rdram_base_verified: true
       rdram_expansion_bytes: 8388608
       cpu_stack_bytes: 65536
       framebuffer_count: 2
       framebuffer_bytes: 307200
+      z_buffer_bytes: 153600
+      z_buffer_format: RGBA16_320x240
       asset_arena_bytes: 1572864
       frame_arena_bytes: 262144
       command_arena_bytes: 131072
       fs_staging_bytes: 131072
       engine_arenas_bytes: 2097152
-      code_data_sdk_reserve_bytes: 1724416
+      code_data_sdk_reserve_bytes: 1570816
       tmem_bytes: 4096
       z_bits: 18
       rom_max_bytes: 67108864
       heap: forbidden
+    render:
+      backend: rdpq_rsp_tnl
+      rsp_overlay: src/hal/n64/rsp_tnl.S
+      rsp_transform_format: Q16.16
+      rsp_tnl_slots: 512
+      rsp_lighting: dot_product_on_rsp
+      z_buffer: hardware_18bit_internal
+      z_buffer_rdram_bytes: 153600
+      tmem_texture_area_bytes: 2048
+      tmem_tlut_bytes: 512
+      texture_format: CI8_RGBA5551_TLUT
+      texture_max_dim_backend: 64
+      texture_strip_examples: [32x64, 64x32, 16x64]
+      texture_filter_textured: bilinear
+      texture_filter_untextured: point
+      perspective_correct: true
+      cpu_tnl_fallback: emergency_only
+      w0_cases: [visible, backface, near-cross, far-cross, behind]
+      w0_hashes:
+        visible: "0x9e92e718"
+        backface: "0x569949c5"
+        near_cross: "0x569949c5"
+        far_cross: "0x569949c5"
+        behind: "0x569949c5"
+      w1_triangles: 48
+      w1_fps_emulator: 59
+      benchmark: docs/benchmarks/n64_render_s43_44.yaml
     filesystem:
       type: dragonfs
       image: retro_n64.dfs

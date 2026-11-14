@@ -8,6 +8,7 @@
 //   RDRAM base                       4194304 B (4 MiB)
 //   CPU stack (libdragon STACK_SIZE)   65536 B (64 KiB)
 //   VI framebuffers 2×320×240×2       307200 B (300 KiB)
+//   Hardware Z-buffer 320×240×2       153600 B (150 KiB)
 //   asset arena                      1572864 B (1.5 MiB)
 //   frame arena                       262144 B (256 KiB)
 //   command arena                     131072 B (128 KiB)
@@ -38,6 +39,7 @@ constexpr uint32_t CPU_STACK_BYTES = 64u * 1024u;
 constexpr uint32_t FRAMEBUFFER_COUNT = 2u;
 constexpr uint32_t FRAMEBUFFER_BYTES =
     (uint32_t)RENDER_FB_WIDTH * (uint32_t)RENDER_FB_HEIGHT * 2u * FRAMEBUFFER_COUNT;
+constexpr uint32_t ZBUFFER_BYTES = (uint32_t)RENDER_FB_WIDTH * (uint32_t)RENDER_FB_HEIGHT * 2u;
 
 // --- Engine arenas ----------------------------------------------------------
 constexpr uint32_t ASSET_ARENA_BYTES = 1536u * 1024u;
@@ -48,17 +50,20 @@ constexpr uint32_t ENGINE_ARENAS_BYTES =
     ASSET_ARENA_BYTES + FRAME_ARENA_BYTES + COMMAND_ARENA_BYTES + FS_STAGING_BYTES;
 
 /** Остаток 4 MiB ledger: код/данные движка, libdragon и его boot-heap. */
-constexpr uint32_t CODE_DATA_SDK_RESERVE_BYTES =
-    RDRAM_BASE_BYTES - CPU_STACK_BYTES - FRAMEBUFFER_BYTES - ENGINE_ARENAS_BYTES;
+constexpr uint32_t CODE_DATA_SDK_RESERVE_BYTES = RDRAM_BASE_BYTES - CPU_STACK_BYTES -
+                                                 FRAMEBUFFER_BYTES - ZBUFFER_BYTES -
+                                                 ENGINE_ARENAS_BYTES;
 
 static_assert(RENDER_FB_WIDTH == 320u && RENDER_FB_HEIGHT == 240u,
               "N64 reference VI must stay 320x240 (docs/N64.md)");
 static_assert(FRAMEBUFFER_BYTES == 320u * 240u * 2u * 2u,
               "VI 16-bit double buffer must be 300 KiB");
+static_assert(ZBUFFER_BYTES == 320u * 240u * 2u, "N64 hardware Z-buffer must be 150 KiB");
 static_assert(ENGINE_ARENAS_BYTES == 2u * 1024u * 1024u,
               "N64 engine arenas must fit exactly 2 MiB of the 4 MiB ledger");
 static_assert(CPU_STACK_BYTES == 64u * 1024u, "libdragon STACK_SIZE is 64 KiB");
-static_assert(ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES <= RDRAM_BASE_BYTES,
+static_assert(ENGINE_ARENAS_BYTES + CPU_STACK_BYTES + FRAMEBUFFER_BYTES + ZBUFFER_BYTES <=
+                  RDRAM_BASE_BYTES,
               "N64 ledger exceeds 4 MiB base RDRAM");
 static_assert(CODE_DATA_SDK_RESERVE_BYTES >= 1024u * 1024u,
               "N64 ledger must leave at least 1 MiB for code/data/SDK");

@@ -560,9 +560,10 @@ N64 S39–46 — следующий этап разработки (§13.3).
 Бюджеты N64 (зафиксированы в S41–42 и `ci/normative_contracts.yaml`):
 - RDRAM: 4 MiB base; Expansion Pak (8 MiB) детектируется, но арены не
   растут. Ledger: arenas 2 MiB (asset 1.5, frame 256K, command 128K,
-  FS staging 128K) + stack 64 KiB + framebuffers 300 KiB + reserve
-  1 724 416 B;
-- TMEM ≤ 4 KiB; текстуры — тайлы 64×64/32×64, CI8/RGBA16 (S43–44);
+  FS staging 128K) + stack 64 KiB + framebuffers 300 KiB + Z-buffer
+  150 KiB + reserve 1 570 816 B;
+- TMEM ≤ 4 KiB (texture area 2 KiB + TLUT 512 B); текстуры — полосы
+  32×64/64×32, CI8 + RGBA5551 TLUT, bilinear (S43–44);
 - ROM/DFS ≤ 32 MiB; stack ≤ 64 KiB; heap запрещён (static check);
 - кадр: target 60 Hz (< 16.6 мс), gate ≥ 30 FPS (< 33 мс), 60 с;
 - W0: 5 кейсов + framebuffer-hash; W1: 4 куба / 48 треугольников.
@@ -581,17 +582,18 @@ N64 S39–46 — следующий этап разработки (§13.3).
 - Релиз — **draft-only**; любая публикация — не ранее **v0.9.x**
   (ADR-013); v0.2.x остаются withdrawn.
 
-**Статус (2026-11-14):** S39–42 реализованы локально: pinned GCC 16.2.0 +
-libdragon `e356bf3`, `n64-release`, bootable `hello_n64.z64` с read-only
-DFS (`CUBE.MSH`/`TEX0.TEX`), ROM verifier PASS, 60-с gate и 10-минутный
-stress в gopher64 1.2.1, N64 host-тесты 46/46 (+ASan), PC regression
-335/335. Remote CI green: `build-n64` push `43601517181` / PR
-`43601522296`, `tests` `43601517320`, `build-pc` `43601517203`,
-`build-ps1` `43601517201`, `build-saturn` `43601517188`,
-`sdk-package` `43601517177`, `ui-client` `43601517161`. Baseline эмулятора —
-gopher64 1.2.1 (mupen64plus не грузит libdragon IPL3 r5+,
-mupen64plus-core#1185). S43–44 — RSP/RDP, Z-буфер, TMEM/текстуры;
-S45–46 — демо, бюджеты, N64 SDK/UI и draft v0.3.0.
+**Статус (2026-11-14):** S39–44 реализованы локально. S39–42: pinned
+GCC 16.2.0 + libdragon `e356bf3`, `n64-release`, bootable `hello_n64.z64`
+с read-only DFS, ROM verifier PASS, 60-с gate/10-мин stress в gopher64
+1.2.1, host-тесты 46/46. S43–44: RSP T&L overlay (Q16.16, 512 слотов),
+RSP dot-lighting, RDPQ + аппаратный Z 320×240, CI8/TMEM-полосы 32×64
+(2560 B, 4 KiB TMEM), bilinear, W0 5/5 с фиксированными хэшами,
+CPU-fallback hash идентичен, W1 4 куба/48 tri @ ≈59 FPS в software RDP
+(gate ≥30; target 60 — железо), `n64_hal_tests` 61/61 (+ASan), ADR-015,
+benchmark YAML и скриншот. PC regression — см. ctest pc-debug.
+Remote CI — после push; baseline эмулятора gopher64 1.2.1
+(mupen64plus не грузит libdragon IPL3 r5+, mupen64plus-core#1185).
+S45–46 — демо/бюджеты, N64 SDK/UI и draft v0.3.0.
 
 ## 14. Реестр рисков (операционный)
 

@@ -126,8 +126,11 @@ set JO_ENGINE_ROOT=C:\joengine
 - `N64_INST` — install-prefix (bin/, `mips64-elf/{include,lib}`);
   `LIBDRAGON_ROOT` — git-checkout для проверки commit.
 - Эмулятор ручного gate — gopher64 1.2.1 (не vendored, BIOS не нужен).
+- RSP T&L overlay `src/hal/n64/rsp_tnl.S` собирается CMake-правилом,
+  повторяющим `n64.mk` (objcopy .text/.data → `rpe_tnl_*`); отдельный
+  ucode-тулчейн не нужен.
 - Версии/SHA-256: [`../VERSION.txt`](../VERSION.txt); платформа —
-  [`N64.md`](N64.md); решение — ADR-014.
+  [`N64.md`](N64.md); решения — ADR-014/ADR-015.
 
 ```bash
 mkdir -p "$HOME/n64-sdk" && cd "$HOME/n64-sdk"
@@ -394,7 +397,8 @@ cmake --build --preset n64-release
 - `retro_n64.z64` — те же байты под engine-именем;
 - `retro_n64.elf` + `retro_n64.sym` — ELF и символы;
 - `retro_n64.dfs` + `retro_n64.dfs.txt` — read-only DFS (`CUBE.MSH`,
-  `TEX0.TEX`, `TRIANGLE.MSH`) и listing.
+  `TEX0.TEX`, `TRIANGLE.MSH`) и listing;
+- `rsp_tnl.elf/.map` + `.text/.data` objects — RSP T&L overlay S43–44.
 
 Проверка ROM без эмулятора:
 

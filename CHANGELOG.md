@@ -34,6 +34,21 @@
   скриншот `screenshots/n64_boot_s41_42.png`. Remote CI на `4882e1d` —
   green: `build-n64` (push/PR), `tests`, `build-pc/ps1/saturn`,
   `sdk-package`, `ui-client`.
+- Спринт 43–44 — N64 renderer: RSP T&L overlay `rsp_tnl.S` (Q16.16,
+  512 слотов, per-slot matrix, `rspq_wait` + cache invalidate), RSP
+  dot-lighting (`n·L`; CPU — ambient/color scale), RDPQ с аппаратным
+  Z-буфером 320×240 RGBA16 (18-bit internal), perspective-correct
+  CI8-текстуры/TMEM-полосы 32×64 + 512 B TLUT (2560 B/полоса, ≤4 KiB),
+  bilinear hardware, downsample 256×256 → 64×64; W0 5/5 с фиксированными
+  FNV-хэшами, CPU-fallback даёт идентичный hash; Z self-test
+  near-first/far-second; W1 4 куба/48 tri — ≈59 FPS (16.9 ms) в gopher64
+  1.2.1 (software RDP; gate ≥30, target 60); 4 MiB base
+  (`--disable-expansion-pak true`) boot/W0/Z/W1 PASS; 10-мин stress
+  618 375+ мс без ERROR/crash;
+  `n64_hal_tests` 61/61, ADR-015, `docs/N64.md`, benchmark
+  `docs/benchmarks/n64_render_s43_44.yaml`,
+  `screenshots/n64_render_s43_44.png`. Z-буфер 150 KiB внесён в memory
+  ledger (reserve 1 570 816 B). Remote CI — после push.
 
 ## [0.2.1] — не опубликовано (release withdrawn; deferred to v0.9.x)
 
