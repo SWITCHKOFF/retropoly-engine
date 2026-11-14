@@ -11,9 +11,9 @@
 > `create_release_archive.sh` v2, reusable SDK/UI workflows и `release.yml`
 > «gate → **draft** only». Remote CI на `3e816d1` — 12/12 green; release
 > workflow 43577691540 создал GitHub Release, но он **удалён/отозван**
-> вместе с тегом `v0.2.1`: публичные релизы заморожены до **~v0.9.x**
+> вместе с тегом `v0.2.1`: любая публикация релизов отложена до **v0.9.x**
 > (`release freeze`). Версия 0.2.1 остаётся development-версией;
-> публикация — вручную после совместной приёмки maintainer + агент.
+> публикация — не ранее v0.9.x, после совместной приёмки maintainer + агент.
 
 ## Карточка спринта
 
@@ -21,12 +21,12 @@
 |---|---|
 | Спринты | 37–38 |
 | Недели | 73–76 — 11.01.2027 – 07.02.2027 |
-| Веха | v0.2.1 — release candidate (SDK + UI); публикация отложена до ~v0.9.x |
-| Цель | Собрать SDK+UI payload и release gate v2; публикация отложена/заморожена |
+| Веха | v0.2.1 — release candidate (SDK + UI); любая публикация отложена до v0.9.x |
+| Цель | Собрать SDK+UI payload и release gate v2; любая публикация отложена до v0.9.x |
 | Входные критерии | S33–34 (SDK) и S35–36 (UI) закрыты; v0.2.0 отозван |
 | На критическом пути | Да (release gate v2) |
-| Выходные артефакты | `sdk/` + `ui/` + `checksums.sha256` + `release_contract_report.json` + `payload_verification_report.json`; тег/релиз v0.2.1 удалены; публикация — после ~v0.9.x |
-| Следующий спринт | v0.3.0 N64 (S39+) — разработка; public release заморожен до ~v0.9.x |
+| Выходные артефакты | `sdk/` + `ui/` + `checksums.sha256` + `release_contract_report.json` + `payload_verification_report.json`; тег/релиз v0.2.1 удалены; публикация — не ранее v0.9.x |
+| Следующий спринт | v0.3.0 N64 (S39+) — разработка; любая публикация релизов отложена до v0.9.x |
 
 ## PERT-оценка
 
@@ -41,7 +41,7 @@
 - [x] [B] `scripts/build_release_bundle.py` (или CMake target): собирает `dist/retro-engine-v<ver>/` из SDK-архивов, UI-пакетов и optional demo-образов
 - [x] [B] Layout: `sdk/`, `ui/`, `checksums.sha256`, `release_contract_report.json`, `README.md`, `LICENSE`, `LEGAL.md`; demo-образы — только `demos/` и явно optional
 - [x] [B] `verify_release_contract.py`: asserts SDK manifest/headers/libs/CMake package, UI package/version, checksums, clean consumer smoke, UI headless smoke
-- [x] [B] `ci/normative_contracts.yaml`: зафиксировать `release.payload = sdk+ui`, версии SDK/UI, supported hosts/targets, обязательные checksums; `release_freeze` до ~v0.9.x, `v0_2_1_release_status: withdrawn`
+- [x] [B] `ci/normative_contracts.yaml`: зафиксировать `release.payload = sdk+ui`, версии SDK/UI, supported hosts/targets, обязательные checksums; `release_freeze` до v0.9.x, `v0_2_1_release_status: withdrawn`
 - [x] [B] `release.yml`: build/consume SDK+UI artifacts, consumer/UI smoke на чистой распаковке, **draft-only** при `all_ok: true`; public publish — вручную
 - [x] [B] `create_release_archive.sh` v2: содержит `sdk/` + `ui/`, а demo-образы не могут подменять SDK
 - [x] [B] Проверка отсутствия BIOS/ROM/ключей/build-каталогов в payload; отдельный negative-test
@@ -69,10 +69,10 @@
 **Неделя 76 — публикация (заморожена):**
 
 - [x] [B] Тег `v0.2.1` (annotated) — создан, затем удалён вместе с Release
-- [ ] [B] GitHub Release — **удалён/отозван**; публикация отложена до ~v0.9.x
+- [ ] [B] GitHub Release — **удалён/отозван**; любая публикация отложена до v0.9.x
 - [x] [B] Проверить скачанные assets: checksums, размеры, отсутствие BIOS/ROM (до отзыва)
 - [x] [B] Обновить README/CHANGELOG/RELEASING статус «withdrawn / release freeze»
-- [ ] [B] Анонс — запрещён до снятия release freeze
+- [ ] [B] Анонс — запрещён до v0.9.x (release freeze)
 - [ ] [M] Собрать метрики релиза — после публикации v0.9.x
 
 ## Критерии приёмки спринта 37–38
@@ -81,7 +81,7 @@
 - [x] `verify_release_contract.py` падает без SDK/UI и проходит на v0.2.1 (negative-tests 13/13 PASS)
 - [x] Clean consumer строит hello_triangle через `find_package`; UI создаёт проект/собирает/запускает
 - [x] Checksums проверяются; нет BIOS/ROM/секретов/build-каталогов
-- [ ] GitHub Release не публикуется до ~v0.9.x; v0.2.1 Release удалён/отозван, README/CHANGELOG/RELEASING согласованы
+- [ ] GitHub Release не публикуется до v0.9.x; v0.2.1 Release удалён/отозван, README/CHANGELOG/RELEASING согласованы
 - [x] v0.2.0 остаётся отозванным; ссылки на него не выдаются за SDK-релиз
 
 ## Ручной чек-лист приёмки

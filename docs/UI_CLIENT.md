@@ -53,8 +53,8 @@ sha256sum -c checksums.sha256
 
 Комбинированный payload `retro-engine-v0.2.1.tar.gz` (release candidate,
 не опубликован) содержит `ui/` рядом с `sdk/`; можно распаковать оба
-каталога в один рабочий каталог и указать UI на `sdk/`. Публикация
-отложена до ~v0.9.x (release freeze). Поддерживаемые hosts: Linux x86_64,
+каталога в один рабочий каталог и указать UI на `sdk/`. Любая публикация
+релизов отложена до v0.9.x (release freeze). Поддерживаемые hosts: Linux x86_64,
 Windows x86_64, macOS arm64; target'ы проекта — PC/PS1/Saturn при наличии
 соответствующего SDK.
 

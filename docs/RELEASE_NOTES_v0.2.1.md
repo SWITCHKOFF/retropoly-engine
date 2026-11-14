@@ -1,10 +1,10 @@
 # DRAFT — RetroPolyEngine v0.2.1 (release candidate, не опубликовано)
 
 > **Статус: withdrawn / deferred.** GitHub Release v0.2.1 удалён/отозван
-> 2026-11-14; публикация отложена до ~v0.9.x. Файл сохранён как черновик
-> release notes для будущей ручной приёмки. `release.yml` создаёт только
-> draft и использует auto-generated notes; этот файл не публикуется
-> автоматически.
+> 2026-11-14; любая публикация релизов отложена до v0.9.x. Файл сохранён
+> как черновик release notes для будущей ручной приёмки. `release.yml`
+> создаёт только draft и использует auto-generated notes; этот файл не
+> публикуется автоматически.
 
 Release candidate: устанавливаемый SDK (PC/PS1/Saturn) и UI client для
 создания, сборки и запуска проектов. GitHub Release v0.2.0 также отозван

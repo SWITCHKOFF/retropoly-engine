@@ -5,10 +5,13 @@
 > `ci/normative_contracts.yaml` + `scripts/verify_release_contract.py`
 > в одном изменении (DEVELOPMENT_PLAN §1, п. 6).
 
-> **RELEASE FREEZE (2026-11-14):** публичные релизы приостановлены до
-> **~v0.9.x**. GitHub Release и тег `v0.2.1` удалены/отозваны; версия
-> 0.2.1 остаётся development-версией и не считается публичным релизом.
-> `release.yml` создаёт только **draft**; публикация — вручную после
+> **RELEASE FREEZE (2026-11-14):** **любая публикация релизов проекта
+> отложена до v0.9.x** — включая v0.2.x, v0.3.0, v0.4.0 и все последующие
+> версии. До v0.9.x разрешены только **draft**-релизы, CI-артефакты и
+> локальные сборки; публичного GitHub Release быть не должно. GitHub
+> Release и тег `v0.2.1` удалены/отозваны; версия 0.2.1 остаётся
+> development-версией и не считается публичным релизом. `release.yml`
+> создаёт только draft; публикация — не ранее v0.9.x и только после
 > совместной приёмки maintainer + агент. Автоматический public release
 > запрещён до отмены freeze. Решение —
 > [`adr/ADR-013-release-freeze.md`](adr/ADR-013-release-freeze.md).
@@ -22,11 +25,11 @@
 
 Тег `v0.2.0` может оставаться в истории git как техническая метка, но
 **не является действующим публичным релизом**. Не ссылаться на него как
-на «релиз SDK» и не публиковать анонс до прохождения нового release gate.
+на «релиз SDK» и не публиковать анонс до v0.9.x.
 
 **v0.2.1 (S33–38):** GitHub Release и тег `v0.2.1` удалены/отозваны
 2026-11-14. SDK+UI payload и release gate v2 реализованы и проходят, но
-публикация **отложена до ~v0.9.x**: перед выпуском maintainer сам
+любая публикация релизов **отложена до v0.9.x**: перед выпуском maintainer сам
 тестирует релиз совместно с агентом. Статус в
 [`ci/normative_contracts.yaml`](../ci/normative_contracts.yaml):
 `v0_2_1_release_status: withdrawn`, `release_freeze.active: true`.
@@ -151,7 +154,7 @@ python3 scripts/build_release_bundle.py \
 
 ## 3. Release gate v2 (обязательные проверки)
 
-До публикации (draft → public) должны быть зелёными:
+До публикации (draft → public, не ранее v0.9.x) должны быть зелёными:
 
 1. `build-pc`, `build-ps1`, `build-saturn`, `tests`, `sdk-package`,
    `ui-client` — success на release-коммите.
@@ -172,8 +175,8 @@ python3 scripts/build_release_bundle.py \
 9. Release notes явно называют версию SDK, UI и поддерживаемые платформы.
 10. **Ручная приёмка maintainer + агент** на скачанных draft-assets:
     распаковка, checksums, SDK consumer, UI New Project → import → Build →
-    Run, PS1/Saturn `.cue` (если применимо). Только после этого draft
-    публикуется вручную.
+    Run, PS1/Saturn `.cue` (если применимо). Приёмка не снимает freeze:
+    draft остаётся draft; публикация возможна только при выпуске v0.9.x.
 
 Команды gate на release-коммите:
 
@@ -210,7 +213,7 @@ withdrawn / SDK+UI pending».
 | Release payload SDK+UI | реализован в S37–38 (`scripts/build_release_bundle.py`, `create_release_archive.sh` v2) | Нет |
 | Negative-tests gate | реализован в S37–38 (`scripts/release_gate_negative_tests.py`) | Нет |
 | Demo-образы PC/PS1/Saturn | есть, только optional `demos/` | Нет |
-| Публикация v0.2.1 | **GitHub Release удалён/отозван; release freeze до ~v0.9.x** | Да (release freeze) |
+| Публикация v0.2.1 | **GitHub Release удалён/отозван; любая публикация отложена до v0.9.x** | Да (release freeze) |
 | Ручная приёмка maintainer + агент | не выполнена | Да (перед public release) |
 
 Поддерживаемые хосты/таргеты v0.2.1:
@@ -222,7 +225,7 @@ withdrawn / SDK+UI pending».
 
 macOS x86_64 собирается из исходников, но не входит в assets v0.2.1.
 
-Следующий этап — **разработка до ~v0.9.x** при активном release freeze:
+Следующий этап — **разработка до v0.9.x** при активном release freeze:
 
 - [`plans/sprint_33_34.md`](plans/sprint_33_34.md) — SDK install/export,
   CMake package, consumer smoke (готово);
@@ -247,11 +250,11 @@ macOS x86_64 собирается из исходников, но не вход�
 - [x] Тег `v0.2.1` и GitHub Release — созданы, затем **удалены/отозваны**;
       версия 0.2.1 остаётся development-версией
 - [x] GitHub Release v0.2.1 удалён/отозван; assets проверены до отзыва
-- [ ] Публикация отложена до **~v0.9.x** (release freeze)
+- [ ] Любая публикация — не ранее **v0.9.x** (release freeze)
 - [ ] Ручная приёмка maintainer + агент на draft-assets
-- [ ] После ручной приёмки: вручную опубликовать draft и снять freeze
-      (статус `released` — только для будущего v0.9.x)
+- [ ] Публикация и снятие freeze — только при выпуске v0.9.x; до этого
+      draft остаётся draft (статус `released` — только для v0.9.x)
 
 v0.2.1 **не является** публичным релизом; v0.2.0 также остаётся
 отозванным. N64 (v0.3.0) и дальнейшая разработка продолжаются без
-публикации релизов до ~v0.9.x.
+публикации релизов до v0.9.x.

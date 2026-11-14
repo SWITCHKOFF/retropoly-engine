@@ -8,9 +8,9 @@
 #      Saturn demo-образы, запускает verify_release_contract.py, clean-room
 #      consumer/UI E2E, negative-tests и собирает payload sdk/ + ui/.
 #   3. publish — создаёт DRAFT GitHub Release только если оба отчёта
-#      all_ok: true; публикация — вручную после приёмки maintainer'ом.
+#      all_ok: true; публикация — не ранее v0.9.x, вручную после приёмки.
 #
-# RELEASE FREEZE (2026-11-14): публичные релизы приостановлены до ~v0.9.x.
+# RELEASE FREEZE (2026-11-14): любая публикация релизов отложена до v0.9.x.
 # v0.2.1 GitHub Release удалён/отозван; автоматический public release
 # запрещён. Политика: docs/RELEASING.md.
 # ============================================================================

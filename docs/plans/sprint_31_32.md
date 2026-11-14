@@ -130,8 +130,8 @@
 - [ ] UI client: editor/launcher (project/target/import/build), пакет под
   Windows/Linux/macOS.
 - [ ] `verify_release_contract.py`: SDK/UI asserts + checksums.
-- [ ] Повторная публикация v0.2.x/v0.3.0 только после 1–3; анонс не
-  выпускать.
+- [ ] Повторная публикация v0.2.x/v0.3.0 — не ранее v0.9.x и только после
+  1–3; анонс не выпускать.
 
 ## Риски
 

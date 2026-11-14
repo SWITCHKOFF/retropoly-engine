@@ -39,8 +39,9 @@ mtime из `SOURCE_DATE_EPOCH`/даты git-коммита.
 
 ## 1.1. Пакет SDK v0.2.1 (release candidate, не опубликован)
 
-**Release freeze:** GitHub Release v0.2.1 удалён/отозван; публикация
-отложена до ~v0.9.x. Артефакты ниже собираются локально или в CI:
+**Release freeze:** любая публикация релизов отложена до v0.9.x;
+GitHub Release v0.2.1 удалён/отозван. Артефакты ниже собираются локально
+или в CI:
 
 `retro-engine-sdk-0.2.1-*` (отдельно) или `retro-engine-v0.2.1.tar.gz`
 (`sdk/` + `ui/` + optional `demos/`).
