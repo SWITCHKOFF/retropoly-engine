@@ -181,7 +181,7 @@ jobs:
           sha256sum -c "$GITHUB_WORKSPACE/ci/n64-toolchain.sha256"
           dpkg-deb -x gcc-toolchain-mips64-x86_64.deb toolchain
           export N64_INST="$RUNNER_TEMP/n64-sdk/toolchain/opt/libdragon"
-          PIN="$(grep -E '^[0-9a-f]{40}$' ci/n64-libdragon.commit | head -n 1)"
+          PIN="$(grep -E '^[0-9a-f]{40}$' "$GITHUB_WORKSPACE/ci/n64-libdragon.commit" | head -n 1)"
           git config --global advice.detachedHead false
           git clone --filter=blob:none https://github.com/DragonMinded/libdragon.git libdragon
           git -C libdragon checkout "$PIN"
