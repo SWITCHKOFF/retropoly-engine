@@ -1,6 +1,6 @@
 # plans/ — Детальные планы спринтов RetroPolyEngine
 
-Каждый спринт (пара спринтов) MVP v0.1.0 имеет собственный файл: полный чек-лист атомарных действий, PERT-оценка, критерии приёмки, артефакты и риски. Пост-MVP-этапы (v0.2.0 Saturn, v0.2.1 SDK+UI, v0.3.0 N64) детализированы отдельными таблицами ниже.
+Каждый спринт (пара спринтов) MVP v0.1.0 имеет собственный файл: полный чек-лист атомарных действий, PERT-оценка, критерии приёмки, артефакты и риски. Пост-MVP-этапы (v0.2.0 Saturn, v0.2.1 SDK+UI, v0.3.0 N64, v0.4.0 Jaguar — DEFERRED) детализированы отдельными таблицами ниже.
 
 Родительский документ: [`../DEVELOPMENT_PLAN.md`](../DEVELOPMENT_PLAN.md) — вехи, критический путь, PERT-сводка (§2.4), сквозные треки, гейты G1–G13, бюджеты, релизный чек-лист. Пост-MVP-план — §13 того же документа.
 
@@ -109,7 +109,51 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ра
 > v0.3.0. Эмулятор в CI не запускается; visual/stress gate — ручной,
 > pinned emulator. До v0.9.x публикуются только draft-релизы.
 
-Следующие итерации (Jaguar v0.4.0, 3DO v0.5.0, аудио/ФС v0.6.0–v0.8.0) в спецификации заданы диапазонами 4–6 / 4–6 / 8–12 спринтов. Jaguar начинается с S47 как продолжение разработки; любая публикация релизов отложена до v0.9.x.
+## Stage 4: v0.4.0 — Atari Jaguar (S47–52, DEFERRED + LEGAL HOLD)
+
+**DEFERRED — «до лучших времён»** (ADR-016): добавление поддержки
+платформы Atari Jaguar / Jaguar CD отложено; S47–52 не активируются,
+Jaguar-код/toolchain/ROM/CD/payload не создаются. Спецификация задаёт
+Jaguar диапазоном 4–6 спринтов; планы сохранены как draft/reference, их
+даты и PERT-оценки не являются commitments, а чек-боксы **не являются
+backlog к исполнению**. **Старт — только по явному личному разрешению
+maintainer начать Jaguar; снятие LEGAL HOLD само по себе план не
+активирует.** Детали и условия возобновления —
+[`jaguar_legal_hold.md`](jaguar_legal_hold.md); решение —
+[`../adr/ADR-016-jaguar-deferred.md`](../adr/ADR-016-jaguar-deferred.md).
+Перед возможным возобновлением обязательны повторная сверка
+reference-фактов Jaguar по первоисточникам (§2.2 инженерной
+документации) и лицензионный аудит. Любая публикация релизов отложена
+до v0.9.x ([`../adr/ADR-013-release-freeze.md`](../adr/ADR-013-release-freeze.md)).
+
+| Файл | Спринты | Недели | Даты (reference) | Веха | Тема | PERT E |
+|---|---|---|---|---|---|---|
+| [sprint_47_48.md](sprint_47_48.md) | 47–48 | 93–96 | 31.05–27.06.2027 | v0.4.0 (reference) | Jaguar: исследование, MIT-профиль toolchain, backend skeleton, CI | 56.7 ч |
+| [sprint_49_50.md](sprint_49_50.md) | 49–50 | 97–100 | 28.06–25.07.2027 | v0.4.0 (reference) | HAL Jaguar: 68000, Jerry I/O, ROM-ассеты, память, Tom video | 61.7 ч |
+| [sprint_51_52.md](sprint_51_52.md) | 51–52 | 101–104 | 26.07–22.08.2027 | v0.4.0 (reference) | Renderer, W0/W1, SDK/UI, draft v0.4.0 | 56.7 ч |
+
+> **Статус (2026-11-15): DEFERRED — «до лучших времён» + LEGAL HOLD.**
+> S47–52 **не активируются**; Jaguar-код/toolchain/ROM/CD/payload не
+> создаются. **Старт — только по явному личному разрешению maintainer;
+> снятие hold само по себе не активирует.** Связка на случай
+> возобновления: VJ external (GPL-3.0) +
+> MIT-профиль SDK + собственный `jagcd`; зафиксирована в
+> [`ADR-016`](../adr/ADR-016-jaguar-deferred.md).
+> Повторный аудит: MIT/BSD-эмулятора Jaguar CD не найдено;
+> лучший открытый CD-эмулятор — `libretro/virtualjaguar-libretro`
+> (GPL-3.0, встроенные Atari BIOS) → только внешний процесс; MAME
+> технически `NOT_WORKING`; BigPEmu закрыт. MIT-clean путь: `lyxass`
+> (MIT), `jaglib` (MIT после замены `jagcore.h`), `new_bjl` (Unlicense),
+> GCC/binutils; CD — собственный clean-room слой + HLE/пользовательский
+> BIOS.
+> Детали — [`jaguar_legal_audit_v2.md`](jaguar_legal_audit_v2.md),
+> кратко — [`jaguar_legal_hold.md`](jaguar_legal_hold.md), бриф выбора —
+> [`jaguar_emulator_sdk_brief.md`](jaguar_emulator_sdk_brief.md), ответы
+> по брифу и зафиксированная CD-first связка —
+> [`jaguar_emulator_sdk_answers.md`](jaguar_emulator_sdk_answers.md).
+> Если возобновление состоится: Σ E ≈ 175.0 ч; при 10–15 ч/нед 12 недель
+> дают 120–180 ч, план сходится только у верхней границы темпа.
+> Публикация — только draft до v0.9.x.
 
 ## Соглашения
 

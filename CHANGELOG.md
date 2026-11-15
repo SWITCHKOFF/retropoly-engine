@@ -2,6 +2,22 @@
 
 Все заметные изменения этого проекта документируются в этом файле в стиле [Keep a Changelog](https://keepachangelog.com/ru/1.1.0/); версионирование — [SemVer](https://semver.org/lang/ru/). Правило: обновление CHANGELOG — на каждом sprint review (docs/DEVELOPMENT_PLAN.md §1, п. 2).
 
+## [Unreleased]
+
+### Changed
+
+- **Atari Jaguar / Jaguar CD (v0.4.0, S47–52) — DEFERRED «до лучших
+  времён»** ([ADR-016](docs/adr/ADR-016-jaguar-deferred.md)): поддержка
+  платформы отложена; S47–52 не активируются, Jaguar-код/toolchain/
+  ROM/CD/payload не создаются. Старт — только по явному личному
+  разрешению maintainer; снятие legal hold само по себе не активирует.
+  Зафиксированная связка: VJ external
+  (GPL-3.0, только внешний процесс) + MIT-профиль SDK (`m68k-elf-gcc` +
+  binutils + `lyxass` + собственный HAL/startup/linker + clean-room CD)
+  + собственный MIT `jagcd` (boot track + `.cue/.bin` + manifest + size
+  check). `jaguar-sdk`/Atari BIOS/`rmac`/`rln`/`cdi-maker` не вендорятся.
+  Детали — [docs/plans/jaguar_emulator_sdk_answers.md](docs/plans/jaguar_emulator_sdk_answers.md).
+
 ## [0.3.0] — draft (не опубликовано; release freeze)
 
 ### Added

@@ -18,6 +18,7 @@ language: "ru"
 | Дата | 2026-09-07 |
 | Основной MVP | PC (SDL3 + OpenGL) + Sony PlayStation 1 |
 | Будущие платформы | Sega Saturn, Nintendo 64, Atari Jaguar, Panasonic 3DO |
+| Atari Jaguar / Jaguar CD | **DEFERRED — «до лучших времён»** (ADR-016, 2026-11-15); S47–52 не активируются, Jaguar-код/toolchain/ROM/CD/payload не создаются; старт — только по явному личному разрешению maintainer |
 | Статус | Инженерная спецификация MVP |
 
 ## Нормативная база
@@ -34,7 +35,7 @@ language: "ru"
 
 > **Каноническое правило.** Переполнение renderer, command buffer, OT и arena является явной ошибкой с диагностикой. Примитивы не должны отбрасываться молча.
 
-> **Справочные данные будущих платформ.** Параметры Saturn, N64, Jaguar и 3DO являются reference material и подлежат повторной проверке перед реализацией соответствующих backend.
+> **Справочные данные будущих платформ.** Параметры Saturn, N64, Jaguar и 3DO являются reference material и подлежат повторной проверке перед реализацией соответствующих backend. **Atari Jaguar / Jaguar CD — DEFERRED «до лучших времён» (ADR-016, 2026-11-15):** все упоминания Jaguar в этом документе — reference material, поддержка не добавляется, S47–52 не активируются; старт — только по явному личному разрешению maintainer.
 
 # Содержание
 
@@ -841,6 +842,12 @@ PS1 HARDWARE NOTE: GTE register formats are operation-specific. The engine fixed
 - The CPU has an FPU; use it only in future backend-specific code where the cost/benefit is benchmarked.
 
 ### 2.4. ATARI JAGUAR
+
+> **Статус: DEFERRED — «до лучших времён» (ADR-016, 2026-11-15).**
+> Раздел сохранён как reference material; S47–52 не активируются,
+> Jaguar backend/SDK/CD-authoring не реализуются. Старт — только по
+> явному личному разрешению maintainer. Связка на случай возобновления —
+> [`plans/jaguar_emulator_sdk_answers.md`](plans/jaguar_emulator_sdk_answers.md).
 
 ОСНОВНЫЕ ХАРАКТЕРИСТИКИ
 

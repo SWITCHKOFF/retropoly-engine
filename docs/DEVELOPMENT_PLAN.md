@@ -6,7 +6,7 @@
 > Release отозван; см. [`RELEASING.md`](RELEASING.md).
 >
 > **Статус:** операционный план работ. Детальные чек-боксы спринтов разложены на атомарные действия в `plans/sprint_NN.md` (указатель — §2.5); этот файл содержит своды, вехи, PERT-оценки, сквозные треки и нормативные приложения.
-> **Скоуп:** MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) + Sony PlayStation 1 (PSn00bSDK v0.24, target `mipsel-none-elf`); §13 — пост-MVP roadmap (v0.2.0+), включая детальные планы Saturn S21–32, SDK+UI S33–38 и N64 S39–46.
+> **Скоуп:** MVP v0.1.0 — PC (SDL3 + OpenGL 3.3) + Sony PlayStation 1 (PSn00bSDK v0.24, target `mipsel-none-elf`); §13 — пост-MVP roadmap (v0.2.0+), включая детальные планы Saturn S21–32, SDK+UI S33–38, N64 S39–46 и Jaguar S47–52 (DEFERRED — «до лучших времён»).
 > **Сроки:** 20 спринтов × 2 недели = 40 недель (~10 месяцев) при 10–15 ч/нед. Recovery/buffer-недели учитываются отдельно и не входят в 40 недель. Ориентир календаря: старт Спринта 0 — 02.11.2026, релиз — 15.08.2027 (см. §2.3).
 
 ---
@@ -186,6 +186,7 @@ gantt
 Пост-MVP v0.2.0 (Sega Saturn): детальные планы S21–32 — §13.1.
 v0.2.1 (SDK + UI client): детальные планы S33–38 — §13.2.
 v0.3.0 (Nintendo 64): детальные планы S39–46 — §13.3.
+v0.4.0 (Atari Jaguar): детальные планы S47–52 — §13.4 (DEFERRED + LEGAL HOLD).
 
 ---
 
@@ -432,7 +433,7 @@ v0.3.0 (Nintendo 64): детальные планы S39–46 — §13.3.
 - **v0.2.0 — Sega Saturn (8–12 спринтов):** изучение Master/Slave SH-2, VDP1 (квады) + VDP2 (фоны), синхронизация, Jo Engine/toolchain; hello_triangle на эмуляторе Saturn. Детальные планы S21–32 — §13.1. GitHub Release отозван (demo-only payload).
 - **v0.2.1 — SDK + UI client (3 пары спринтов, S33–38):** install/export CMake package, SDK-архивы PC/PS1/Saturn, consumer smoke; UI client (project/target/import/build/run); release gate v2 и payload `sdk/`+`ui/` готовы, но публикация **отозвана/отложена до v0.9.x** (release freeze, ручная приёмка). Детальные планы — §13.2.
 - **v0.3.0 — N64 (8 спринтов, S39–46):** libdragon/toolchain, HAL N64, микрокод RCP (RSP+RDP), аппаратный Z-буфер, perspective-correct текстурирование, hello_triangle/rotating_cube, N64 SDK/UI. Детальные планы — §13.3.
-- **v0.4.0 — Jaguar (4–6 спринтов):** blitter-программирование (Tom), Jerry-DSP; 68000 host.
+- **v0.4.0 — Jaguar (6 спринтов, S47–52; DEFERRED + LEGAL HOLD):** **добавление поддержки платформы Atari Jaguar / Jaguar CD откладывается «до лучших времён»** ([`ADR-016`](adr/ADR-016-jaguar-deferred.md)); S47–52 не активируются, Jaguar-код/toolchain/ROM/CD/payload не создаются. **Старт — только по явному личному разрешению maintainer; снятие hold/лицензионные решения сами по себе не активируют.** Зафиксированная связка: VJ external (GPL-3.0) + MIT-профиль SDK (`m68k-elf-gcc`/binutils/`lyxass` + свой HAL) + собственный MIT `jagcd`; `jaguar-sdk`/Atari BIOS/`rmac`/`rln`/`cdi-maker` не вендорятся. Планы сохранены как draft/reference; ответы — [`plans/jaguar_emulator_sdk_answers.md`](plans/jaguar_emulator_sdk_answers.md), hold — [`plans/jaguar_legal_hold.md`](plans/jaguar_legal_hold.md); draft-only до v0.9.x. Детальные планы — §13.4.
 - **v0.5.0 — 3DO (4–6 спринтов):** CEL/MADAM-композитинг; отдельная юридическая проверка SDK перед любым vendoring/перераспределением.
 - **v0.6.0–v0.8.0 — Аудио и ФС:** XA/PCM/ADPCM (SPU/SCSP/AI), расширенный ISO9660/CDFS, memory card save.
 - Перед любой Tier-2/3 реализацией: повторная сверка hardware-спецификаций против первоисточников (данные будущих платформ — reference material).
@@ -599,6 +600,98 @@ S45–46 — `hello_triangle`/`rotating_cube` ROM, `asset_converter
 `sdk/platforms/n64` + `demos/n64`, contract asserts и negative-tests;
 60-с gate и 10-мин stress в gopher64 1.2.1. Публикация — только draft
 до v0.9.x.
+
+### 13.4. v0.4.0 — Atari Jaguar: детальные планы спринтов (DEFERRED + LEGAL HOLD)
+
+> **DEFERRED — «до лучших времён» + LEGAL HOLD (2026-11-15):**
+> добавление поддержки платформы Atari Jaguar / Jaguar CD отложено
+> ([`adr/ADR-016-jaguar-deferred.md`](adr/ADR-016-jaguar-deferred.md));
+> S47–52 **не активируются**, Jaguar-код/toolchain/ROM/CD/payload не
+> создаются. **Старт — только по явному личному разрешению maintainer;
+> снятие LEGAL HOLD само по себе не активирует.** Планы сохранены как
+> draft/reference, их даты/PERT не commitments, чек-боксы — не backlog.
+> Связка и ответы —
+> [`plans/jaguar_emulator_sdk_answers.md`](plans/jaguar_emulator_sdk_answers.md);
+> условия возобновления —
+> [`plans/jaguar_legal_hold.md`](plans/jaguar_legal_hold.md).
+
+Отложенный этап после N64 draft. Спецификация задаёт Jaguar диапазоном
+4–6 спринтов; для возможного возобновления выбран верхний край — 6
+спринтов (S47–52), чтобы довести backend до hello_triangle/rotating_cube,
+W0/W1, SDK/UI и draft-релиза. Сейчас работы не начинаются. Перед
+возобновлением обязательны повторная сверка reference-фактов Jaguar по
+первоисточникам (§2.2) и лицензионный аудит. Повторный аудит
+(2026-11-15, [`plans/jaguar_legal_audit_v2.md`](plans/jaguar_legal_audit_v2.md)):
+MIT/BSD-эмулятора Jaguar CD не найдено; лучший открытый CD-эмулятор —
+`libretro/virtualjaguar-libretro` (GPL-3.0, встроенные Atari BIOS) —
+только внешний процесс; MAME технически `NOT_WORKING`; BigPEmu закрыт.
+У `jaguar-sdk` нет top-level LICENSE, внутри Atari CD BIOS/библиотеки;
+`rmac`/`rln` без явной лицензии. MIT-clean путь: для картриджа (smoke) —
+`lyxass` (MIT), `new_bjl` (Unlicense), `jaglib` (MIT после замены
+Atari `jagcore.h`), GCC/binutils как build tools; для CD — собственный
+clean-room boot/CD-слой и пользовательский BIOS/HLE. ADR-016 фиксирует
+deferral и связку; ADR-017 (детальная интеграция) создаётся только при
+возобновлении. Любая публикация релизов отложена до v0.9.x (ADR-013),
+поэтому при возобновлении v0.4.0 готовится как **draft**.
+
+| Файл | Спринты | Недели | Даты (reference) | Тема | PERT E |
+|---|---|---|---|---|---|
+| [plans/sprint_47_48.md](plans/sprint_47_48.md) | 47–48 | 93–96 | 31.05–27.06.2027 | Исследование, MIT-профиль toolchain, backend skeleton, CI | 56.7 ч |
+| [plans/sprint_49_50.md](plans/sprint_49_50.md) | 49–50 | 97–100 | 28.06–25.07.2027 | HAL: 68000, Jerry I/O, ROM-ассеты, память, Tom video | 61.7 ч |
+| [plans/sprint_51_52.md](plans/sprint_51_52.md) | 51–52 | 101–104 | 26.07–22.08.2027 | Renderer, W0/W1, SDK/UI, draft v0.4.0 | 56.7 ч |
+
+Σ E ≈ **175.0 ч**. 6 спринтов = 12 недель; при 10–15 ч/нед доступно
+120–180 ч: план сходится только у верхней границы темпа; 95%-сценарий
+(≈ 226.3 ч) требует recovery-недель или scope reduction. Первые
+кандидаты на сокращение: CRY-путь, DSP-помощь, UI Jaguar-таргет
+(переносится), но не ROM/бюджеты/SDK.
+
+Бюджеты Jaguar (reference; уточняются при возобновлении в S49–50 и `ci/normative_contracts.yaml`):
+- DRAM 2 MiB (2 097 152 B), ledger: code/data/object lists ≤ 320 KiB,
+  stack 64 KiB, framebuffers 300 KiB (2×153 600 B, 320×240 RGB16),
+  Z 150 KiB (153 600 B, 16-bit), engine arenas 704 KiB (asset 448,
+  frame 128, command 64, FS staging 64 KiB), reserve 448 KiB,
+  headroom ≥ 62 KiB. GPU local 4 KiB и DSP local 8 KiB — вне DRAM.
+- ROM/asset pack ≤ 4 MiB (картридж до 6 MiB, оставлен запас);
+  heap в engine-коде запрещён (static check); SDK/libc-аллокации
+  минимизированы и документированы.
+- 320×240 RGB16, NTSC 60 Гц display; CRY/PAL — опции/ограничения,
+  не release gate v0.4.0.
+- Кадр: target 30 FPS (< 33.3 мс), gate ≥ 20 FPS (< 50 мс), 60 с;
+  10-минутный stress.
+- W0: 5 кейсов + framebuffer-hash; W1: 4 куба / 48 треугольников,
+  64×64 текстура, Gouraud, 16-bit Z.
+
+Гейт v0.4.0 (если платформа будет возвращена):
+- `jaguar-release` собирается pinned MIT-профилем (GCC/binutils/`lyxass`);
+  `.j64` проходит header/checksum/entry `$802000`; CI `build-jaguar` зелёный.
+- `hello_triangle` и `rotating_cube` работают в pinned эмуляторе;
+  60-с gate и 10-минутный stress PASS.
+- Tom Object Processor/Blitter реально используются; 16-bit Z,
+  Gouraud и texture mapping подтверждены; 68000 — host/control,
+  Jerry — I/O/таймеры; silent drop отсутствует.
+- Бюджеты DRAM/ROM/stack/GPU local соблюдены; W0/W1-метрики с
+  environment-метаданными (G12).
+- SDK Jaguar + UI target Jaguar в payload; `verify_release_contract.py` —
+  `all_ok: true`; negative-tests PASS; нет чужих BIOS/ROM/ключей/
+  build-каталогов.
+- Релиз — **draft-only**; любая публикация — не ранее **v0.9.x**
+  (ADR-013); v0.2.x остаются withdrawn, v0.3.0 — draft.
+
+**Статус (2026-11-15): DEFERRED — «до лучших времён» + LEGAL HOLD.**
+S47–52 запланированы, но **не активируются**; Jaguar-код/toolchain/ROM/
+CD/payload не создаются. **Старт — только по явному личному разрешению
+maintainer; снятие hold само по себе не активирует.** Зафиксированная связка: libretro Virtual Jaguar
+(GPL-3.0, master `8543bbf`) — только внешний процесс, без линковки и
+payload; SDK — MIT-профиль (`m68k-elf-gcc` + binutils + `lyxass` + свой
+HAL/startup/linker + clean-room CD); CD — собственный MIT `jagcd`
+(boot track + `.cue/.bin` + manifest + size check); `jaguar-sdk`/Atari
+BIOS/`rmac`/`rln`/`cdi-maker` не вендорятся. Hardware-факты подтверждены
+по JTRM rev 8; детали — `plans/jaguar_legal_audit_v2.md`, ответы —
+`plans/jaguar_emulator_sdk_answers.md`, решение —
+`adr/ADR-016-jaguar-deferred.md`. ADR-017 создаётся только при
+возобновлении; начало работ — после отдельного явного личного разрешения
+maintainer и условий `plans/jaguar_legal_hold.md`.
 
 ## 14. Реестр рисков (операционный)
 

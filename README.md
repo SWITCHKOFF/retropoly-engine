@@ -270,18 +270,28 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] N64 S41–42: HAL VI/input/DFS/память, render skeleton, gopher64 gate
 - [x] N64 S43–44: RSP T&L + RSP lighting, RDPQ/Z/TMEM, W0/W1, gopher64 gate
 - [x] N64 S45–46: hello_triangle/rotating_cube, бюджеты, N64 SDK/UI, draft v0.3.0
+- [ ] Jaguar S47–52: **DEFERRED — «до лучших времён»** + LEGAL HOLD — поддержка платформы отложена; связка зафиксирована в [ADR-016](docs/adr/ADR-016-jaguar-deferred.md); работы не начинаются, пока maintainer сам не разрешит старт
 - [ ] Публикация отложена до v0.9.x (release freeze); v0.2.1 Release удалён/отозван
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
 [docs/RELEASING.md](docs/RELEASING.md). Любая публикация релизов отложена до
-**v0.9.x**; N64 **v0.3.0** (S39–46) собран как draft. Следующий milestone —
-Jaguar v0.4.0 (S47+). Планы — [sprint_33_34](docs/plans/sprint_33_34.md),
+**v0.9.x**; N64 **v0.3.0** (S39–46) собран как draft. Jaguar v0.4.0
+(S47–52) — **DEFERRED — «до лучших времён»** + LEGAL HOLD; старт — только
+по личному разрешению maintainer; связка: VJ external (GPL-3.0) + MIT-профиль
+SDK (`m68k-elf-gcc`/binutils/`lyxass` + свой HAL) + собственный MIT `jagcd`;
+ответы —
+[jaguar_emulator_sdk_answers.md](docs/plans/jaguar_emulator_sdk_answers.md),
+решение — [ADR-016](docs/adr/ADR-016-jaguar-deferred.md); планы сохранены
+как draft/reference — [sprint_33_34](docs/plans/sprint_33_34.md),
 [sprint_35_36](docs/plans/sprint_35_36.md),
 [sprint_37_38](docs/plans/sprint_37_38.md),
 [sprint_39_40](docs/plans/sprint_39_40.md),
 [sprint_41_42](docs/plans/sprint_41_42.md),
 [sprint_43_44](docs/plans/sprint_43_44.md),
-[sprint_45_46](docs/plans/sprint_45_46.md).
+[sprint_45_46](docs/plans/sprint_45_46.md),
+[sprint_47_48](docs/plans/sprint_47_48.md),
+[sprint_49_50](docs/plans/sprint_49_50.md),
+[sprint_51_52](docs/plans/sprint_51_52.md).
 
 ## Лицензия
 
