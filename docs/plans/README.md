@@ -103,7 +103,7 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ра
 > benchmark YAML и скриншоты. Remote CI green (PR #5 `2191d3a`:
 > `build-n64`/`tests`/`sdk-package`/`ui-client` + `build-pc/ps1/saturn`;
 > release gate dispatch 43720489809 — success, `publish` skipped;
-> merge `2f7d9f4` — develop). Payload: `forbidden: []` — нет
+> CI push `ad70587` — develop/main green). Payload: `forbidden: []` — нет
 > Jaguar/BIOS/ROM/ключей/эмулятора; negative-tests 18/18. Baseline
 > эмулятора — **gopher64 1.2.1** (mupen64plus не грузит libdragon IPL3
 > r5+, mupen64plus-core#1185; ares без Linux-бинаря). Эмулятор в CI не

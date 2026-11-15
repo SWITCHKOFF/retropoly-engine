@@ -31,7 +31,7 @@
 `sdk/platforms/n64` + UI + `demos/n64`; собирается и проходит gate
 локально/в CI, но **не публикуется** (release freeze). Remote CI green
 (PR #5 `2191d3a`; release gate dispatch 43720489809 — `publish` skipped;
-merge `2f7d9f4` — develop). Тег/Release не создаются; публикация —
+CI push `ad70587` — develop/main green). Тег/Release не создаются; публикация —
 не ранее v0.9.x.
 
 **v0.2.1 (S33–38):** GitHub Release и тег `v0.2.1` удалены/отозваны
@@ -266,7 +266,7 @@ macOS x86_64 собирается из исходников, но не вход�
       UI headless smoke, consumer PC/PS1/Saturn)
 - [x] Clean-room consumer PC и clean-room UI E2E на локальных ассетах
 - [x] Remote CI на коммите `3e816d1` — 12/12 green
-- [x] Remote CI v0.3.0 (PR #5 `2191d3a`, merge `2f7d9f4`) — green;
+- [x] Remote CI v0.3.0 (PR #5 `2191d3a`, CI push `ad70587`) — green;
       release gate dispatch `43720489809` — `all_ok`, `forbidden: []`,
       `publish` skipped
 - [x] Тег `v0.2.1` и GitHub Release — созданы, затем **удалены/отозваны**;

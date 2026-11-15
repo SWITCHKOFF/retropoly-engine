@@ -597,7 +597,7 @@ Remote CI green: PR #5 `2191d3a` — `build-n64` 43720487426,
 `tests` 43720487400, `sdk-package` 43720487415, `ui-client` 43720487377,
 `build-pc/ps1/saturn`; release gate dispatch 43720489809 — success
 (24/24 asserts, payload `all_ok`, `forbidden: []`, `publish` skipped);
-merge `2f7d9f4` — develop green. Baseline эмулятора gopher64 1.2.1
+CI push `ad70587` — develop/main green. Baseline эмулятора gopher64 1.2.1
 (mupen64plus не грузит libdragon IPL3 r5+, mupen64plus-core#1185).
 S45–46 — `hello_triangle`/`rotating_cube` ROM, `asset_converter
 --platform n64`, бюджеты/W0/W1, N64 SDK (`find_package` +

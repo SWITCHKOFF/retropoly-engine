@@ -104,6 +104,6 @@ Jaguar/emulator — 18/18), `scripts/verify_n64_budgets.py`,
 `scripts/verify_n64_assets.py`.
 Remote CI: PR #5 `2191d3a` — green (`build-n64`, `tests`, `sdk-package`,
 `ui-client`, `build-pc/ps1/saturn`); release gate dispatch `43720489809` —
-success, payload `all_ok`, `forbidden: []`, `publish` skipped; merge
-`2f7d9f4` — develop green.
+success, payload `all_ok`, `forbidden: []`, `publish` skipped; CI push
+`ad70587` — develop/main green.
 Бенчмарк: [`benchmarks/n64_hello_triangle_v0_3_0.yaml`](benchmarks/n64_hello_triangle_v0_3_0.yaml).

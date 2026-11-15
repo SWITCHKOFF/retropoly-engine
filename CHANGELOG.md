@@ -28,7 +28,7 @@
   18/18; README supported matrix и `docs/N64.md` синхронизированы.
   Remote CI green: PR #5 `2191d3a` (`build-n64`, `tests`, `sdk-package`,
   `ui-client`, `build-pc/ps1/saturn`), release gate dispatch 43720489809
-  — success (`publish` skipped), merge `2f7d9f4` — develop green.
+  — success (`publish` skipped); CI push `ad70587` — develop/main green.
   Тег/GitHub Release не создаются; публикация — не ранее v0.9.x.
 - Спринт 45–46 — N64 v0.3.0 (draft): отдельные ROM `hello_triangle.z64`
   (TRIANGLE.MSH + TEX0.TEX, интерактивная камера stick/D-pad/A-reset) и

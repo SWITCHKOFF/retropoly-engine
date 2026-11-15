@@ -70,8 +70,8 @@ macOS не проверяется. В payload нет Jaguar-артефактов
 
 Remote CI v0.3.0 (PR #5, `2191d3a`): `build-n64`, `tests`, `sdk-package`,
 `ui-client` и `build-pc/ps1/saturn` — success; release gate dry-run
-`43720489809` — success, `publish` skipped; merge `2f7d9f4` — develop
-green. Release notes:
+`43720489809` — success, `publish` skipped; CI push `ad70587` —
+develop/main green. Release notes:
 [docs/RELEASE_NOTES_v0.3.0.md](docs/RELEASE_NOTES_v0.3.0.md). Полный гайд:
 [docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
 
