@@ -22,6 +22,11 @@
 
 ### Added
 
+- N64 v0.3.0 **закрыт как draft** (2026-11-15): local gate 24/24
+  (`all_ok`), payload `retro-engine-v0.3.0.tar.gz` — `all_ok: true`,
+  `forbidden: []` (нет Jaguar/BIOS/ROM/ключей/эмулятора), negative-tests
+  18/18; README supported matrix и `docs/N64.md` синхронизированы.
+  Тег/GitHub Release не создаются; публикация — не ранее v0.9.x.
 - Спринт 45–46 — N64 v0.3.0 (draft): отдельные ROM `hello_triangle.z64`
   (TRIANGLE.MSH + TEX0.TEX, интерактивная камера stick/D-pad/A-reset) и
   `rotating_cube.z64` (W1 4 куба/48 tri, fixed camera, RSP light);

@@ -1,6 +1,6 @@
 # DRAFT — RetroPolyEngine v0.3.0 (Nintendo 64, не опубликовано)
 
-> **Статус: draft / frozen.** v0.3.0 — development-релиз N64; любая
+> **Статус: closed as draft / frozen (2026-11-15).** v0.3.0 — development-релиз N64; любая
 > публикация отложена до **v0.9.x** ([ADR-013](adr/ADR-013-release-freeze.md)).
 > GitHub Release/тег не создаются; `release.yml` формирует только draft
 > после ручной приёмки maintainer + агент. v0.2.x остаются withdrawn.
@@ -72,8 +72,9 @@ cmake --build build        # hello_triangle_n64.z64
 | Windows x86_64 | PC; PS1/Saturn/N64 — экспериментально (toolchain env) |
 | macOS arm64 | PC; cross-targets требуют внешний toolchain |
 
-N64 host — Linux x86_64 (CI); Windows-сборка N64 экспериментальна.
-BIOS/ROM/ключи не входят в payload; для N64 BIOS не требуется.
+N64 host — Linux x86_64 (CI); Windows-сборка N64 экспериментальна,
+macOS не проверяется. BIOS/ROM/ключи, Jaguar-артефакты и эмуляторы
+(включая gopher64) в payload не входят; для N64 BIOS не требуется.
 
 ## Известные ограничения
 

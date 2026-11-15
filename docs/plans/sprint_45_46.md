@@ -6,7 +6,9 @@
 > §2.3 (N64), §4 (итерация 4); [`../RELEASING.md`](../RELEASING.md) — релиз
 > обязан содержать SDK + UI client.
 > Легенда: **[B]** blocking · **[H]** high · **[M]** medium (можно перенести).
-> **Статус (2026-11-14): реализация закрыта локально; v0.3.0 — draft.**
+> **Статус (2026-11-15): S45–46 закрыты; v0.3.0 закрыт как draft.**
+> Remote CI green, payload audit без Jaguar/BIOS/эмулятора; публикации
+> нет — release freeze до v0.9.x.
 > hello_triangle/rotating_cube ROM, `--platform n64`, бюджеты/W0/W1,
 > N64 SDK + UI target, payload `sdk/platforms/n64` + `demos/n64`,
 > contract asserts/negative-tests и draft-only release workflow.
@@ -47,8 +49,11 @@
 | N64 SDK | clean consumer `find_package` → `.z64` PASS; `n64_rsp_tnl` |
 | UI N64 | New Project → import → Build → Run gopher64 PASS |
 | Stress 10 мин | rotating: 613 361 мс / 36 600 кадров, `pending=0`, без ERROR |
-| Payload | `sdk/platforms/n64` + `ui` + `demos/n64`; negative-tests 16/16 PASS |
-| Артефакты | benchmark YAML, 2 скриншота, `docs/N64.md` §9.3, release notes |
+| Payload | `sdk/platforms/n64` + `ui` + `demos/n64`; negative-tests 18/18 PASS |
+| Payload audit | `forbidden: []` — нет Jaguar/BIOS/ROM/ключей/эмулятора |
+| Local gate | 24/24 asserts `all_ok`; payload 11 573 405 B, `all_ok: true` |
+| Артефакты | benchmark YAML, 2 скриншота, `docs/N64.md` §9.3–9.4, release notes |
+| Закрытие | v0.3.0 закрыт как draft; публикации нет (freeze до v0.9.x) |
 
 ## Задачи
 
@@ -85,7 +90,7 @@
 - [x] [B] Clean-room: распаковать N64 SDK → consumer `hello_triangle` собирается через `find_package` → `.z64` запускается в pinned эмуляторе
 - [x] [B] UI E2E: New Project → target N64 → import assets → Build → Run в эмуляторе
 - [x] [B] CI green: `build-n64`, `tests`, `sdk-package`, `ui-client`, release gate; negative-tests PASS
-- [x] [B] Payload audit: нет BIOS/ROM/ключей/build-каталогов; checksums сходятся
+- [x] [B] Payload audit: нет BIOS/ROM/ключей/build-каталогов/Jaguar/эмулятора; checksums сходятся
 - [x] [B] Приёмка v0.3.0: gate §13.3; релиз остаётся draft/frozen
 - [ ] [M] Метрики/анонс — после v0.9.x (осознанно не выполняется до снятия freeze)
 

@@ -29,10 +29,10 @@ maintainer + агент. Подробности — [docs/RELEASING.md](docs/REL
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
-## Draft v0.3.0 (не опубликован; v0.2.1 withdrawn)
+## Draft v0.3.0 (закрыт как draft; не опубликован; v0.2.1 withdrawn)
 
-Публичного GitHub Release сейчас нет. Те же артефакты можно собрать
-локально/в CI:
+Публичного GitHub Release сейчас нет; v0.3.0 закрыт как draft 2026-11-15.
+Те же артефакты можно собрать локально/в CI:
 
 ```sh
 # SDK + UI package
@@ -52,11 +52,21 @@ python3 scripts/build_release_bundle.py \
 python3 scripts/verify_release_contract.py --payload-only
 ```
 
-Будущий payload: `retro-engine-v0.3.0.tar.gz` (`sdk/` +
+Payload v0.3.0 (draft): `retro-engine-v0.3.0.tar.gz` (`sdk/` +
 `sdk/platforms/n64/` + `ui/` + optional `demos/n64`) + отдельные
 SDK/UI-архивы PC/PS1/Saturn/N64, checksums и отчёты gate.
-Поддерживаемые hosts/targets v0.3.0: SDK — Linux x86_64, Windows x86_64,
-macOS arm64; target PC/PS1/Saturn/N64. Release notes:
+
+Поддерживаемые hosts/targets v0.3.0 (draft):
+
+| Host | PC | PS1 | Saturn | N64 |
+|---|---|---|---|---|
+| Linux x86_64 | CI | CI (PSn00bSDK v0.24) | CI (Jo Engine v2026.2) | CI (libdragon + GCC 16.2.0) |
+| Windows x86_64 | CI | эксперим. (внешний PSn00bSDK) | эксперим. (внешний Jo Engine) | эксперим. (win64 toolchain + `n64tool.exe`) |
+| macOS arm64 | CI | внешний toolchain, вне CI | внешний toolchain, вне CI | внешний toolchain, вне CI |
+
+N64 reference/CI host — Linux x86_64; Windows-сборка экспериментальна,
+macOS не проверяется. В payload нет Jaguar-артефактов, BIOS/ROM, ключей
+и эмуляторов (gopher64 — env-install, не вендорится). Release notes:
 [docs/RELEASE_NOTES_v0.3.0.md](docs/RELEASE_NOTES_v0.3.0.md). Полный гайд:
 [docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
 

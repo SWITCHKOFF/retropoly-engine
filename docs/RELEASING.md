@@ -27,9 +27,10 @@
 **не является действующим публичным релизом**. Не ссылаться на него как
 на «релиз SDK» и не публиковать анонс до v0.9.x.
 
-**v0.3.0 (S39–46):** N64 draft — SDK `sdk/platforms/n64` + UI +
-`demos/n64`; собирается и проходит gate локально/в CI, но **не
-публикуется** (release freeze). Тег/Release не создаются.
+**v0.3.0 (S39–46):** N64 **закрыт как draft** (2026-11-15) — SDK
+`sdk/platforms/n64` + UI + `demos/n64`; собирается и проходит gate
+локально/в CI, но **не публикуется** (release freeze). Тег/Release не
+создаются; публикация — не ранее v0.9.x.
 
 **v0.2.1 (S33–38):** GitHub Release и тег `v0.2.1` удалены/отозваны
 2026-11-14. SDK+UI payload и release gate v2 реализованы и проходят, но
@@ -146,8 +147,11 @@ N64 `.z64` разрешён только в `demos/n64/`.
 - `checksums.sha256` покрывает все файлы payload, включая `sdk/`, N64 SDK
   и `ui/`; `sdk/checksums.sha256`, `sdk/platforms/n64/checksums.sha256`
   и `ui/checksums.sha256` проверяются отдельно.
-- Запрещены BIOS/коммерческие ROM, приватные ключи, `.env`, `.git`, build-каталоги
-  (`build/`, `CMakeFiles/`), `secrets/`, `roms/`.
+- Запрещены BIOS/коммерческие ROM, Jaguar-артефакты, эмуляторы
+  (gopher64/mupen64plus/Mednafen/DuckStation и др.), приватные ключи,
+  `.env`, `.git`, build-каталоги (`build/`, `CMakeFiles/`), `secrets/`,
+  `roms/`. Проверка — `release_payload._forbidden_entries` и
+  negative-tests gate.
 - Cross-platform SDK/UI-архивы (`retro-engine-sdk-*`,
   `retro-engine-ui-*`) публикуются отдельными assets; комбинированный
   payload содержит native-host сборку.
@@ -254,7 +258,8 @@ macOS x86_64 собирается из исходников, но не вход�
 - [x] `release_payload` assert и layout `sdk/` + `ui/`
 - [x] `build_release_bundle.py` / `create_release_archive.sh` v2
 - [x] Negative-tests: missing SDK/UI/checksum, BIOS/ROM, build-каталоги
-- [x] `release.yml`: reusable SDK/UI workflows → gate → **draft** only
+- [x] `release.yml`: reusable SDK/UI workflows → gate → **draft** only;
+      `workflow_dispatch` — dry-run gate (CI-артефакты, без Release/тега)
 - [x] Локальный полный gate 2026-11-14 (`--w1-seconds 60`, `all_ok: true`,
       UI headless smoke, consumer PC/PS1/Saturn)
 - [x] Clean-room consumer PC и clean-room UI E2E на локальных ассетах
