@@ -29,8 +29,10 @@
 
 **v0.3.0 (S39–46):** N64 **закрыт как draft** (2026-11-15) — SDK
 `sdk/platforms/n64` + UI + `demos/n64`; собирается и проходит gate
-локально/в CI, но **не публикуется** (release freeze). Тег/Release не
-создаются; публикация — не ранее v0.9.x.
+локально/в CI, но **не публикуется** (release freeze). Remote CI green
+(PR #5 `2191d3a`; release gate dispatch 43720489809 — `publish` skipped;
+merge `2f7d9f4` — develop). Тег/Release не создаются; публикация —
+не ранее v0.9.x.
 
 **v0.2.1 (S33–38):** GitHub Release и тег `v0.2.1` удалены/отозваны
 2026-11-14. SDK+UI payload и release gate v2 реализованы и проходят, но
@@ -160,8 +162,8 @@ N64 `.z64` разрешён только в `demos/n64/`.
 
 ```sh
 python3 scripts/build_release_bundle.py \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz \
   --report release_contract_report.json \
   --demos-dir dist/demos        # optional
 ```
@@ -200,13 +202,13 @@ python3 scripts/build_release_bundle.py \
 # 1. Полный контракт (нужны собранные пресеты и dist-архивы)
 xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60 \
   --skip-payload \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz
 
 # 2. Payload SDK+UI и checksums
 python3 scripts/build_release_bundle.py \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz \
   --report release_contract_report.json --demos-dir dist/demos
 python3 scripts/verify_release_contract.py --payload-only \
   --output payload_verification_report.json
@@ -264,6 +266,9 @@ macOS x86_64 собирается из исходников, но не вход�
       UI headless smoke, consumer PC/PS1/Saturn)
 - [x] Clean-room consumer PC и clean-room UI E2E на локальных ассетах
 - [x] Remote CI на коммите `3e816d1` — 12/12 green
+- [x] Remote CI v0.3.0 (PR #5 `2191d3a`, merge `2f7d9f4`) — green;
+      release gate dispatch `43720489809` — `all_ok`, `forbidden: []`,
+      `publish` skipped
 - [x] Тег `v0.2.1` и GitHub Release — созданы, затем **удалены/отозваны**;
       версия 0.2.1 остаётся development-версией
 - [x] GitHub Release v0.2.1 удалён/отозван; assets проверены до отзыва

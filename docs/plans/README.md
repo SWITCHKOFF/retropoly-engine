@@ -94,20 +94,21 @@ SDK и UI-клиент ([`../RELEASING.md`](../RELEASING.md)). N64 (v0.3.0) ра
 | [sprint_43_44.md](sprint_43_44.md) | 43–44 | 85–88 | 05.04–02.05.2027 | v0.3.0 | RSP-микрокод, RDP, аппаратный Z-буфер, текстуры | 67.5 ч |
 | [sprint_45_46.md](sprint_45_46.md) | 45–46 | 89–92 | 03.05–30.05.2027 | v0.3.0 | hello_triangle/rotating_cube, бюджеты, SDK/UI, draft v0.3.0 | 56.7 ч |
 
-> **Статус (2026-11-14):** S39–44 (N64 toolchain/libdragon, `n64-release`,
+> **Статус (2026-11-15):** S39–46 (N64 toolchain/libdragon, `n64-release`,
 > HAL VI/input/DFS/память, bootable `.z64` + DFS, `build-n64.yml`,
-> ADR-014/015, `docs/N64.md`) **реализованы локально**: pinned GCC
-> 16.2.0 + libdragon `e356bf3`, `hello_n64.z64` с `CUBE.MSH`/`TEX0.TEX`
-> в read-only DFS, ROM verifier PASS, 60-с gate и 10-минутный stress в
-> gopher64 1.2.1, RSP T&L + RSP dot-lighting, RDPQ с аппаратным Z,
-> CI8/TMEM-полосы 32×64 (2560 B), bilinear, W0 5/5, W1 4 куба/48 tri
-> @ ≈59 FPS (gate ≥30), `n64_hal_tests` 61/61 (+ASan), benchmark YAML и
-> скриншот. Remote CI — после push. Baseline эмулятора — **gopher64
-> 1.2.1** (mupen64plus не грузит libdragon IPL3 r5+,
-> mupen64plus-core#1185; ares без Linux-бинаря). S45–46 —
-> hello_triangle/rotating_cube, W0/W1-бюджеты, N64 SDK/UI и draft
-> v0.3.0. Эмулятор в CI не запускается; visual/stress gate — ручной,
-> pinned emulator. До v0.9.x публикуются только draft-релизы.
+> ADR-014/015, RSP T&L/RDP/Z/TMEM, демо, N64 SDK/UI, payload) **закрыты**;
+> v0.3.0 **закрыт как draft**. Pinned GCC 16.2.0 + libdragon `e356bf3`,
+> ROM verifier PASS, 60-с gate/10-мин stress в gopher64 1.2.1, W0 5/5,
+> W1 4 куба/48 tri @ ≈59 FPS (gate ≥30), `n64_hal_tests` 61/61 (+ASan),
+> benchmark YAML и скриншоты. Remote CI green (PR #5 `2191d3a`:
+> `build-n64`/`tests`/`sdk-package`/`ui-client` + `build-pc/ps1/saturn`;
+> release gate dispatch 43720489809 — success, `publish` skipped;
+> merge `2f7d9f4` — develop). Payload: `forbidden: []` — нет
+> Jaguar/BIOS/ROM/ключей/эмулятора; negative-tests 18/18. Baseline
+> эмулятора — **gopher64 1.2.1** (mupen64plus не грузит libdragon IPL3
+> r5+, mupen64plus-core#1185; ares без Linux-бинаря). Эмулятор в CI не
+> запускается; visual/stress gate — ручной, pinned emulator. Публикации
+> нет — release freeze до v0.9.x.
 
 ## Stage 4: v0.4.0 — Atari Jaguar (S47–52, DEFERRED + LEGAL HOLD)
 

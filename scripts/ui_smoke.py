@@ -10,8 +10,8 @@
 # Примеры:
 #   python3 scripts/ui_smoke.py --sdk-dir build/pc-release/sdk-stage-pc-x86_64 \
 #       --ui-binary build/ui-release/ui/retro_engine_ui
-#   python3 scripts/ui_smoke.py --sdk-archive dist/retro-engine-sdk-0.2.1-pc-*.tar.gz \
-#       --ui-package dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+#   python3 scripts/ui_smoke.py --sdk-archive dist/retro-engine-sdk-0.3.0-pc-*.tar.gz \
+#       --ui-package dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz
 # ============================================================================
 import argparse
 import glob

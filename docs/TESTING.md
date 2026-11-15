@@ -63,13 +63,13 @@ cmake --preset ps1-release && cmake --build --preset ps1-release
 # Контракты + clean consumer + W0/W1 (SDK/UI архивы в dist/)
 xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60 \
   --skip-payload \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz
 
 # Payload sdk/ + ui/ + checksums + report
 python3 scripts/build_release_bundle.py \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-  --ui-archive dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz \
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+  --ui-archive dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz \
   --report release_contract_report.json --demos-dir dist/demos
 python3 scripts/verify_release_contract.py --payload-only
 

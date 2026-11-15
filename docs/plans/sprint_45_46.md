@@ -52,6 +52,9 @@
 | Payload | `sdk/platforms/n64` + `ui` + `demos/n64`; negative-tests 18/18 PASS |
 | Payload audit | `forbidden: []` — нет Jaguar/BIOS/ROM/ключей/эмулятора |
 | Local gate | 24/24 asserts `all_ok`; payload 11 573 405 B, `all_ok: true` |
+| Remote CI | PR #5 `2191d3a`: `build-n64`/`tests`/`sdk-package`/`ui-client` + `build-pc/ps1/saturn` — success |
+| Release gate | dispatch 43720489809 — success; 24/24 asserts, payload `all_ok`, `forbidden: []`; `publish` skipped |
+| Merge CI | `2f7d9f4`: develop — success (тот же SHA в main) |
 | Артефакты | benchmark YAML, 2 скриншота, `docs/N64.md` §9.3–9.4, release notes |
 | Закрытие | v0.3.0 закрыт как draft; публикации нет (freeze до v0.9.x) |
 
@@ -89,7 +92,7 @@
 
 - [x] [B] Clean-room: распаковать N64 SDK → consumer `hello_triangle` собирается через `find_package` → `.z64` запускается в pinned эмуляторе
 - [x] [B] UI E2E: New Project → target N64 → import assets → Build → Run в эмуляторе
-- [x] [B] CI green: `build-n64`, `tests`, `sdk-package`, `ui-client`, release gate; negative-tests PASS
+- [x] [B] CI green: `build-n64`, `tests`, `sdk-package`, `ui-client`, release gate (PR #5 `2191d3a`; gate dispatch 43720489809); negative-tests 18/18 PASS
 - [x] [B] Payload audit: нет BIOS/ROM/ключей/build-каталогов/Jaguar/эмулятора; checksums сходятся
 - [x] [B] Приёмка v0.3.0: gate §13.3; релиз остаётся draft/frozen
 - [ ] [M] Метрики/анонс — после v0.9.x (осознанно не выполняется до снятия freeze)

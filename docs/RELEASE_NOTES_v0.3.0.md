@@ -99,6 +99,11 @@ sha256sum -c ui/checksums.sha256
 ```
 
 Gate: `scripts/verify_release_contract.py` (`all_ok: true`),
-`scripts/release_gate_negative_tests.py` (включая missing/bad N64 SDK),
-`scripts/verify_n64_budgets.py`, `scripts/verify_n64_assets.py`.
+`scripts/release_gate_negative_tests.py` (включая missing/bad N64 SDK,
+Jaguar/emulator — 18/18), `scripts/verify_n64_budgets.py`,
+`scripts/verify_n64_assets.py`.
+Remote CI: PR #5 `2191d3a` — green (`build-n64`, `tests`, `sdk-package`,
+`ui-client`, `build-pc/ps1/saturn`); release gate dispatch `43720489809` —
+success, payload `all_ok`, `forbidden: []`, `publish` skipped; merge
+`2f7d9f4` — develop green.
 Бенчмарк: [`benchmarks/n64_hello_triangle_v0_3_0.yaml`](benchmarks/n64_hello_triangle_v0_3_0.yaml).

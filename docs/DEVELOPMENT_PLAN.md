@@ -583,7 +583,8 @@ N64 S39–46 — следующий этап разработки (§13.3).
 - Релиз — **draft-only**; любая публикация — не ранее **v0.9.x**
   (ADR-013); v0.2.x остаются withdrawn.
 
-**Статус (2026-11-14):** S39–46 реализованы локально; v0.3.0 — draft. S39–42: pinned
+**Статус (2026-11-15):** S39–46 закрыты; v0.3.0 **закрыт как draft**
+(публикации нет, release freeze до v0.9.x). S39–42: pinned
 GCC 16.2.0 + libdragon `e356bf3`, `n64-release`, bootable `hello_n64.z64`
 с read-only DFS, ROM verifier PASS, 60-с gate/10-мин stress в gopher64
 1.2.1, host-тесты 46/46. S43–44: RSP T&L overlay (Q16.16, 512 слотов),
@@ -591,15 +592,19 @@ RSP dot-lighting, RDPQ + аппаратный Z 320×240, CI8/TMEM-полосы 
 (2560 B, 4 KiB TMEM), bilinear, W0 5/5 с фиксированными хэшами,
 CPU-fallback hash идентичен, W1 4 куба/48 tri @ ≈59 FPS в software RDP
 (gate ≥30; target 60 — железо), `n64_hal_tests` 61/61 (+ASan), ADR-015,
-benchmark YAML и скриншот. PC regression — см. ctest pc-debug.
-Remote CI — после push; baseline эмулятора gopher64 1.2.1
+benchmark YAML и скриншот. PC regression — 350/350 (1 audio skip).
+Remote CI green: PR #5 `2191d3a` — `build-n64` 43720487426,
+`tests` 43720487400, `sdk-package` 43720487415, `ui-client` 43720487377,
+`build-pc/ps1/saturn`; release gate dispatch 43720489809 — success
+(24/24 asserts, payload `all_ok`, `forbidden: []`, `publish` skipped);
+merge `2f7d9f4` — develop green. Baseline эмулятора gopher64 1.2.1
 (mupen64plus не грузит libdragon IPL3 r5+, mupen64plus-core#1185).
 S45–46 — `hello_triangle`/`rotating_cube` ROM, `asset_converter
 --platform n64`, бюджеты/W0/W1, N64 SDK (`find_package` +
 `n64_rsp_tnl`), UI target N64 (import/build/run gopher64), payload
 `sdk/platforms/n64` + `demos/n64`, contract asserts и negative-tests;
-60-с gate и 10-мин stress в gopher64 1.2.1. Публикация — только draft
-до v0.9.x.
+60-с gate и 10-мин stress в gopher64 1.2.1. v0.3.0 закрыт как draft;
+публикация — не ранее v0.9.x.
 
 ### 13.4. v0.4.0 — Atari Jaguar: детальные планы спринтов (DEFERRED + LEGAL HOLD)
 

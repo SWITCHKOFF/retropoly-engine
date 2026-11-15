@@ -9,8 +9,8 @@
 #
 # Пример:
 #   python3 scripts/ui_e2e.py \
-#       --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-#       --ui-package dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+#       --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+#       --ui-package dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz
 # ============================================================================
 import argparse
 import hashlib

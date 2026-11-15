@@ -66,7 +66,12 @@ SDK/UI-архивы PC/PS1/Saturn/N64, checksums и отчёты gate.
 
 N64 reference/CI host — Linux x86_64; Windows-сборка экспериментальна,
 macOS не проверяется. В payload нет Jaguar-артефактов, BIOS/ROM, ключей
-и эмуляторов (gopher64 — env-install, не вендорится). Release notes:
+и эмуляторов (gopher64 — env-install, не вендорится).
+
+Remote CI v0.3.0 (PR #5, `2191d3a`): `build-n64`, `tests`, `sdk-package`,
+`ui-client` и `build-pc/ps1/saturn` — success; release gate dry-run
+`43720489809` — success, `publish` skipped; merge `2f7d9f4` — develop
+green. Release notes:
 [docs/RELEASE_NOTES_v0.3.0.md](docs/RELEASE_NOTES_v0.3.0.md). Полный гайд:
 [docs/SDK.md](docs/SDK.md), [docs/UI_CLIENT.md](docs/UI_CLIENT.md).
 

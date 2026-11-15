@@ -20,7 +20,7 @@
 # Пример:
 #   cmake --preset ui-release && cmake --build --preset ui-release
 #   python3 scripts/package_ui.py --build-dir build/ui-release \
-#       --version 0.2.1 --output-dir dist
+#       --version 0.3.0 --output-dir dist
 # ============================================================================
 import argparse
 import datetime as _dt

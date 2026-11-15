@@ -26,6 +26,9 @@
   (`all_ok`), payload `retro-engine-v0.3.0.tar.gz` — `all_ok: true`,
   `forbidden: []` (нет Jaguar/BIOS/ROM/ключей/эмулятора), negative-tests
   18/18; README supported matrix и `docs/N64.md` синхронизированы.
+  Remote CI green: PR #5 `2191d3a` (`build-n64`, `tests`, `sdk-package`,
+  `ui-client`, `build-pc/ps1/saturn`), release gate dispatch 43720489809
+  — success (`publish` skipped), merge `2f7d9f4` — develop green.
   Тег/GitHub Release не создаются; публикация — не ранее v0.9.x.
 - Спринт 45–46 — N64 v0.3.0 (draft): отдельные ROM `hello_triangle.z64`
   (TRIANGLE.MSH + TEX0.TEX, интерактивная камера stick/D-pad/A-reset) и
@@ -91,7 +94,14 @@
   `n64_hal_tests` 61/61, ADR-015, `docs/N64.md`, benchmark
   `docs/benchmarks/n64_render_s43_44.yaml`,
   `screenshots/n64_render_s43_44.png`. Z-буфер 150 KiB внесён в memory
-  ledger (reserve 1 570 816 B). Remote CI — после push.
+  ledger (reserve 1 570 816 B). Remote CI — green (PR #4; merge 70694b3).
+
+### Fixed
+
+- UI-пакет: `ui-client.yml` больше не хардкодит `--version 0.2.1`;
+  версия берётся из `CMAKE_PROJECT_VERSION`, а clean UI E2E выбирает
+  SDK/UI-архивы по версии из `ci/normative_contracts.yaml`. Найдено
+  remote CI при закрытии v0.3.0 (mismatch SDK 0.3.0 / UI 0.2.1).
 
 ## [0.2.1] — не опубликовано (release withdrawn; deferred to v0.9.x)
 

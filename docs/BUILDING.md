@@ -229,9 +229,8 @@ cmake --preset ui-release
 cmake --build --preset ui-release --target retro_engine_ui
 ./build/ui-release/ui/retro_engine_ui
 
-# Пакет ui/ + checksums
-python3 scripts/package_ui.py --build-dir build/ui-release \
-  --version 0.2.1 --output-dir dist
+# Пакет ui/ + checksums (версия берётся из CMakeCache)
+python3 scripts/package_ui.py --build-dir build/ui-release --output-dir dist
 ```
 
 Требования: Dear ImGui submodule (`git submodule update --init --recursive`),
