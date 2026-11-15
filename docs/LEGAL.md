@@ -43,6 +43,19 @@ Copyright (c) 2026 RetroPolyEngine contributors
 - **Mednafen** (GPL-2.0-or-later) — только dev-инструмент ручной приёмки;
   в релизные архивы не входит.
 
+### Panasonic 3DO (исключён из roadmap; не вендорится)
+
+- **3DO исключён из roadmap (2026-11-15).** Поддержка не добавляется; S53+
+  не используются для 3DO. Аудит сохранён как справочный материал —
+  [`plans/3do_legal_audit.md`](plans/3do_legal_audit.md).
+- Не вендорятся и не входят в SDK/release payload: `3do-devkit`, Portfolio
+  OS/SDK, оригинальные 3DO libraries/headers/docs, BIOS/ROM (включая
+  `-norsa`), Norcroft/ARM SDT, 3DO logo/art, `3dt`/retail RSA-ключи,
+  `3dokit`/`retro3do-core` без отдельного legal review.
+- **Opera/FreeDO** — FreeDO modified LGPL с non-commercial ограничением;
+  только внешний процесс после юридической проверки, не линковать и не
+  включать в релизы.
+
 ## Правила сохранения notices
 
 1. **Собственный код**: в начале каждого файла — `SPDX-License-Identifier: MIT`.
@@ -56,5 +69,7 @@ Copyright (c) 2026 RetroPolyEngine contributors
 
 OpenGL® является зарегистрированным товарным знаком Silicon Graphics, Inc.
 Sony PlayStation® является товарным знаком Sony Interactive Entertainment
-Inc. RetroPolyEngine не связан с этими компаниями и не претендует на
-официальную поддержку какой-либо платформы.
+Inc. Panasonic является товарным знаком Panasonic Corporation. 3DO является
+товарным знаком Throwback Entertainment (консоль/железо); «The 3DO Company» —
+товарный знак соответствующего владельца. RetroPolyEngine не связан с этими
+компаниями и не претендует на официальную поддержку какой-либо платформы.

@@ -60,3 +60,9 @@
 - BIOS/ROM/секреты/build-каталоги не входят в UI-пакет; проверка —
   `scripts/package_ui.py`, `scripts/ui_e2e.py`,
   `scripts/verify_release_contract.py`.
+
+## 3DO (не поддерживается)
+
+3DO исключён из roadmap (2026-11-15); поддержка не добавляется. 3DO SDK,
+BIOS/ROM, эмуляторы и `3do-devkit` не вендорятся и не входят в релизы.
+Обоснование и риски — `docs/plans/3do_legal_audit.md`.

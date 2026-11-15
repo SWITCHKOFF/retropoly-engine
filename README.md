@@ -271,6 +271,7 @@ C/X — высота, Y/Z — орбита, Start — сброс. Сборка/�
 - [x] N64 S43–44: RSP T&L + RSP lighting, RDPQ/Z/TMEM, W0/W1, gopher64 gate
 - [x] N64 S45–46: hello_triangle/rotating_cube, бюджеты, N64 SDK/UI, draft v0.3.0
 - [ ] Jaguar S47–52: **DEFERRED — «до лучших времён»** + LEGAL HOLD — поддержка платформы отложена; связка зафиксирована в [ADR-016](docs/adr/ADR-016-jaguar-deferred.md); работы не начинаются, пока maintainer сам не разрешит старт
+- [ ] 3DO: **исключён из roadmap** (2026-11-15); поддержка не добавляется, S53+ не планируются
 - [ ] Публикация отложена до v0.9.x (release freeze); v0.2.1 Release удалён/отозван
 
 Release-контракт: `scripts/verify_release_contract.py`. Политика публикации:
