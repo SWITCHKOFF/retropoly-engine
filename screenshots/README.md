@@ -1,5 +1,16 @@
 # Скриншоты (PC vs PS1 vs N64)
 
+## `n64_hello_triangle.png` / `n64_rotating_cube.png` — N64 v0.3.0 (Спринт 45–46)
+
+Pinned gopher64 1.2.1 (Xvfb/llvmpipe Vulkan, 320×240, 16-bit VI):
+`hello_triangle` (TRIANGLE.MSH + TEX0.TEX, интерактивная камера,
+swing ±0.6 rad) и W1 `rotating_cube` (4 куба/48 tri, fixed camera,
+RSP light). Overlay: режим, RSP TNL+RDP | LIGHT, frame/FPS, peak RDRAM,
+TMEM, TNL/RDP µs, draw calls, W0 hash. 60-с gate: 59 FPS, без ERROR;
+10-мин stress 613 361 мс / 36 600 кадров. Подробности —
+[`../docs/N64.md`](../docs/N64.md) §5.2/§9.3,
+[`../docs/benchmarks/n64_hello_triangle_v0_3_0.yaml`](../docs/benchmarks/n64_hello_triangle_v0_3_0.yaml).
+
 ## `n64_render_s43_44.png` — N64 renderer gate (Спринт 43–44)
 
 Pinned gopher64 1.2.1 (Xvfb/llvmpipe Vulkan, 320×240, 16-bit VI):

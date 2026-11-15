@@ -339,10 +339,12 @@ void GuiApp::pollDialogs()
             break;
         case DialogTarget::SdkPc:
         case DialogTarget::SdkPs1:
-        case DialogTarget::SdkSaturn: {
-            const Platform platform = target == DialogTarget::SdkPc    ? Platform::Pc
-                                      : target == DialogTarget::SdkPs1 ? Platform::Ps1
-                                                                       : Platform::Saturn;
+        case DialogTarget::SdkSaturn:
+        case DialogTarget::SdkN64: {
+            const Platform platform = target == DialogTarget::SdkPc       ? Platform::Pc
+                                      : target == DialogTarget::SdkPs1    ? Platform::Ps1
+                                      : target == DialogTarget::SdkSaturn ? Platform::Saturn
+                                                                          : Platform::N64;
             std::string error;
             if (!core_.setSdkPath(platform, path, &error)) {
                 error_message_ = error;
@@ -359,6 +361,10 @@ void GuiApp::pollDialogs()
         case DialogTarget::EmulatorSaturn:
             settings_edit_.emulator_saturn = path;
             core_.mutableSettings().emulator_saturn = path;
+            break;
+        case DialogTarget::EmulatorN64:
+            settings_edit_.emulator_n64 = path;
+            core_.mutableSettings().emulator_n64 = path;
             break;
         case DialogTarget::ImportAsset:
             importAsset(path);
@@ -939,6 +945,11 @@ void GuiApp::drawSettings()
     if (ImGui::Button((std::string(tr_(lang, "common.browse")) + "##sdsat").c_str())) {
         requestFolderDialog(DialogTarget::SdkSaturn);
     }
+    inputString(tr_(lang, "settings.sdk_n64"), &settings_edit_.sdk_n64);
+    ImGui::SameLine();
+    if (ImGui::Button((std::string(tr_(lang, "common.browse")) + "##sdn64").c_str())) {
+        requestFolderDialog(DialogTarget::SdkN64);
+    }
     ImGui::Separator();
     inputString(tr_(lang, "settings.cmake"), &settings_edit_.cmake_path);
     inputString(tr_(lang, "settings.ninja"), &settings_edit_.ninja_path);
@@ -951,6 +962,11 @@ void GuiApp::drawSettings()
     ImGui::SameLine();
     if (ImGui::Button((std::string(tr_(lang, "common.browse")) + "##emusat").c_str())) {
         requestFileDialog(DialogTarget::EmulatorSaturn, "Emulator", "*");
+    }
+    inputString(tr_(lang, "settings.emulator_n64"), &settings_edit_.emulator_n64);
+    ImGui::SameLine();
+    if (ImGui::Button((std::string(tr_(lang, "common.browse")) + "##emun64").c_str())) {
+        requestFileDialog(DialogTarget::EmulatorN64, "Emulator", "*");
     }
     ImGui::Separator();
     if (ImGui::BeginCombo(tr_(lang, "settings.theme"), settings_edit_.theme == "light"

@@ -60,6 +60,8 @@ std::string platformSdkEnv(Platform platform)
             return "RPE_SDK_PS1";
         case Platform::Saturn:
             return "RPE_SDK_SATURN";
+        case Platform::N64:
+            return "RPE_SDK_N64";
     }
     return "RPE_SDK_PC";
 }
@@ -85,6 +87,8 @@ std::string exampleNameForPlatform(Platform platform)
             return "hello_triangle_ps1";
         case Platform::Saturn:
             return "hello_triangle_saturn";
+        case Platform::N64:
+            return "hello_triangle_n64";
     }
     return "hello_triangle";
 }
@@ -309,7 +313,7 @@ SdkInfo findSdkForPlatform(const AppSettings& settings, Platform platform, Lang 
 std::vector<TargetAvailability> discoverTargets(const AppSettings& settings, Lang lang)
 {
     std::vector<TargetAvailability> targets;
-    const Platform platforms[] = {Platform::Pc, Platform::Ps1, Platform::Saturn};
+    const Platform platforms[] = {Platform::Pc, Platform::Ps1, Platform::Saturn, Platform::N64};
     for (size_t i = 0; i < sizeof(platforms) / sizeof(platforms[0]); ++i) {
         TargetAvailability target;
         target.platform = platforms[i];
@@ -335,6 +339,13 @@ std::vector<TargetAvailability> discoverTargets(const AppSettings& settings, Lan
             target.available = false;
             target.reason_key = "target.reason.jo_engine";
             target.reason_detail = tr(lang, "target.reason.jo_engine");
+            targets.push_back(target);
+            continue;
+        }
+        if (platforms[i] == Platform::N64 && environmentValue("N64_INST").empty()) {
+            target.available = false;
+            target.reason_key = "target.reason.n64_toolchain";
+            target.reason_detail = tr(lang, "target.reason.n64_toolchain");
             targets.push_back(target);
             continue;
         }

@@ -7,7 +7,9 @@
 #   missing sdk/ ui/ checksums/report → FAIL
 #   повреждённый checksum              → FAIL
 #   BIOS/ROM/секреты/build-каталог      → FAIL
+#   Jaguar-артефакты/эмулятор          → FAIL (v0.3.0 draft audit)
 #   demo-образ вне demos/              → FAIL
+#   отсутствует/повреждён N64 SDK       → FAIL (S45–46)
 #   report all_ok: false               → FAIL
 #
 # Baseline (валидный payload) обязан пройти. Скрипт возвращает 0, только если
@@ -124,6 +126,21 @@ def case_secrets(path):
     refresh_checksums(path)
 
 
+def case_jaguar(path):
+    os.makedirs(os.path.join(path, "jaguar"), exist_ok=True)
+    with open(os.path.join(path, "jaguar", "hello_triangle.j64"), "wb") as f:
+        f.write(b"not-a-real-jaguar-rom\x00")
+    refresh_checksums(path)
+
+
+def case_emulator(path):
+    target = os.path.join(path, "gopher64")
+    with open(target, "wb") as f:
+        f.write(b"\x7fELF not-a-real-emulator\x00")
+    os.chmod(target, 0o755)
+    refresh_checksums(path)
+
+
 def case_build_dir(path):
     os.makedirs(os.path.join(path, "build"), exist_ok=True)
     with open(os.path.join(path, "build", "CMakeCache.txt"), "w",
@@ -135,6 +152,22 @@ def case_build_dir(path):
 def case_demo_outside_demos(path):
     with open(os.path.join(path, "game.iso"), "wb") as f:
         f.write(b"demo image outside demos/\n")
+    refresh_checksums(path)
+
+
+def case_missing_n64_sdk(path):
+    mutate_missing(os.path.join(path, "sdk", "platforms", "n64"))
+
+
+def case_n64_bad_checksum(path):
+    target = os.path.join(path, "sdk", "platforms", "n64", "VERSION.txt")
+    with open(target, "a", encoding="utf-8") as f:
+        f.write("\nmutation\n")
+
+
+def case_n64_rom_outside_demos(path):
+    with open(os.path.join(path, "hello_triangle.z64"), "wb") as f:
+        f.write(b"rom outside demos/\n")
     refresh_checksums(path)
 
 
@@ -163,8 +196,13 @@ CASES = [
     ("bios", case_bios, "forbidden"),
     ("roms", case_rom, "forbidden"),
     ("secrets", case_secrets, "forbidden"),
+    ("jaguar", case_jaguar, "forbidden"),
+    ("emulator", case_emulator, "forbidden"),
     ("build-dir", case_build_dir, "forbidden"),
     ("demo-outside-demos", case_demo_outside_demos, "non-demo"),
+    ("missing-n64-sdk", case_missing_n64_sdk, "n64"),
+    ("n64-bad-checksum", case_n64_bad_checksum, "n64"),
+    ("n64-rom-outside", case_n64_rom_outside_demos, "non-demo"),
     ("report-all-ok-false", case_report_false, "all_ok"),
     ("unexpected-top-level", case_unexpected_top_level, "unexpected"),
 ]

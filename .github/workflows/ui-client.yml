@@ -76,7 +76,7 @@ jobs:
         run: |
           set -euo pipefail
           PY=python3; [ "$RUNNER_OS" = "Windows" ] && PY=python
-          "$PY" scripts/package_ui.py --build-dir build/ui-release --version 0.2.1 --output-dir dist
+          "$PY" scripts/package_ui.py --build-dir build/ui-release --output-dir dist
 
       # --- Linux-only: SDK + clean E2E under xvfb -------------------------
       - name: Build PC SDK for E2E
@@ -92,8 +92,9 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
-          SDK=$(ls dist/retro-engine-sdk-*-pc-linux-*.tar.gz | head -n 1)
-          UI=$(ls dist/retro-engine-ui-*.tar.gz | head -n 1)
+          VERSION="$(sed -n 's/^  version: \([0-9][0-9.]*\)$/\1/p' ci/normative_contracts.yaml | head -n 1)"
+          SDK=$(ls dist/retro-engine-sdk-"$VERSION"-pc-linux-*.tar.gz | head -n 1)
+          UI=$(ls dist/retro-engine-ui-"$VERSION"-*.tar.gz | head -n 1)
           python3 scripts/ui_e2e.py --sdk-archive "$SDK" --ui-package "$UI" \
             --screenshot-dir dist/ui-screenshots
 

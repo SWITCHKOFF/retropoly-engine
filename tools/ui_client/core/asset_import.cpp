@@ -202,6 +202,11 @@ AssetImportResult importAsset(const std::string& project_root, Project* project,
 
     ProcessSpec spec;
     spec.argv.push_back(sdk.converter_path);
+    if (project->platform == Platform::N64) {
+        // S45–46: host-only N64 layout (64×64 CI8 + 256-entry CLUT).
+        spec.argv.push_back("--platform");
+        spec.argv.push_back("n64");
+    }
     spec.argv.push_back(absolute_source);
     spec.argv.push_back(output_path);
     spec.working_directory = project_root;

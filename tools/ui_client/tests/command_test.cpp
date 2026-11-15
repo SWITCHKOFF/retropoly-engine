@@ -31,7 +31,7 @@ SdkInfo fakeSdk(Platform platform, const std::string& path)
     sdk.valid = true;
     sdk.path = path;
     sdk.platform = platform;
-    sdk.version = "0.2.1";
+    sdk.version = "0.3.0";
     return sdk;
 }
 
@@ -44,7 +44,7 @@ TEST(CommandTest, PcBuildPlanUsesNinjaAndSdk)
         GTEST_SKIP() << "cmake/ninja not installed";
     }
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Pc,
                                           "hello_triangle", "hello_triangle");
     const BuildPlan plan = makeBuildPlan(project, dir.str(), fakeSdk(Platform::Pc, dir.str()),
                                          AppSettings(), Lang::Ru);
@@ -67,7 +67,7 @@ TEST(CommandTest, Ps1PlanAddsToolchain)
         GTEST_SKIP() << "cmake/ninja not installed";
     }
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Ps1,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Ps1,
                                           "hello_triangle_ps1", "hello_triangle_ps1");
     const BuildPlan plan = makeBuildPlan(project, dir.str(), fakeSdk(Platform::Ps1, dir.str()),
                                          AppSettings(), Lang::Ru);
@@ -81,7 +81,7 @@ TEST(CommandTest, Ps1PlanAddsToolchain)
 TEST(CommandTest, PcRunFindsExecutable)
 {
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Pc,
                                           "hello_triangle", "hello_triangle");
 #ifdef _WIN32
     const std::string exe = dir.str() + "/build/pc/bin/hello_triangle.exe";
@@ -101,7 +101,7 @@ TEST(CommandTest, PcRunFindsExecutable)
 TEST(CommandTest, PcRunReportsMissingBinary)
 {
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Pc,
                                           "hello_triangle", "hello_triangle");
     const RunPlan plan =
         makeRunPlan(project, dir.str(), fakeSdk(Platform::Pc, dir.str()), AppSettings(), Lang::Ru);
@@ -112,7 +112,7 @@ TEST(CommandTest, PcRunReportsMissingBinary)
 TEST(CommandTest, Ps1RunUsesConfiguredEmulatorAndCue)
 {
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Ps1,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Ps1,
                                           "hello_triangle_ps1", "hello_triangle_ps1");
     const std::string emulator = dir.str() + "/duckstation";
     writeFile(emulator, "fake");
@@ -132,7 +132,7 @@ TEST(CommandTest, Ps1RunUsesConfiguredEmulatorAndCue)
 TEST(CommandTest, Ps1RunWithoutEmulatorIsError)
 {
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Ps1,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Ps1,
                                           "hello_triangle_ps1", "hello_triangle_ps1");
     const RunPlan plan =
         makeRunPlan(project, dir.str(), fakeSdk(Platform::Ps1, dir.str()), AppSettings(), Lang::Ru);
@@ -143,7 +143,7 @@ TEST(CommandTest, Ps1RunWithoutEmulatorIsError)
 TEST(CommandTest, ProjectEmulatorOverridesSettings)
 {
     TempDir dir;
-    Project project = makeProjectTemplate("demo", "0.2.1", dir.str(), Platform::Saturn,
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::Saturn,
                                           "hello_triangle_saturn", "hello_triangle_saturn");
     const std::string emulator = dir.str() + "/mednafen";
     writeFile(emulator, "fake");
@@ -154,4 +154,36 @@ TEST(CommandTest, ProjectEmulatorOverridesSettings)
                                      AppSettings(), Lang::Ru);
     ASSERT_TRUE(plan.ok) << plan.error;
     EXPECT_EQ(plan.argv[0], absolutePath(emulator));
+}
+
+TEST(CommandTest, N64PlanAddsToolchainAndRunsRom)
+{
+    if (findExecutable("", {"cmake", "cmake.exe"}).empty() ||
+        findExecutable("", {"ninja", "ninja.exe"}).empty()) {
+        GTEST_SKIP() << "cmake/ninja not installed";
+    }
+    TempDir dir;
+    Project project = makeProjectTemplate("demo", "0.3.0", dir.str(), Platform::N64,
+                                          "hello_triangle_n64", "hello_triangle_n64");
+    const BuildPlan build = makeBuildPlan(project, dir.str(), fakeSdk(Platform::N64, dir.str()),
+                                          AppSettings(), Lang::Ru);
+    ASSERT_TRUE(build.ok) << build.error;
+    EXPECT_TRUE(contains(build.configure, "-DCMAKE_TOOLCHAIN_FILE=" +
+                                              joinPath(dir.str(), "cmake/n64-toolchain.cmake")));
+    EXPECT_EQ(build.build_dir, normalizePath(dir.str() + "/build/n64"));
+
+    const std::string emulator = dir.str() + "/gopher64";
+    writeFile(emulator, "fake");
+    makeExecutable(emulator);
+    AppSettings settings;
+    settings.emulator_n64 = emulator;
+    const std::string rom = dir.str() + "/build/n64/hello_triangle_n64.z64";
+    writeFile(rom, "rom");
+    const RunPlan run =
+        makeRunPlan(project, dir.str(), fakeSdk(Platform::N64, dir.str()), settings, Lang::Ru);
+    ASSERT_TRUE(run.ok) << run.error;
+    EXPECT_EQ(run.argv.size(), 2u);
+    EXPECT_EQ(run.argv[0], absolutePath(emulator));
+    EXPECT_EQ(run.argv[1], absolutePath(rom));
+    EXPECT_TRUE(run.uses_emulator);
 }

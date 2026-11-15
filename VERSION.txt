@@ -10,7 +10,7 @@
 
 [engine]
 name        = RetroPolyEngine
-version     = 0.2.1
+version     = 0.3.0
 sdk_schema  = 1
 note        = версия SDK задаётся CMake project(VERSION) и попадает в
               include/retro_engine/version.h, sdk_manifest.json и VERSION.txt

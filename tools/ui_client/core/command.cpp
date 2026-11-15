@@ -28,19 +28,20 @@ std::string firstExisting(const std::vector<std::string>& candidates)
     return std::string();
 }
 
-std::string findCueRecursive(const std::string& directory, int depth)
+std::string findByExtensionRecursive(const std::string& directory, int depth,
+                                     const std::string& extension)
 {
     if (depth < 0 || !isDirectory(directory)) return std::string();
     const std::vector<std::string> entries = listDirectorySorted(directory);
     // Сначала файлы текущего уровня, потом подкаталоги.
     for (size_t i = 0; i < entries.size(); ++i) {
         const std::string path = joinPath(directory, entries[i]);
-        if (isRegularFile(path) && fileExtension(path) == ".cue") return path;
+        if (isRegularFile(path) && fileExtension(path) == extension) return path;
     }
     for (size_t i = 0; i < entries.size(); ++i) {
         const std::string path = joinPath(directory, entries[i]);
         if (isDirectory(path)) {
-            const std::string found = findCueRecursive(path, depth - 1);
+            const std::string found = findByExtensionRecursive(path, depth - 1, extension);
             if (!found.empty()) return found;
         }
     }
@@ -53,6 +54,7 @@ std::string emulatorForPlatform(const Project& project, const AppSettings& setti
     if (!project.emulator_path.empty()) return project.emulator_path;
     if (platform == Platform::Ps1) return settings.emulator_ps1;
     if (platform == Platform::Saturn) return settings.emulator_saturn;
+    if (platform == Platform::N64) return settings.emulator_n64;
     return std::string();
 }
 
@@ -102,6 +104,11 @@ BuildPlan makeBuildPlan(const Project& project, const std::string& project_root,
                                  joinPath(sdk.path, "cmake/saturn-sdk-toolchain.cmake"));
         const std::string jo_root = environmentValue("JO_ENGINE_ROOT");
         if (!jo_root.empty()) plan.configure.push_back("-DJO_ENGINE_ROOT=" + jo_root);
+    } else if (project.platform == Platform::N64) {
+        plan.configure.push_back("-DCMAKE_TOOLCHAIN_FILE=" +
+                                 joinPath(sdk.path, "cmake/n64-toolchain.cmake"));
+        const std::string n64_inst = environmentValue("N64_INST");
+        if (!n64_inst.empty()) plan.configure.push_back("-DN64_INST=" + n64_inst);
     }
 
     plan.build.push_back(cmake);
@@ -129,11 +136,20 @@ std::string findPcExecutable(const std::string& build_dir, const std::string& ta
 
 std::string findCueFile(const std::string& project_root, const std::string& build_dir)
 {
-    std::string cue = findCueRecursive(build_dir, 4);
+    std::string cue = findByExtensionRecursive(build_dir, 4, ".cue");
     if (!cue.empty()) return cue;
-    cue = findCueRecursive(joinPath(project_root, "dist"), 3);
+    cue = findByExtensionRecursive(joinPath(project_root, "dist"), 3, ".cue");
     if (!cue.empty()) return cue;
-    return findCueRecursive(project_root, 2);
+    return findByExtensionRecursive(project_root, 2, ".cue");
+}
+
+std::string findRomFile(const std::string& project_root, const std::string& build_dir)
+{
+    std::string rom = findByExtensionRecursive(build_dir, 4, ".z64");
+    if (!rom.empty()) return rom;
+    rom = findByExtensionRecursive(joinPath(project_root, "dist"), 3, ".z64");
+    if (!rom.empty()) return rom;
+    return findByExtensionRecursive(project_root, 2, ".z64");
 }
 
 RunPlan makeRunPlan(const Project& project, const std::string& project_root, const SdkInfo& sdk,
@@ -175,6 +191,23 @@ RunPlan makeRunPlan(const Project& project, const std::string& project_root, con
         plan.error = trf(lang, plan.error_key.c_str(), emulator_path.c_str());
         return plan;
     }
+    if (project.platform == Platform::N64) {
+        const std::string rom = findRomFile(project_root, build_dir);
+        if (rom.empty()) {
+            plan.error_key = "err.run_no_rom";
+            plan.error_detail = std::string(tr(lang, platformNameKey(project.platform)));
+            plan.error = trf(lang, plan.error_key.c_str(), plan.error_detail.c_str());
+            return plan;
+        }
+        plan.argv.push_back(emulator_path);
+        plan.argv.push_back(rom);
+        plan.working_directory = project_root;
+        plan.uses_emulator = true;
+        plan.image_path = rom;
+        plan.ok = true;
+        return plan;
+    }
+
     const std::string cue = findCueFile(project_root, build_dir);
     if (cue.empty()) {
         plan.error_key = "err.run_no_cue";
@@ -187,6 +220,7 @@ RunPlan makeRunPlan(const Project& project, const std::string& project_root, con
     plan.working_directory = project_root;
     plan.uses_emulator = true;
     plan.cue_path = cue;
+    plan.image_path = cue;
     plan.ok = true;
     return plan;
 }

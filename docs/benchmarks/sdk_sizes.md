@@ -1,4 +1,4 @@
-# SDK sizes — PC / PS1 / Saturn (S33–34)
+# SDK sizes — PC / PS1 / Saturn / N64 (S33–46)
 
 Замер: 2026-11-13, Linux x86_64, GCC 13.3 (PC), PSn00bSDK v0.24 (MIPS),
 Jo Engine v2026.2 / sh-none-elf-gcc 8.2.0. Release-конфигурация.
@@ -8,6 +8,7 @@ Jo Engine v2026.2 / sh-none-elf-gcc 8.2.0. Release-конфигурация.
 | PC (`pc/x86_64`) | 14 MiB | 151 | 3.07 MiB | 3.19 MiB | 0.10 s |
 | PS1 (`ps1/mips`) | 848 KiB | 43 | 224 KiB | 249 KiB | 0.01 s |
 | Saturn (`saturn/sh2`) | 1.7 MiB | 100 | 344 KiB | 427 KiB | 0.03 s |
+| N64 (`n64/mips64`) | 1.2 MiB | 58 | 322 KiB | 352 KiB | 0.02 s |
 
 Примечания:
 
@@ -17,6 +18,9 @@ Jo Engine v2026.2 / sh-none-elf-gcc 8.2.0. Release-конфигурация.
   (MPL-2.0, toolchain) не вендорится.
 - Saturn-пакет содержит `libjo_engine.a` (MIT) и публичные заголовки
   Jo Engine; bundled-компилятор не входит.
+- N64-пакет содержит HAL, `libretro_engine_n64_ucode.a` (RSP T&L),
+  `rsp/rsp_tnl.{S,elf,map}`, `hello_triangle_n64`, toolchain wrapper и
+  `ci/n64-*`; libdragon/toolchain не вендорятся.
 - Время установки — `cmake --install` в пустой каталог на локальном SSD;
   медиана из одного прогона, ориентир, не SLA.
 - Контрольные суммы и размеры фиксируются в `sdk_manifest.json` и
@@ -29,5 +33,6 @@ Jo Engine v2026.2 / sh-none-elf-gcc 8.2.0. Release-конфигурация.
 cmake --build build/pc-release --target sdk_package
 cmake --build build/ps1-release --target sdk_package
 cmake --build build/saturn-release --target sdk_package
+cmake --build build/n64-release --target sdk_package
 ls -lh dist/retro-engine-sdk-*
 ```

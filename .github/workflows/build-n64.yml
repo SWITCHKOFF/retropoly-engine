@@ -9,7 +9,7 @@
 # gate — ручной (gopher64 1.2.1, docs/N64.md §9).
 #
 # Structural checks:
-#   - ROM header/ELF/CRC-policy/sha256;
+#   - ROM header/ELF/CRC-policy/sha256 для hello_triangle + rotating_cube;
 #   - RSP T&L overlay artifacts (rsp_tnl.elf/.map);
 #   - DFS listing + побайтовое сравнение извлечённых ассетов;
 #   - запрет heap в src/hal/n64 (scripts/verify_n64_no_heap.py).
@@ -46,7 +46,7 @@ jobs:
       - name: Тулчейн-хост (ninja + curl/dpkg-deb + build-essential)
         run: |
           sudo apt-get update
-          sudo apt-get install -y ninja-build curl build-essential libpng-dev zlib1g-dev
+          sudo apt-get install -y ninja-build curl build-essential libpng-dev zlib1g-dev python3-yaml
 
       - name: Кэш pinned toolchain/libdragon
         uses: actions/cache@v4
@@ -114,16 +114,27 @@ jobs:
           test -s "$ART/retro_n64.z64.sha256"
           test -s "$ART/retro_n64.dfs"
           test -s "$ART/retro_n64.dfs.txt"
+          test -s "$ART/hello_triangle.z64"
+          test -s "$ART/hello_triangle.z64.sha256"
+          test -s "$ART/hello_triangle_n64.map"
+          test -s "$ART/rotating_cube.z64"
+          test -s "$ART/rotating_cube.z64.sha256"
+          test -s "$ART/rotating_cube_n64.map"
           test -s "$ART/hello_n64.z64"
           test -s "$ART/hello_n64.map"
           test -s "$ART/hello_n64.z64.sha256"
+          test -s "$ART/retro_n64.z64"
+          test -s "$ART/retro_n64.map"
+          test -s "$ART/retro_n64.z64.sha256"
+          test -s "$ART/retro_n64.elf"
           test -s "$ART/rsp_tnl.elf"
           test -s "$ART/rsp_tnl.map"
-          cmp "$ART/retro_n64.z64" "$ART/hello_n64.z64"
+          cmp "$ART/hello_n64.z64" "$ART/hello_triangle.z64"
+          cmp "$ART/retro_n64.z64" "$ART/rotating_cube.z64"
           file "$ART/retro_n64.elf" | grep -q 'MIPS'
           mips64-elf-readelf -h "$ART/retro_n64.elf" 2>/dev/null | grep -q '0x80000400' || \
             "$N64_INST/bin/mips64-elf-readelf" -h "$ART/retro_n64.elf" | grep -q '0x80000400'
-          python3 scripts/verify_n64_rom.py --json "$ART/hello_n64.z64" \
+          python3 scripts/verify_n64_rom.py --json "$ART/hello_triangle.z64" \
             > "$RUNNER_TEMP/n64_rom_report.json"
           python3 - <<'PY'
           import json, os
@@ -136,8 +147,12 @@ jobs:
           assert report["size_bytes"] <= 64 * 1024 * 1024
           print("N64 ROM report: PASS", report["size_bytes"], report["sha256"])
           PY
+          python3 scripts/verify_n64_budgets.py --artifacts "$ART" \
+            --output "$RUNNER_TEMP/n64_budgets.json"
+          python3 scripts/verify_n64_assets.py --skip-converter
           cd "$ART"
-          sha256sum -c hello_n64.z64.sha256
+          sha256sum -c hello_triangle.z64.sha256
+          sha256sum -c rotating_cube.z64.sha256
 
       - name: "Проверка DFS-ассетов в ROM (S41–42)"
         run: |
@@ -146,9 +161,9 @@ jobs:
           grep -q 'CUBE.MSH' "$ART/retro_n64.dfs.txt"
           grep -q 'TEX0.TEX' "$ART/retro_n64.dfs.txt"
           grep -q 'TRIANGLE.MSH' "$ART/retro_n64.dfs.txt"
-          "$N64_INST/bin/dumpdfs" -e "$ART/hello_n64.z64" CUBE.MSH > "$RUNNER_TEMP/CUBE.MSH"
-          "$N64_INST/bin/dumpdfs" -e "$ART/hello_n64.z64" TEX0.TEX > "$RUNNER_TEMP/TEX0.TEX"
-          "$N64_INST/bin/dumpdfs" -e "$ART/hello_n64.z64" TRIANGLE.MSH > "$RUNNER_TEMP/TRIANGLE.MSH"
+          "$N64_INST/bin/dumpdfs" -e "$ART/hello_triangle.z64" CUBE.MSH > "$RUNNER_TEMP/CUBE.MSH"
+          "$N64_INST/bin/dumpdfs" -e "$ART/hello_triangle.z64" TEX0.TEX > "$RUNNER_TEMP/TEX0.TEX"
+          "$N64_INST/bin/dumpdfs" -e "$ART/hello_triangle.z64" TRIANGLE.MSH > "$RUNNER_TEMP/TRIANGLE.MSH"
           cmp "$RUNNER_TEMP/CUBE.MSH" assets/build/cube.mesh
           cmp "$RUNNER_TEMP/TEX0.TEX" assets/build/texture_0.tex
           cmp "$RUNNER_TEMP/TRIANGLE.MSH" assets/build/triangle.mesh
@@ -228,8 +243,13 @@ jobs:
         with:
           name: retro-n64-rom
           path: |
+            build/n64-release/src/hal/n64/hello_triangle.z64
+            build/n64-release/src/hal/n64/hello_triangle.z64.sha256
+            build/n64-release/src/hal/n64/hello_triangle_n64.map
+            build/n64-release/src/hal/n64/rotating_cube.z64
+            build/n64-release/src/hal/n64/rotating_cube.z64.sha256
+            build/n64-release/src/hal/n64/rotating_cube_n64.map
             build/n64-release/src/hal/n64/hello_n64.z64
-            build/n64-release/src/hal/n64/hello_n64.map
             build/n64-release/src/hal/n64/hello_n64.z64.sha256
             build/n64-release/src/hal/n64/retro_n64.z64
             build/n64-release/src/hal/n64/retro_n64.z64.sha256

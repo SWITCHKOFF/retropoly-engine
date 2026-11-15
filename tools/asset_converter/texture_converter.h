@@ -21,3 +21,15 @@
  * @return true при успехе; иначе false и записанный код.
  */
 bool convert_texture(const char* input_path, const char* output_path, uint32_t* out_error_code);
+
+/**
+ * N64-таргет (S45–46): та же .tex v1, но вход 64/128/256 nearest-
+ * downsample'ится к 64×64 ДО квантования; выход — CI8 + 256-entry CLUT,
+ * пригодный для TMEM-полос (≤2 KiB) и RGBA5551 TLUT.
+ *
+ * @param input_path Имя входного изображения.
+ * @param output_path Имя выходного .tex (64×64).
+ * @param out_error_code Выход: код ConverterDiag (NULL допустим).
+ * @return true при успехе.
+ */
+bool convert_texture_n64(const char* input_path, const char* output_path, uint32_t* out_error_code);

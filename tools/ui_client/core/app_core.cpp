@@ -114,9 +114,12 @@ std::string patchedCMake(std::string text, Platform platform)
     } else if (platform == Platform::Ps1) {
         text = replaceAll(text, "add_executable(hello_triangle_ps1 GPREL main.cpp)",
                           "add_executable(hello_triangle_ps1 GPREL src/main.cpp)");
-    } else {
+    } else if (platform == Platform::Saturn) {
         text = replaceAll(text, "add_executable(hello_triangle_saturn main.cpp jo_bridge.c)",
                           "add_executable(hello_triangle_saturn src/main.cpp src/jo_bridge.c)");
+    } else {
+        text = replaceAll(text, "add_executable(hello_triangle_n64 main.cpp)",
+                          "add_executable(hello_triangle_n64 src/main.cpp)");
     }
     return text;
 }
@@ -136,7 +139,7 @@ std::string projectReadme(const Project& project)
     out << "cmake --build " << project.build_dir << "/" << platformCode(project.platform)
         << " --target " << project.target << "\n";
     out << "```\n\n";
-    out << "Для PS1/Saturn добавьте `-DCMAKE_TOOLCHAIN_FILE=<sdk>/cmake/...` "
+    out << "Для PS1/Saturn/N64 добавьте `-DCMAKE_TOOLCHAIN_FILE=<sdk>/cmake/...` "
            "(UI client делает это автоматически).\n";
     return out.str();
 }
@@ -197,6 +200,8 @@ std::string defaultTargetForPlatform(Platform platform)
             return "hello_triangle_ps1";
         case Platform::Saturn:
             return "hello_triangle_saturn";
+        case Platform::N64:
+            return "hello_triangle_n64";
     }
     return "hello_triangle";
 }
@@ -463,11 +468,16 @@ bool AppCore::setProjectTarget(Platform platform, std::string* error)
         return false;
     }
     if (platform != Platform::Pc) {
-        const char* env = platform == Platform::Ps1 ? "PSN00BSDK_LIBS" : "JO_ENGINE_ROOT";
-        if (environmentValue(env).empty()) {
-            if (error != nullptr)
-                *error = tr(lang_, platform == Platform::Ps1 ? "target.reason.psn00bsdk"
-                                                             : "target.reason.jo_engine");
+        if (platform == Platform::Ps1 && environmentValue("PSN00BSDK_LIBS").empty()) {
+            if (error != nullptr) *error = tr(lang_, "target.reason.psn00bsdk");
+            return false;
+        }
+        if (platform == Platform::Saturn && environmentValue("JO_ENGINE_ROOT").empty()) {
+            if (error != nullptr) *error = tr(lang_, "target.reason.jo_engine");
+            return false;
+        }
+        if (platform == Platform::N64 && environmentValue("N64_INST").empty()) {
+            if (error != nullptr) *error = tr(lang_, "target.reason.n64_toolchain");
             return false;
         }
     }

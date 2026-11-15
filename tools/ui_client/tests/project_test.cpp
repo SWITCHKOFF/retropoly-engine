@@ -15,7 +15,7 @@ namespace {
 
 Project sampleProject()
 {
-    Project project = makeProjectTemplate("demo", "0.2.1", "/opt/retro-sdk", Platform::Pc,
+    Project project = makeProjectTemplate("demo", "0.3.0", "/opt/retro-sdk", Platform::Pc,
                                           "hello_triangle", "hello_triangle");
     AssetEntry mesh;
     mesh.source = "assets/source/cube.gltf";

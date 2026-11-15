@@ -1,6 +1,6 @@
 # UI client RetroPolyEngine
 
-> Спринт 35–36 (недели 69–72), веха v0.2.1. Архитектурное решение —
+> Спринт 35–36 (недели 69–72), веха v0.3.0. Архитектурное решение —
 > [`adr/ADR-012-ui-client.md`](adr/ADR-012-ui-client.md). Релизная политика —
 > [`RELEASING.md`](RELEASING.md).
 
@@ -34,7 +34,7 @@ ui/
 
 ```sh
 # Linux
-tar -xzf retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+tar -xzf retro-engine-ui-0.3.0-linux-x86_64.tar.gz
 ./ui/retro-engine-ui
 
 # Windows
@@ -51,11 +51,11 @@ cd ui
 sha256sum -c checksums.sha256
 ```
 
-Комбинированный payload `retro-engine-v0.2.1.tar.gz` (release candidate,
+Комбинированный payload `retro-engine-v0.3.0.tar.gz` (draft,
 не опубликован) содержит `ui/` рядом с `sdk/`; можно распаковать оба
 каталога в один рабочий каталог и указать UI на `sdk/`. Любая публикация
 релизов отложена до v0.9.x (release freeze). Поддерживаемые hosts: Linux x86_64,
-Windows x86_64, macOS arm64; target'ы проекта — PC/PS1/Saturn при наличии
+Windows x86_64, macOS arm64; target'ы проекта — PC/PS1/Saturn/N64 при наличии
 соответствующего SDK.
 
 При первом запуске откройте **Вид → Настройки** и укажите SDK PC
@@ -85,8 +85,8 @@ Windows x86_64, macOS arm64; target'ы проекта — PC/PS1/Saturn при �
 
 ```sh
 python3 scripts/ui_e2e.py \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz \
-  --ui-package dist/retro-engine-ui-0.2.1-linux-x86_64.tar.gz
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz \
+  --ui-package dist/retro-engine-ui-0.3.0-linux-x86_64.tar.gz
 ```
 
 ## 4. Модель проекта `.rpeproject`
@@ -97,7 +97,7 @@ python3 scripts/ui_e2e.py \
 {
   "schema": 1,
   "name": "my_project",
-  "engine_version": "0.2.1",
+  "engine_version": "0.3.0",
   "sdk_path": "/opt/retro-engine-sdk",
   "target": "hello_triangle",
   "platform": "pc",
@@ -127,7 +127,7 @@ python3 scripts/ui_e2e.py \
 - `assets[].source/output`, `build_dir`, `run_target` — только безопасные
   относительные пути внутри проекта; `..`/абсолютные пути запрещены;
 - `engine_version` — строгий semver `X.Y.Z`;
-- `platform` — `pc`/`ps1`/`saturn`;
+- `platform` — `pc`/`ps1`/`saturn`/`n64`;
 - отсутствующие source/output/SDK/эмулятор — предупреждения в
   **Диагностике**, проект всё равно открывается.
 
@@ -155,6 +155,7 @@ my_project/
 | PC | SDK `platform=pc` + `asset_converter` | executable из `build/pc[/bin]` |
 | PS1 | SDK `platform=ps1` + `PSN00BSDK_LIBS` | `.cue` в DuckStation/совместимом эмуляторе |
 | Saturn | SDK `platform=saturn` + `JO_ENGINE_ROOT` | `.cue` в Mednafen |
+| N64 | SDK `platform=n64` + `N64_INST` | `.z64` в gopher64 |
 
 Если SDK/env/эмулятор отсутствует, target показывается disabled с
 объяснением; сборка невозможна, но проект открывается.
@@ -237,7 +238,7 @@ cmake --build --preset ui-debug --target retro_engine_ui
 cmake --preset ui-release
 cmake --build --preset ui-release --target retro_engine_ui
 python3 scripts/package_ui.py --build-dir build/ui-release \
-  --version 0.2.1 --output-dir dist
+  --version 0.3.0 --output-dir dist
 ```
 
 Пресеты: `ui-debug` (Debug + тесты), `ui-release` (Release, без тестов).
@@ -255,6 +256,10 @@ python3 scripts/ui_smoke.py \
   --sdk-dir build/pc-release/sdk-stage-pc-x86_64 \
   --ui-binary build/ui-release/ui/retro_engine_ui
 
+# N64: build-only (N64 SDK + PC SDK для --platform n64 converter)
+python3 scripts/ui_smoke.py --platform n64 --sdk-dir <n64-sdk> --no-run \
+  --pc-sdk-dir <pc-sdk>
+
 # PS1/Saturn: сборка из UI (запуск .cue — ручной gate эмулятора)
 python3 scripts/ui_smoke.py --platform ps1 --no-run \
   --sdk-dir build/ps1-release/sdk-stage-ps1-mips \
@@ -268,7 +273,18 @@ CI: `.github/workflows/ui-client.yml` — matrix Ubuntu/Windows/macOS
 (`ui-debug` тесты, `ui-release` сборка, package artifact), Linux — SDK
 `pc-release` + `sdk_package` + clean E2E под `xvfb-run`.
 
-### 11.1. Ручной gate PS1/Saturn (пройден 2026-11-13)
+### 11.1. Ручной gate N64 (пройден 2026-11-14)
+
+```sh
+export N64_INST=$HOME/n64-sdk/toolchain/opt/libdragon
+python3 scripts/ui_smoke.py --platform n64 --sdk-dir <n64-sdk> \
+  --pc-sdk-dir <pc-sdk> --emulator ~/n64-sdk/gopher64 --run-seconds 4
+```
+
+Проверяет New Project → import (`--platform n64`, 64×64 .tex) → Build
+(`hello_triangle_n64.z64`) → Run в gopher64 и остановку процесса.
+
+### 11.2. Ручной gate PS1/Saturn (пройден 2026-11-13)
 
 `.cue` собран из UI-проекта и запущен в настроенном эмуляторе; UI
 показывает команду, pid и лог процесса:
@@ -306,7 +322,7 @@ xvfb-run -a build/ui-release/ui/retro_engine_ui \
 `scripts/ui_e2e.py` и `scripts/verify_release_contract.py`
 (`ui_archives`, `ui_manifest`).
 
-## 13. Ограничения v0.2.1
+## 13. Ограничения v0.3.0
 
 - Нет полноценной IDE: только project/target/assets/build/run/diagnostics.
 - Нет визуального редактора сцены/материалов.
@@ -324,6 +340,9 @@ xvfb-run -a build/ui-release/ui/retro_engine_ui \
 | SDK disabled | Проверьте `sdk_manifest.json`, версию 0.2.x, `platform` и компоненты |
 | PS1 target disabled | `export PSN00BSDK_LIBS=$HOME/PSn00bSDK/lib/libpsn00b` |
 | Saturn target disabled | `export JO_ENGINE_ROOT=$HOME/joengine` (v2026.2) |
+| N64 target disabled | `export N64_INST=$HOME/n64-sdk/toolchain/opt/libdragon` |
+| N64 run: ROM не найден | target `hello_triangle_n64` должен собрать `.z64` (POST_BUILD n64tool) |
+| N64 import: converter нет | N64 SDK не содержит host-конвертер; задайте PC SDK (`RPE_SDK_PC`) |
 | Import failed | Проверьте `tools/asset_converter`, расширение и лог конвертера |
 | Run: `.cue` not found | Соберите ISO/`.cue` проекта или укажите `dist/` |
 | UI не стартует на Linux | Нужен OpenGL 3.3 и X11/Wayland; headless — `xvfb-run` |

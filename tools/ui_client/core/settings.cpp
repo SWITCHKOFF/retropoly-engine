@@ -44,6 +44,7 @@ AppSettings loadSettings(std::string* warning)
         settings.sdk_pc = defaultSdkFromEnv("RPE_SDK_PC");
         settings.sdk_ps1 = defaultSdkFromEnv("RPE_SDK_PS1");
         settings.sdk_saturn = defaultSdkFromEnv("RPE_SDK_SATURN");
+        settings.sdk_n64 = defaultSdkFromEnv("RPE_SDK_N64");
         return settings;
     }
     std::string text;
@@ -71,10 +72,12 @@ AppSettings loadSettings(std::string* warning)
     getString(root, "sdk_pc", &settings.sdk_pc);
     getString(root, "sdk_ps1", &settings.sdk_ps1);
     getString(root, "sdk_saturn", &settings.sdk_saturn);
+    getString(root, "sdk_n64", &settings.sdk_n64);
     getString(root, "cmake_path", &settings.cmake_path);
     getString(root, "ninja_path", &settings.ninja_path);
     getString(root, "emulator_ps1", &settings.emulator_ps1);
     getString(root, "emulator_saturn", &settings.emulator_saturn);
+    getString(root, "emulator_n64", &settings.emulator_n64);
     getString(root, "theme", &settings.theme);
     std::string language;
     if (getString(root, "language", &language)) settings.language = parseLang(language);
@@ -99,10 +102,12 @@ bool saveSettings(const AppSettings& settings, std::string* error)
     root.append("sdk_pc", JsonValue::makeString(settings.sdk_pc));
     root.append("sdk_ps1", JsonValue::makeString(settings.sdk_ps1));
     root.append("sdk_saturn", JsonValue::makeString(settings.sdk_saturn));
+    root.append("sdk_n64", JsonValue::makeString(settings.sdk_n64));
     root.append("cmake_path", JsonValue::makeString(settings.cmake_path));
     root.append("ninja_path", JsonValue::makeString(settings.ninja_path));
     root.append("emulator_ps1", JsonValue::makeString(settings.emulator_ps1));
     root.append("emulator_saturn", JsonValue::makeString(settings.emulator_saturn));
+    root.append("emulator_n64", JsonValue::makeString(settings.emulator_n64));
     root.append("theme", JsonValue::makeString(settings.theme));
     root.append("language", JsonValue::makeString(langCode(settings.language)));
     JsonValue recent = JsonValue::makeArray();
@@ -140,6 +145,8 @@ std::string sdkPathForPlatform(const AppSettings& settings, int platform_index)
             return settings.sdk_ps1;
         case 2:
             return settings.sdk_saturn;
+        case 3:
+            return settings.sdk_n64;
         default:
             return std::string();
     }
@@ -157,6 +164,9 @@ void setSdkPathForPlatform(AppSettings* settings, int platform_index, const std:
             break;
         case 2:
             settings->sdk_saturn = path;
+            break;
+        case 3:
+            settings->sdk_n64 = path;
             break;
         default:
             break;

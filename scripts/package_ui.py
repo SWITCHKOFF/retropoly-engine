@@ -104,7 +104,7 @@ def read_version(build_dir):
         match = re.search(r"CMAKE_PROJECT_VERSION:STATIC=([0-9.]+)", text)
         if match:
             return match.group(1)
-    return "0.2.1"
+    return "0.3.0"
 
 
 def iter_files(root):
@@ -132,7 +132,7 @@ Launcher/editor для проектов RetroPolyEngine ({os}/{arch}).
 
 ## Быстрый старт
 
-1. **Новый проект** → имя/каталог → target PC/PS1/Saturn → шаблон.
+1. **Новый проект** → имя/каталог → target PC/PS1/Saturn/N64 → шаблон.
 2. **Импортировать ассеты** (`.gltf`, `.glb`, `.png`, `.jpg`) — вызывается
    `asset_converter` из SDK.
 3. **Собрать** — CMake/Ninja в отдельном процессе, лог в UI.
@@ -166,7 +166,7 @@ def write_version(stage_dir, args, git_sha, git_describe, git_date, dirty):
         f.write("git_describe=%s\n" % (git_describe or "unknown"))
         f.write("git_dirty=%s\n" % ("true" if dirty else "false"))
         f.write("commit_date=%s\n" % git_date)
-        f.write("sdk_series=0.2\n")
+        f.write("sdk_series=0.3\n")
         f.write("ui_toolkit=SDL3+Dear ImGui\n")
 
 
@@ -182,7 +182,7 @@ def write_manifest(stage_dir, args, git_sha, git_describe, git_date, dirty):
         "package": PACKAGE,
         "name": "RetroPolyEngine UI",
         "version": args.version,
-        "sdk_series": "0.2",
+        "sdk_series": "0.3",
         "ui_toolkit": "SDL3+Dear ImGui",
         "git_commit": git_sha or "unknown",
         "git_describe": git_describe or "unknown",

@@ -114,6 +114,8 @@ const char* platformCode(Platform platform)
             return "ps1";
         case Platform::Saturn:
             return "saturn";
+        case Platform::N64:
+            return "n64";
     }
     return "pc";
 }
@@ -133,6 +135,10 @@ bool parsePlatform(const std::string& code, Platform* out)
         *out = Platform::Saturn;
         return true;
     }
+    if (code == "n64") {
+        *out = Platform::N64;
+        return true;
+    }
     return false;
 }
 
@@ -145,6 +151,8 @@ const char* platformNameKey(Platform platform)
             return "target.ps1";
         case Platform::Saturn:
             return "target.saturn";
+        case Platform::N64:
+            return "target.n64";
     }
     return "target.pc";
 }

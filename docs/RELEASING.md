@@ -27,6 +27,11 @@
 **не является действующим публичным релизом**. Не ссылаться на него как
 на «релиз SDK» и не публиковать анонс до v0.9.x.
 
+**v0.3.0 (S39–46):** N64 **закрыт как draft** (2026-11-15) — SDK
+`sdk/platforms/n64` + UI + `demos/n64`; собирается и проходит gate
+локально/в CI, но **не публикуется** (release freeze). Тег/Release не
+создаются; публикация — не ранее v0.9.x.
+
 **v0.2.1 (S33–38):** GitHub Release и тег `v0.2.1` удалены/отозваны
 2026-11-14. SDK+UI payload и release gate v2 реализованы и проходят, но
 любая публикация релизов **отложена до v0.9.x**: перед выпуском maintainer сам
@@ -58,10 +63,12 @@ sdk/
     pc/<arch>/...                   # static/shared libs, debug+release
     ps1/...                         # кросс-библиотеки (если входят в релиз)
     saturn/...                      # SH-2 библиотеки (если входят в релиз)
+    n64/mips64/...                  # N64 HAL + libretro_engine_n64_ucode.a
   lib/cmake/RetroPolyEngine/        # find_package(RetroPolyEngine)
     RetroPolyEngineConfig.cmake
     RetroPolyEngineTargets.cmake
-  cmake/                            # ps1/saturn toolchain wrappers
+  cmake/                            # ps1/saturn/n64 toolchain wrappers
+  ci/                               # n64-libdragon.commit/toolchain sha256
   tools/                            # asset_converter, утилиты сборки
   examples/                         # hello_triangle, rotating_cube (исходники)
   templates/                        # шаблон нового проекта
@@ -104,10 +111,10 @@ ui/
 UI client должен уметь как минимум:
 
 - создать/открыть проект;
-- выбрать target и платформу (PC/PS1/Saturn);
+- выбрать target и платформу (PC/PS1/Saturn/N64);
 - импортировать `.gltf`/`.png` и запустить asset_converter;
 - собрать проект через SDK (CMake preset);
-- запустить demo/эмулятор по документированной команде;
+- запустить demo/эмулятор по документированной команде (N64 — gopher64);
 - показать версию SDK и совместимость.
 
 Если UI client ещё не реализован, публичный релиз **блокируется**; demo
@@ -119,10 +126,11 @@ archive публикуется только как technical preview с явно
 `retro-engine-v<version>.tar.gz` (рядом `.sha256`) со структурой:
 
 ```
-retro-engine-v0.2.1/
+retro-engine-v0.3.0/
   sdk/                          # распакованный PC SDK (headers/libs/config)
+    platforms/n64/              # N64 SDK (headers/libs/ucode/examples)
   ui/                           # распакованный UI client для host-платформы
-  demos/                        # OPTIONAL demo-образы pc/ps1/saturn
+  demos/                        # OPTIONAL demo-образы pc/ps1/saturn/n64
   checksums.sha256              # все файлы payload (кроме себя)
   release_contract_report.json  # полный отчёт release gate v2
   README.md
@@ -131,11 +139,19 @@ retro-engine-v0.2.1/
 ```
 
 - `sdk/` и `ui/` обязательны; без них сборка payload завершается ошибкой.
+Для v0.3.0 `sdk/platforms/n64/` обязателен: gate проверяет
+`sdk_manifest.json` (platform n64), `checksums.sha256`, ucode-библиотеку
+и `examples/hello_triangle_n64`; negative-tests падают без N64 SDK.
+N64 `.z64` разрешён только в `demos/n64/`.
 - `demos/` — только optional примеры; demo-образ не может подменить SDK/UI.
-- `checksums.sha256` покрывает все файлы payload, включая `sdk/` и `ui/`;
-  `sdk/checksums.sha256` и `ui/checksums.sha256` проверяются отдельно.
-- Запрещены BIOS/ROM, приватные ключи, `.env`, `.git`, build-каталоги
-  (`build/`, `CMakeFiles/`), `secrets/`, `roms/`.
+- `checksums.sha256` покрывает все файлы payload, включая `sdk/`, N64 SDK
+  и `ui/`; `sdk/checksums.sha256`, `sdk/platforms/n64/checksums.sha256`
+  и `ui/checksums.sha256` проверяются отдельно.
+- Запрещены BIOS/коммерческие ROM, Jaguar-артефакты, эмуляторы
+  (gopher64/mupen64plus/Mednafen/DuckStation и др.), приватные ключи,
+  `.env`, `.git`, build-каталоги (`build/`, `CMakeFiles/`), `secrets/`,
+  `roms/`. Проверка — `release_payload._forbidden_entries` и
+  negative-tests gate.
 - Cross-platform SDK/UI-архивы (`retro-engine-sdk-*`,
   `retro-engine-ui-*`) публикуются отдельными assets; комбинированный
   payload содержит native-host сборку.
@@ -242,7 +258,8 @@ macOS x86_64 собирается из исходников, но не вход�
 - [x] `release_payload` assert и layout `sdk/` + `ui/`
 - [x] `build_release_bundle.py` / `create_release_archive.sh` v2
 - [x] Negative-tests: missing SDK/UI/checksum, BIOS/ROM, build-каталоги
-- [x] `release.yml`: reusable SDK/UI workflows → gate → **draft** only
+- [x] `release.yml`: reusable SDK/UI workflows → gate → **draft** only;
+      `workflow_dispatch` — dry-run gate (CI-артефакты, без Release/тега)
 - [x] Локальный полный gate 2026-11-14 (`--w1-seconds 60`, `all_ok: true`,
       UI headless smoke, consumer PC/PS1/Saturn)
 - [x] Clean-room consumer PC и clean-room UI E2E на локальных ассетах

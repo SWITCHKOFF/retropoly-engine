@@ -14,7 +14,7 @@ using namespace rpe::ui::test;
 namespace {
 
 std::string fakeSdk(const TempDir& dir, const std::string& platform = "pc",
-                    const std::string& version = "0.2.1")
+                    const std::string& version = "0.3.0")
 {
     const std::string root = dir.str();
     writeFile(root + "/include/retro_engine/retro_engine.h", "#pragma once\n");
@@ -25,6 +25,7 @@ std::string fakeSdk(const TempDir& dir, const std::string& platform = "pc",
     writeFile(root + "/templates/project/CMakeLists.txt", "project(fake)\n");
     const std::string example = platform == "pc"    ? "hello_triangle"
                                 : platform == "ps1" ? "hello_triangle_ps1"
+                                : platform == "n64" ? "hello_triangle_n64"
                                                     : "hello_triangle_saturn";
     writeFile(root + "/examples/" + example + "/CMakeLists.txt", "project(fake_example)\n");
     if (platform == "pc") {
@@ -76,7 +77,7 @@ TEST(SdkTest, LoadsValidPcManifest)
     const SdkLoadResult loaded = loadSdk(dir.str(), Lang::Ru);
     ASSERT_TRUE(loaded.ok) << loaded.error;
     EXPECT_TRUE(loaded.sdk.valid);
-    EXPECT_EQ(loaded.sdk.version, "0.2.1");
+    EXPECT_EQ(loaded.sdk.version, "0.3.0");
     EXPECT_EQ(loaded.sdk.platform, Platform::Pc);
     EXPECT_EQ(loaded.sdk.compiler_id, "GNU");
     EXPECT_EQ(loaded.sdk.pointer_bits, 64);
@@ -87,10 +88,10 @@ TEST(SdkTest, LoadsValidPcManifest)
 TEST(SdkTest, RejectsIncompatibleVersion)
 {
     TempDir dir;
-    fakeSdk(dir, "pc", "0.3.0");
+    fakeSdk(dir, "pc", "0.4.0");
     const SdkLoadResult loaded = loadSdk(dir.str(), Lang::Ru);
     EXPECT_FALSE(loaded.ok);
-    EXPECT_NE(loaded.error.find("0.3.0"), std::string::npos);
+    EXPECT_NE(loaded.error.find("0.4.0"), std::string::npos);
 }
 
 TEST(SdkTest, RejectsMissingComponent)
@@ -126,11 +127,12 @@ TEST(SdkTest, DiscoversTargets)
     AppSettings settings;
     settings.sdk_pc = dir.str();
     const std::vector<TargetAvailability> targets = discoverTargets(settings, Lang::Ru);
-    ASSERT_EQ(targets.size(), 3u);
+    ASSERT_EQ(targets.size(), 4u);
     EXPECT_TRUE(targets[0].available);
     EXPECT_EQ(targets[0].sdk_path, absolutePath(dir.str()));
     EXPECT_FALSE(targets[1].available);
     EXPECT_FALSE(targets[2].available);
+    EXPECT_FALSE(targets[3].available);
 }
 
 TEST(SdkTest, FindsCmakeInPath)

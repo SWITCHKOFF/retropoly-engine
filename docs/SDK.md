@@ -1,6 +1,6 @@
 # SDK RetroPolyEngine
 
-> Спринт 33–34 (недели 65–68), веха v0.2.1. Границы API —
+> Спринт 33–34 (недели 65–68), веха v0.3.0. Границы API —
 > [`adr/ADR-011-public-sdk-api.md`](adr/ADR-011-public-sdk-api.md).
 > Релизная политика — [`RELEASING.md`](RELEASING.md).
 
@@ -17,12 +17,13 @@ sdk/
   lib/<platform>/<arch>/...
   lib/cmake/RetroPolyEngine/...
   lib/pkgconfig/retro_engine.pc
-  cmake/                       # ps1-toolchain.cmake, saturn-sdk-toolchain.cmake
+  cmake/                       # ps1/saturn/n64 toolchain wrappers
   tools/asset_converter[.exe]  # PC
   examples/hello_triangle/
   examples/rotating_cube/      # PC
   examples/hello_triangle_ps1/
   examples/hello_triangle_saturn/
+  examples/hello_triangle_n64/  # N64: find_package → .z64
   templates/project/
   VERSION.txt
   LEGAL.md
@@ -33,29 +34,31 @@ sdk/
 ```
 
 Архивы: `retro-engine-sdk-<version>-<platform>[-<os>]-<arch>.tar.gz` и
-`.zip` (PC: `-pc-linux-x86_64`, PS1: `-ps1-mips`, Saturn: `-saturn-sh2`),
+`.zip` (PC: `-pc-linux-x86_64`, PS1: `-ps1-mips`, Saturn: `-saturn-sh2`,
+N64: `-n64-mips64`),
 рядом — `.sha256`. Layout детерминирован: фиксированный порядок файлов,
 mtime из `SOURCE_DATE_EPOCH`/даты git-коммита.
 
-## 1.1. Пакет SDK v0.2.1 (release candidate, не опубликован)
+## 1.1. Пакет SDK v0.3.0 (draft, не опубликован)
 
 **Release freeze:** любая публикация релизов отложена до v0.9.x;
-GitHub Release v0.2.1 удалён/отозван. Артефакты ниже собираются локально
+v0.3.0 — draft/frozen (ADR-013); GitHub Release/тег не создаются. Артефакты ниже собираются локально
 или в CI:
 
-`retro-engine-sdk-0.2.1-*` (отдельно) или `retro-engine-v0.2.1.tar.gz`
+`retro-engine-sdk-0.3.0-*` (отдельно) или `retro-engine-v0.3.0.tar.gz`
 (`sdk/` + `ui/` + optional `demos/`).
 
 | Host | Архив | Target |
 |---|---|---|
-| Linux x86_64 | `retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz` | PC |
-| Windows x86_64 | `retro-engine-sdk-0.2.1-pc-windows-x86_64.zip` | PC |
-| macOS arm64 | `retro-engine-sdk-0.2.1-pc-macos-arm64.tar.gz` | PC |
-| Linux (cross) | `retro-engine-sdk-0.2.1-ps1-mips.tar.gz` | PS1 (PSn00bSDK v0.24) |
-| Linux (cross) | `retro-engine-sdk-0.2.1-saturn-sh2.tar.gz` | Saturn (Jo Engine v2026.2) |
+| Linux x86_64 | `retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz` | PC |
+| Windows x86_64 | `retro-engine-sdk-0.3.0-pc-windows-x86_64.zip` | PC |
+| macOS arm64 | `retro-engine-sdk-0.3.0-pc-macos-arm64.tar.gz` | PC |
+| Linux (cross) | `retro-engine-sdk-0.3.0-ps1-mips.tar.gz` | PS1 (PSn00bSDK v0.24) |
+| Linux (cross) | `retro-engine-sdk-0.3.0-saturn-sh2.tar.gz` | Saturn (Jo Engine v2026.2) |
+| Linux (cross) | `retro-engine-sdk-0.3.0-n64-mips64.tar.gz` | N64 (pinned libdragon) |
 
 ```sh
-tar -xzf retro-engine-sdk-0.2.1-pc-linux-x86_64.tar.gz
+tar -xzf retro-engine-sdk-0.3.0-pc-linux-x86_64.tar.gz
 cd sdk
 sha256sum -c checksums.sha256
 cat VERSION.txt sdk_manifest.json
@@ -92,7 +95,7 @@ cmake --build build/saturn-release --target sdk_package
 
 ```sh
 python3 scripts/package_sdk.py --build-dir build/pc-release \
-  --platform pc --arch x86_64 --version 0.2.1 --output-dir dist
+  --platform pc --arch x86_64 --version 0.3.0 --output-dir dist
 ```
 
 Выход: `build/<preset>/sdk-stage-<platform>-<arch>/` (install-tree) и
@@ -123,7 +126,8 @@ cmake --build build
 | Target | Содержимое |
 |---|---|
 | `RetroPolyEngine::retro_engine` | fixed/ECS/alloc/render/assets/игровые системы |
-| `RetroPolyEngine::hal` | выбранный бэкенд (PC/PS1/Saturn) |
+| `RetroPolyEngine::hal` | выбранный бэкенд (PC/PS1/Saturn/N64) |
+| `RetroPolyEngine::n64_rsp_tnl` | N64 RSP T&L overlay (только N64 SDK) |
 | `RetroPolyEngine::log` | диагностика |
 
 `find_package` работает и из build-tree:
@@ -200,7 +204,27 @@ cmake --build build-ht
 ./build-ht/hello_triangle --version
 ```
 
-## 6. PS1 SDK
+## 6. N64 SDK
+
+N64 toolchain/libdragon не входят в архив (MIT, env-install):
+`N64_INST` + `LIBDRAGON_ROOT` — см. [`N64.md`](N64.md) §2–3.
+Установка даёт `lib/n64/mips64/libretro_engine*.a`, `rsp/` (исходник,
+карта, ELF) и `lib/n64/mips64/libretro_engine_n64_ucode.a`
+(`RetroPolyEngine::n64_rsp_tnl`).
+
+```sh
+export N64_INST=$HOME/n64-sdk/toolchain/opt/libdragon
+cmake -S examples/hello_triangle_n64 -B build -G Ninja \
+  -DCMAKE_TOOLCHAIN_FILE=<sdk>/cmake/n64-toolchain.cmake \
+  -DCMAKE_PREFIX_PATH=<sdk>
+cmake --build build          # → build/hello_triangle_n64.z64
+```
+
+`examples/hello_triangle_n64` использует публичный API и POST_BUILD
+`n64tool`; DFS не требуется. Clean smoke:
+`python3 scripts/sdk_consumer_smoke.py --sdk-archive <n64>.tar.gz --platform n64`.
+
+## 7. PS1 SDK
 
 ```sh
 export PSN00BSDK_LIBS="$HOME/PSn00bSDK/lib/libpsn00b"
@@ -213,7 +237,7 @@ cmake --build build-ps1
 Результат — `hello_triangle_ps1.elf/.exe`. Для CD-образа используйте
 `mkpsxiso` из PSn00bSDK (см. `docs/BUILDING.md` §PS1).
 
-## 7. Saturn SDK
+## 8. Saturn SDK
 
 ```sh
 export JO_ENGINE_ROOT="$HOME/joengine"
@@ -227,7 +251,7 @@ cmake --build build-sat
 публичные заголовки Jo Engine. Запуск — в Mednafen (BIOS пользователя, не
 вендорится).
 
-## 8. Манифест и checksums
+## 9. Манифест и checksums
 
 `sdk_manifest.json` содержит:
 
@@ -247,10 +271,10 @@ Release gate:
 
 ```sh
 python3 scripts/verify_release_contract.py \
-  --sdk-archive dist/retro-engine-sdk-0.2.1-pc-x86_64.tar.gz
+  --sdk-archive dist/retro-engine-sdk-0.3.0-pc-x86_64.tar.gz
 ```
 
-## 9. Clean consumer smoke
+## 10. Clean consumer smoke
 
 ```sh
 python3 scripts/sdk_consumer_smoke.py \
@@ -263,13 +287,14 @@ python3 scripts/sdk_consumer_smoke.py \
 ```sh
 python3 scripts/sdk_consumer_smoke.py --sdk-dir /path/to/sdk --platform ps1
 python3 scripts/sdk_consumer_smoke.py --sdk-dir /path/to/sdk --platform saturn
+python3 scripts/sdk_consumer_smoke.py --sdk-archive <n64>.tar.gz --platform n64
 ```
 
-## 10. Ограничения v0.2.1
+## 11. Ограничения v0.3.0
 
 - Нет dependency manager/version solver: SDK поставляет ровно один набор
   headers/libs/config/checksums.
 - PC SDK содержит static SDL3/glad; системным остаётся только OpenGL.
-- PS1/Saturn требуют внешний pinned toolchain (PSn00bSDK/Jo Engine).
+- PS1/Saturn/N64 требуют внешний pinned toolchain (PSn00bSDK/Jo Engine/libdragon).
 - ABI-совместимость гарантируется в пределах major-версии пакета
   (`SameMajorVersion`); C++ API без бинарного обещания между компиляторами.

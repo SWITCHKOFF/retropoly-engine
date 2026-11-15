@@ -17,7 +17,9 @@ language: "ru"
 | Версия | 1.43 |
 | Дата | 2026-09-07 |
 | Основной MVP | PC (SDL3 + OpenGL) + Sony PlayStation 1 |
-| Будущие платформы | Sega Saturn, Nintendo 64, Atari Jaguar, Panasonic 3DO |
+| Будущие платформы | Sega Saturn, Nintendo 64, Atari Jaguar (DEFERRED) |
+| Atari Jaguar / Jaguar CD | **DEFERRED — «до лучших времён»** (ADR-016, 2026-11-15); S47–52 не активируются, Jaguar-код/toolchain/ROM/CD/payload не создаются; старт — только по явному личному разрешению maintainer |
+| 3DO | Исключён из roadmap (2026-11-15); раздел 2.5 сохранён как reference |
 | Статус | Инженерная спецификация MVP |
 
 ## Нормативная база
@@ -34,7 +36,7 @@ language: "ru"
 
 > **Каноническое правило.** Переполнение renderer, command buffer, OT и arena является явной ошибкой с диагностикой. Примитивы не должны отбрасываться молча.
 
-> **Справочные данные будущих платформ.** Параметры Saturn, N64, Jaguar и 3DO являются reference material и подлежат повторной проверке перед реализацией соответствующих backend.
+> **Справочные данные будущих платформ.** Параметры Saturn, N64 и Jaguar являются reference material и подлежат повторной проверке перед реализацией соответствующих backend. **Atari Jaguar / Jaguar CD — DEFERRED «до лучших времён» (ADR-016, 2026-11-15):** все упоминания Jaguar в этом документе — reference material, поддержка не добавляется, S47–52 не активируются; старт — только по явному личному разрешению maintainer. 3DO исключён из roadmap (2026-11-15); его данные сохранены только как historical reference.
 
 # Содержание
 
@@ -184,9 +186,9 @@ language: "ru"
 >
 > N64: libdragon (open-source, MIT). Риск низкий.
 >
-> Jaguar: jaguar-sdk (open-source, public domain). Риск низкий.
+> Jaguar: **DEFERRED «до лучших времён» (ADR-016).** `jaguar-sdk` — без top-level LICENSE, внутри Atari samples/docs/CD BIOS; `lyxass` — MIT; `jaglib` — MIT кроме Atari `jagcore.h`; `rmvlib` — LGPL-2.1. Юридический риск средний/высокий; вендоринг запрещён, платформа не активируется.
 >
-> 3DO: historical SDK/tooling requires separate legal review before redistribution or vendoring; it is not an MVP dependency. Current trademark/rights status must be verified from an authoritative source before any release claim. Position of the rights holder cited in the research follows: "Права на товарный знак 3DO и связанные с ним дизайны, а также домен 3DO.com принадлежат компании Throwback Entertainment. Эти активы не были проданы, переданы или лицензированы компании Empire Interactive, и планов по их продаже нет" [1] (<https://www.timeextension.com/news/2026/07/empire-interactive-withdraws-from-3do-project-due-to-likelihood-of-prolonged-legal-disputes?spm=a2ty_o01.29997173.0.0.20fd55fbt2Yenk>) [2] (<https://www.engadget.com/2206578/3do-revival-empire-interactive/?spm=a2ty_o01.29997173.0.0.20fd55fbt2Yenk>).
+> 3DO: **Исключён из roadmap (2026-11-15); поддержка не добавляется.** Historical SDK/tooling requires separate legal review before redistribution or vendoring; it is not an MVP dependency. Current trademark/rights status must be verified from an authoritative source before any release claim. Position of the rights holder cited in the research follows: "Права на товарный знак 3DO и связанные с ним дизайны, а также домен 3DO.com принадлежат компании Throwback Entertainment. Эти активы не были проданы, переданы или лицензированы компании Empire Interactive, и планов по их продаже нет" [1] (<https://www.timeextension.com/news/2026/07/empire-interactive-withdraws-from-3do-project-due-to-likelihood-of-prolonged-legal-disputes?spm=a2ty_o01.29997173.0.0.20fd55fbt2Yenk>) [2] (<https://www.engadget.com/2206578/3do-revival-empire-interactive/?spm=a2ty_o01.29997173.0.0.20fd55fbt2Yenk>).
 
 4. Single-header libraries: cgltf (MIT license). stb_image (MIT license, Public Domain). Риск: низкий.
 
@@ -202,7 +204,7 @@ language: "ru"
 >
 > Jaguar: 68000 CPU plus multiple programmable graphics/audio processor units (Tom/Jerry). Сложность: очень высокая. Точная processor topology и roles are backend-specific; see S7 before implementation.
 >
-> 3DO: ARM60 @ 12.5 МГц, 2 MiB DRAM + 1 MiB VRAM in the minimum configuration; MADAM CEL engine + matrix engine provide hardware assistance. Backend complexity: High. Proprietary historical SDK/licensing requires separate legal review; it is not an MVP dependency.
+> 3DO: **Исключён из roadmap (2026-11-15).** ARM60 @ 12.5 МГц, 2 MiB DRAM + 1 MiB VRAM in the minimum configuration; MADAM CEL engine + matrix engine provide hardware assistance. Backend complexity: High. Proprietary historical SDK/licensing requires separate legal review; it is not an MVP dependency.
 
 2. Реалистичная оценка для соло-разработчика:
 
@@ -210,7 +212,7 @@ language: "ru"
 >
 > Tier 2 (Saturn или N64): Реалистично за 6-12 месяцев после MVP. Saturn --- ад с двумя CPU, N64 --- сложен из-за микрокода.
 >
-> Tier 3 (Jaguar, 3DO): Реалистично за 12-18 месяцев после Tier 2. Очень сложные архитектуры, мало документации, юридические проблемы.
+> Tier 3 (Jaguar; 3DO исключён из roadmap): Реалистично за 12-18 месяцев после Tier 2. Очень сложные архитектуры, мало документации, юридические проблемы.
 
 3. Риски:
 
@@ -336,7 +338,7 @@ language: "ru"
 >
 > Осциллографы и логические анализаторы: $200-1000, не нужны для MVP.
 >
-> Saturn/N64/Jaguar/3DO консоли: $100-500 каждая, не нужны до Tier 2-3.
+> Saturn/N64/Jaguar консоли: $100-500 каждая, не нужны до Tier 2-3; 3DO исключён из roadmap.
 
 ## Скоуп MVP (v0.1.0)
 
@@ -414,7 +416,7 @@ language: "ru"
 >
 > 2. НЕ ВХОДИТ В MVP (откладываем до v0.2.0+):
 >
-> Поддержка Saturn/N64/Jaguar/3DO: Только PC + PS1.
+> Поддержка Saturn/N64/Jaguar: Только PC + PS1; 3DO исключён из roadmap.
 >
 > Динамическое освещение: Только вершинное/ambient.
 >
@@ -488,7 +490,7 @@ language: "ru"
 
 - MVP (v0.1.0): PC (SDL3 + OpenGL) + PS1
 
-- Будущие версии: Saturn, N64, Jaguar, 3DO
+- Будущие версии: Saturn, N64, Jaguar; 3DO исключён из roadmap
 
 > Все требования основаны на реальных спецификациях железа и опыте homebrew сообщества (PSn00bSDK, libdragon, Jo Engine).
 
@@ -842,6 +844,12 @@ PS1 HARDWARE NOTE: GTE register formats are operation-specific. The engine fixed
 
 ### 2.4. ATARI JAGUAR
 
+> **Статус: DEFERRED — «до лучших времён» (ADR-016, 2026-11-15).**
+> Раздел сохранён как reference material; S47–52 не активируются,
+> Jaguar backend/SDK/CD-authoring не реализуются. Старт — только по
+> явному личному разрешению maintainer. Связка на случай возобновления —
+> [`plans/jaguar_emulator_sdk_answers.md`](plans/jaguar_emulator_sdk_answers.md).
+
 ОСНОВНЫЕ ХАРАКТЕРИСТИКИ
 
 - CPU: Motorola 68000 @ 13.3 МГц (основной)
@@ -896,7 +904,11 @@ PS1 HARDWARE NOTE: GTE register formats are operation-specific. The engine fixed
 
 - Очень сложно для разработки
 
-### 2.5. PANASONIC 3DO
+### 2.5. PANASONIC 3DO (REFERENCE ONLY; EXCLUDED FROM ROADMAP)
+
+> **Статус (2026-11-15): 3DO исключён из roadmap. Поддержка не добавляется.**
+> Раздел сохранён как справочный материал; значения не являются backend
+> acceptance criteria. Аудит и риски — `docs/plans/3do_legal_audit.md`.
 
 ОСНОВНЫЕ ХАРАКТЕРИСТИКИ
 
@@ -1147,7 +1159,7 @@ HAL
 
 ## 7. ТАБЛИЦЫ СРАВНЕНИЯ КОНСОЛЕЙ
 
-Статус данных: PS1 --- нормативные hardware facts для MVP. Saturn/N64/Jaguar/3DO --- справочные архитектурные ориентиры, не backend acceptance criteria. В future sections, labels "hardware fact" describe silicon behavior; "engine policy" describes the proposed backend mapping. Before implementation, re-verify values against platform-specific primary/reference documentation.
+Статус данных: PS1 --- нормативные hardware facts для MVP. Saturn/N64/Jaguar --- справочные архитектурные ориентиры, не backend acceptance criteria; 3DO исключён из roadmap, его строки сохранены как historical reference. В future sections, labels "hardware fact" describe silicon behavior; "engine policy" describes the proposed backend mapping. Before implementation, re-verify values against platform-specific primary/reference documentation.
 
 СРАВНЕНИЕ CPU
 
@@ -1157,7 +1169,7 @@ HAL
  Saturn 2x SH-2 28.6 МГц НЕТ Benchmark only
  N64 MIPS R4300i 93.75 МГц ДА Benchmark only
  Jaguar Motorola 68000 13.295 МГц НЕТ Host CPU; graphics/audio work is largely offloaded to programmable Tom/Jerry processors
- 3DO ARM60 12.5 МГц НЕТ Benchmark only
+ 3DO (excluded) ARM60 12.5 МГц НЕТ Benchmark only
 
 СРАВНЕНИЕ ПАМЯТИ
 
@@ -1167,7 +1179,7 @@ HAL
  Saturn 2 МБ Work RAM (Low + High) VDP1/VDP2-specific VRAM 512 КБ sound RAM CD-ROM, nominal 2x
  N64 4 МБ; 8 МБ with Expansion Pak RCP/video memory model Audio is subsystem-specific Cartridge ROM
  Jaguar 2 МБ DRAM Shared DRAM / Tom-Jerry subsystem Shared DRAM / Jerry DSP subsystem Cartridge ROM (CD add-on on some systems)
- 3DO 2 МБ main RAM Video/system memory is platform-specific Subsystem-specific CD-ROM; verify profile per target
+ 3DO (excluded) 2 МБ main RAM Video/system memory is platform-specific Subsystem-specific CD-ROM; verify profile per target
 
 *- -- консоли использовали унифицированную память (UMA, в качестве неё часто выступала оперативная память), которая не имела строгого распределения на видео- и звуковую память
 
@@ -1180,7 +1192,7 @@ For Jaguar, "ДА (Blitter)" describes hardware Z compare/write support in 16-bi
  Saturn НЕТ Affine No universal z-buffer contract; backend-specific VDP1/VDP2 ordering
  N64 ДА Perspective correct Hardware depth buffer; perspective-correct texture pipeline
  Jaguar ДА (Blitter, 16-bit pixel mode) Programmable texture mapping Blitter provides hardware-assisted Z compare/write in 16-bit pixel mode; texture mapping is programmable
- 3DO НЕТ Аппаратное (cell) Cell-based compositing / hardware-assisted video; backend-specific
+ 3DO (excluded) НЕТ Аппаратное (cell) Cell-based compositing / hardware-assisted video; backend-specific
 
 ## 8. РЕКОМЕНДАЦИИ ПО РЕАЛИЗАЦИИ
 
@@ -1206,7 +1218,7 @@ For Jaguar, "ДА (Blitter)" describes hardware Z compare/write support in 16-bi
 
 - Jaguar: прямое программирование blitter
 
-- 3DO: cell-based рендеринг
+- 3DO (excluded): cell-based рендеринг
 
 # ЭТАП 4: АРХИТЕКТУРА И ПРОЕКТИРОВАНИЕ (SYSTEM DESIGN)
 
@@ -1270,7 +1282,7 @@ BUILD PRECEDENCE: CMakePresets.json is the only canonical build entry point. All
 
 - Консольные сборки используют общий engine representation; platform-specific conversion, submission и hardware state принадлежат backend.
 
-MVP v0.1.0 targets exactly PC (SDL3 + OpenGL 3.3) and PlayStation 1 (PSn00bSDK v0.24). Saturn, N64, Jaguar and 3DO are post-MVP. PC = Personal Computer (host platform); PS1 = Sony PlayStation 1; backend = platform-specific renderer/HAL implementation; engine representation = platform-independent data before backend conversion.
+MVP v0.1.0 targets exactly PC (SDL3 + OpenGL 3.3) and PlayStation 1 (PSn00bSDK v0.24). Saturn, N64 and Jaguar are post-MVP; 3DO is excluded from the roadmap. PC = Personal Computer (host platform); PS1 = Sony PlayStation 1; backend = platform-specific renderer/HAL implementation; engine representation = platform-independent data before backend conversion.
 
 Workload contract: W0 is the deterministic conformance scene; W1 is the demo/performance scene. Performance claims must identify which workload produced the measurement.
 
@@ -6362,11 +6374,11 @@ Logger::log("WARNING: Memory usage critical!");
 
 - Master + Slave SH-2, VDP1 + VDP2
 
-#### Итерация 4: N64, Jaguar, 3DO (v0.3.0 - v0.5.0)
+#### Итерация 4: N64 (v0.3.0) + Jaguar (v0.4.0, DEFERRED); 3DO исключён
 
-- 12-18 спринтов (6-9 месяцев)
+- 12-18 спринтов (6-9 месяцев); N64 реализован как draft v0.3.0
 
-- Микрокод RCP, Blitter Jaguar, Cell engine 3DO
+- Микрокод RCP; Jaguar-часть **DEFERRED «до лучших времён» (ADR-016)** — не активируется без явного личного разрешения maintainer; Cell engine 3DO — reference only (3DO исключён из roadmap)
 
 #### Итерация 5: Аудио и файловая система (v0.6.0 - v0.8.0)
 
@@ -7230,11 +7242,11 @@ Logger::log("WARNING: Memory usage critical!");
 >
 > ------------------------------------------------------------------------
 >
-> ИТЕРАЦИЯ 4: N64, JAGUAR, 3DO (v0.3.0 - v0.5.0) --- 12-18 СПРИНТОВ (6-9 МЕСЯЦЕВ)
+> ИТЕРАЦИЯ 4: N64 (v0.3.0) + JAGUAR (v0.4.0, DEFERRED) --- N64 РЕАЛИЗОВАН КАК DRAFT; JAGUAR НЕ АКТИВИРУЕТСЯ (ADR-016); 3DO ИСКЛЮЧЁН
 >
 > ------------------------------------------------------------------------
 >
-> ЦЕЛЬ: Добавить поддержку N64, Jaguar, 3DO.
+> ЦЕЛЬ: Поддержка N64; **Jaguar отложен «до лучших времён» (ADR-016)**; 3DO исключён из roadmap.
 >
 > N64 (v0.3.0):
 
@@ -7244,19 +7256,14 @@ Logger::log("WARNING: Memory usage critical!");
 
 - Perspective correct текстурирование
 
-- 6-8 спринтовJaguar (v0.4.0):
+- 6-8 спринтов Jaguar (v0.4.0) — **DEFERRED, не активируется (ADR-016):**
 
 - Прямое программирование Blitter (Tom)
 
 - Five processors are present across the Jaguar architecture; the 68000 is the host/boot processor while Tom and Jerry contain additional programmable processors.
 
-- 4-6 спринтов3DO (v0.5.0):
-
-- Cell-based рендеринг
-
-- ARM60 CPU
-
-- 4-6 спринтов
+> 3DO (v0.5.0): ИСКЛЮЧЁН ИЗ ROADMAP (2026-11-15). Backend/SDK/сборка дисков
+> не планируются; раздел 2.5 сохранён как reference.
 
 > ------------------------------------------------------------------------
 >
@@ -7532,7 +7539,7 @@ A release candidate is accepted only when the reference workload, memory budgets
 
 > ЧТО МЫ НЕ ПОЛУЧИЛИ (и это нормально):
 
-- Поддержка Saturn/N64/Jaguar/3DO (будет в v0.2.0+)
+- Поддержка Saturn/N64/Jaguar (будет в v0.2.0+); 3DO исключён из roadmap
 
 - Полноценное аудио (будет в v0.6.0+)
 
@@ -10044,7 +10051,7 @@ Watch on Youtube
 >
 > Overview
 >
-> Retro Engine is a cross-platform 3D game engine designed for retro consoles (PS1, Saturn, N64, Jaguar, 3DO) and PC. The architecture follows these principles:
+> Retro Engine is a cross-platform 3D game engine designed for retro consoles (PS1, Saturn, N64, Jaguar) and PC. The architecture follows these principles:
 >
 > Data-Oriented Design (DOD) --- Data is stored sequentially for cache efficiency
 >
@@ -11270,7 +11277,7 @@ body: 'Please fill out the issue template completely.'
 >
 > Проведение второго Game Jam МЕСЯЦ 10-12:
 >
-> Поддержка Jaguar/3DO (v0.4.0 - v0.5.0)
+> Поддержка Jaguar (v0.4.0); 3DO исключён из roadmap
 >
 > Полноценная файловая система
 >
@@ -11485,7 +11492,7 @@ body: 'Please fill out the issue template completely.'
 # REVISION SOURCES --- ТЕХНИЧЕСКАЯ ПРОВЕРКА
 
 [S7] SDL3 Migration Guide --- official SDL documentation: SDL3 renamed SDL_GameController API to SDL_Gamepad and removed SDL_INIT_TIMER. <https://wiki.libsdl.org/SDL3/README-migration>
-[S8] 3DO Development Repo --- hardware/memory documentation (non-normative future-platform reference): <https://3dodev.com/documentation/hardware/opera/memory_configurations>
+[S8] 3DO Development Repo --- hardware/memory documentation (non-normative historical reference; 3DO excluded from roadmap): <https://3dodev.com/documentation/hardware/opera/memory_configurations>
 
 [S1] PSX-SPX: PlayStation hardware specification and GTE/GPU documentation --- <https://psx-spx.consoledev.net/psx-spx.pdf>
 

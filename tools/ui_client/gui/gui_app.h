@@ -75,8 +75,10 @@ private:
         SdkPc,
         SdkPs1,
         SdkSaturn,
+        SdkN64,
         EmulatorPs1,
         EmulatorSaturn,
+        EmulatorN64,
         ImportAsset,
         WizardLocation
     };

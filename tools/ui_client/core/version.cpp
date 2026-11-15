@@ -6,7 +6,7 @@
 #include <cstdlib>
 
 #ifndef RPE_UI_VERSION
-#define RPE_UI_VERSION "0.2.1"
+#define RPE_UI_VERSION "0.3.0"
 #endif
 
 namespace rpe {

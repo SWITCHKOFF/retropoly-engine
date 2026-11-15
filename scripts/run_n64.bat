@@ -13,7 +13,7 @@ setlocal
 
 set "REPO_ROOT=%~dp0.."
 if "%~1"=="" (
-    set "ROM=%REPO_ROOT%\build\n64-release\src\hal\n64\hello_n64.z64"
+    set "ROM=%REPO_ROOT%\build\n64-release\src\hal\n64\hello_triangle.z64"
 ) else (
     set "ROM=%~1"
 )

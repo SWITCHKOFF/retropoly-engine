@@ -4,7 +4,8 @@
 # Матрица:
 #   - PC: Ubuntu/Windows/macOS, pc-release → sdk_package → clean consumer;
 #   - PS1: pinned PSn00bSDK v0.24 → ps1-release → sdk_package → consumer;
-#   - Saturn: pinned Jo Engine v2026.2 → saturn-release → sdk_package → consumer.
+#   - Saturn: pinned Jo Engine v2026.2 → saturn-release → sdk_package → consumer;
+#   - N64: pinned libdragon → n64-release → sdk_package → consumer.
 #
 # Артефакты скачиваются/проверяются release gate v2 (S37–38).
 # ============================================================================
@@ -173,4 +174,83 @@ jobs:
             dist/retro-engine-sdk-*-saturn-*.tar.gz.sha256
             dist/retro-engine-sdk-*-saturn-*.zip
             dist/retro-engine-sdk-*-saturn-*.zip.sha256
+          if-no-files-found: error
+
+  sdk-n64:
+    name: SDK N64 (ubuntu-latest, libdragon pinned)
+    runs-on: ubuntu-latest
+
+    env:
+      N64_SDK: ${{ github.workspace }}/n64-sdk
+      N64_INST: ${{ github.workspace }}/n64-sdk/toolchain/opt/libdragon
+      LIBDRAGON_ROOT: ${{ github.workspace }}/n64-sdk/libdragon
+
+    steps:
+      - name: "Checkout (без submodules: N64 не тянет SDL3)"
+        uses: actions/checkout@v4
+
+      - name: Host toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y ninja-build curl build-essential libpng-dev zlib1g-dev
+
+      - name: Кэш pinned toolchain/libdragon
+        uses: actions/cache@v4
+        with:
+          path: ${{ github.workspace }}/n64-sdk
+          key: n64-sdk-${{ hashFiles('ci/n64-toolchain.sha256', 'ci/n64-libdragon.commit') }}
+
+      - name: libdragon-toolchain (pinned deb + SHA-256)
+        run: |
+          set -euo pipefail
+          mkdir -p "$N64_SDK"
+          cd "$N64_SDK"
+          if [ ! -x "$N64_INST/bin/mips64-elf-gcc" ]; then
+            curl -L --retry 3 -o gcc-toolchain-mips64-x86_64.deb \
+              https://github.com/DragonMinded/libdragon/releases/download/toolchain-continuous-prerelease/gcc-toolchain-mips64-x86_64.deb
+            sha256sum -c "$GITHUB_WORKSPACE/ci/n64-toolchain.sha256"
+            rm -rf toolchain
+            dpkg-deb -x gcc-toolchain-mips64-x86_64.deb toolchain
+          fi
+          test -x "$N64_INST/bin/mips64-elf-gcc"
+
+      - name: libdragon (pinned commit → make install + tools-install)
+        run: |
+          set -euo pipefail
+          PIN="$(grep -E '^[0-9a-f]{40}$' ci/n64-libdragon.commit | head -n 1)"
+          test -n "$PIN"
+          if [ ! -f "$N64_INST/mips64-elf/lib/libdragon.a" ] || \
+             [ ! -x "$N64_INST/bin/n64sym" ] || \
+             [ ! -x "$N64_INST/bin/mkdfs" ]; then
+            rm -rf "$LIBDRAGON_ROOT"
+            git config --global advice.detachedHead false
+            git clone --filter=blob:none https://github.com/DragonMinded/libdragon.git "$LIBDRAGON_ROOT"
+            git -C "$LIBDRAGON_ROOT" checkout "$PIN"
+            make -C "$LIBDRAGON_ROOT" -j"$(nproc)"
+            make -C "$LIBDRAGON_ROOT" install
+            make -C "$LIBDRAGON_ROOT" tools-install
+          fi
+          test "$(git -C "$LIBDRAGON_ROOT" rev-parse HEAD)" = "$PIN"
+
+      - name: Build + package N64 SDK
+        run: |
+          cmake --preset n64-release
+          cmake --build --preset n64-release
+          cmake --build build/n64-release --target sdk_package
+
+      - name: Clean consumer smoke (N64)
+        run: |
+          set -euo pipefail
+          archive="$(ls dist/retro-engine-sdk-*-n64-*.tar.gz | head -n 1)"
+          python3 scripts/sdk_consumer_smoke.py --sdk-archive "$archive" --platform n64
+
+      - name: Upload N64 SDK
+        uses: actions/upload-artifact@v4
+        with:
+          name: retro-engine-sdk-n64
+          path: |
+            dist/retro-engine-sdk-*-n64-*.tar.gz
+            dist/retro-engine-sdk-*-n64-*.tar.gz.sha256
+            dist/retro-engine-sdk-*-n64-*.zip
+            dist/retro-engine-sdk-*-n64-*.zip.sha256
           if-no-files-found: error

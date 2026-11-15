@@ -19,7 +19,7 @@
 cmake_minimum_required(VERSION 3.25)
 
 project(retro_engine
-    VERSION 0.2.1
+    VERSION 0.3.0
     DESCRIPTION "RetroPolyEngine — deterministic retro engine (PC: SDL3 + OpenGL 3.3; PS1: PSn00bSDK v0.24; Saturn: Jo Engine v2026.2; N64: libdragon)"
     LANGUAGES C CXX ASM
 )
@@ -352,9 +352,17 @@ elseif(PLATFORM_PS1)
     install(DIRECTORY examples/sdk/ps1/ DESTINATION examples/hello_triangle_ps1)
 elseif(PLATFORM_SATURN)
     install(DIRECTORY examples/sdk/saturn/ DESTINATION examples/hello_triangle_saturn)
+elseif(PLATFORM_N64)
+    install(DIRECTORY examples/sdk/n64/ DESTINATION examples/hello_triangle_n64)
 endif()
 
 install(DIRECTORY templates/project DESTINATION templates)
+# Toolchain wrapper (SDK) проверяет pinned libdragon commit относительно
+# <sdk>/ci/n64-libdragon.commit — манифест обязан входить в SDK.
+install(FILES
+        "${CMAKE_SOURCE_DIR}/ci/n64-libdragon.commit"
+        "${CMAKE_SOURCE_DIR}/ci/n64-toolchain.sha256"
+        DESTINATION ci)
 install(FILES
         "${CMAKE_SOURCE_DIR}/cmake/ps1-toolchain.cmake"
         "${CMAKE_SOURCE_DIR}/cmake/saturn-toolchain.cmake"
@@ -363,8 +371,8 @@ install(FILES
         DESTINATION cmake)
 
 # SDK-архив: cmake --build <build-dir> --target sdk_package
-# N64 SDK/UI — S45–46; в S39–40 пакет не создаётся (package_sdk.py пока
-# поддерживает pc/ps1/saturn, а N64-библиотеки требуют libdragon).
+# N64 SDK/UI — S45–46: package_sdk.py --platform n64; библиотеки HAL +
+# отдельный RSP T&L overlay (libretro_engine_n64_ucode.a).
 if(PLATFORM_PC)
     set(RPE_SDK_PACKAGE_DEPS retro_engine retro_engine_hal retro_engine_log
         asset_converter hello_triangle rotating_cube)
@@ -374,6 +382,9 @@ elseif(PLATFORM_PS1)
 elseif(PLATFORM_SATURN)
     set(RPE_SDK_PACKAGE_DEPS retro_engine retro_engine_hal retro_engine_log
         hello_triangle_saturn)
+elseif(PLATFORM_N64)
+    set(RPE_SDK_PACKAGE_DEPS retro_engine retro_engine_hal retro_engine_log
+        retro_engine_n64_ucode hello_triangle_n64 rotating_cube_n64)
 endif()
 find_package(Python3 COMPONENTS Interpreter QUIET)
 if(Python3_Interpreter_FOUND AND DEFINED RPE_SDK_PACKAGE_DEPS)

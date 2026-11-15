@@ -65,7 +65,7 @@ def main():
     parser = argparse.ArgumentParser(description="SDK clean consumer smoke")
     parser.add_argument("--sdk-dir")
     parser.add_argument("--sdk-archive")
-    parser.add_argument("--platform", choices=["pc", "ps1", "saturn"], default="pc")
+    parser.add_argument("--platform", choices=["pc", "ps1", "saturn", "n64"], default="pc")
     parser.add_argument("--generator", default="Ninja")
     parser.add_argument("--build-dir", default=None)
     parser.add_argument("--expected-version", default=None)
@@ -99,6 +99,14 @@ def main():
                 "-DCMAKE_TOOLCHAIN_FILE=%s" %
                 os.path.join(sdk_dir, "cmake", "saturn-sdk-toolchain.cmake"),
             ]
+        elif args.platform == "n64":
+            source_dir = os.path.join(sdk_dir, "examples", "hello_triangle_n64")
+            configure = [
+                "cmake", "-S", source_dir, "-B", build_dir, "-G", args.generator,
+                "-DCMAKE_PREFIX_PATH=%s" % sdk_dir,
+                "-DCMAKE_TOOLCHAIN_FILE=%s" %
+                os.path.join(sdk_dir, "cmake", "n64-toolchain.cmake"),
+            ]
         rc, out, err = run(configure)
         if rc != 0:
             print(out)
@@ -123,6 +131,8 @@ def main():
                       os.path.join(build_dir, "hello_triangle_ps1.elf")]
         elif args.platform == "saturn":
             probes = [os.path.join(build_dir, "hello_triangle_saturn.elf")]
+        elif args.platform == "n64":
+            probes = [os.path.join(build_dir, "hello_triangle_n64.z64")]
 
         existing = [p for p in probes if os.path.isfile(p)]
         if not existing:

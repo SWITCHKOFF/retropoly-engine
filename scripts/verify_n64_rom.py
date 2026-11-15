@@ -13,7 +13,7 @@
 #   - SHA-256 и размер печатаются/пишутся в JSON.
 #
 # Использование:
-#   python3 scripts/verify_n64_rom.py build/n64-release/src/hal/n64/hello_n64.z64
+#   python3 scripts/verify_n64_rom.py build/n64-release/src/hal/n64/hello_triangle.z64
 #   python3 scripts/verify_n64_rom.py --json rom.z64
 #
 # Exit code: 0 — ROM валиден, 1 — нарушение контракта, 2 — ошибка аргументов.

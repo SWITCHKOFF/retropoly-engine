@@ -15,3 +15,4 @@ ADR-001…ADR-007 зафиксированы в
 | 013 | Release freeze: любая публикация релизов отложена до v0.9.x, draft-only workflow и ручная приёмка | Accepted (2026-11-14) | [ADR-013-release-freeze.md](ADR-013-release-freeze.md) |
 | 014 | N64 backend: toolchain/libdragon, `.z64`, ROM header/CRC policy, memory/DFS/input, gopher64, границы v0.3.0 | Accepted, rev2 (2026-11-14) | [ADR-014-n64-backend.md](ADR-014-n64-backend.md) |
 | 015 | N64 renderer: RSP T&L overlay, RDP rdpq, аппаратный Z, TMEM-полосы, W0/W1 | Accepted (2026-11-14) | [ADR-015-n64-rsp-rdp.md](ADR-015-n64-rsp-rdp.md) |
+| 016 | Atari Jaguar / Jaguar CD: связка зафиксирована, поддержка отложена «до лучших времён»; старт — только по личному разрешению maintainer | Accepted / DEFERRED (2026-11-15) | [ADR-016-jaguar-deferred.md](ADR-016-jaguar-deferred.md) |

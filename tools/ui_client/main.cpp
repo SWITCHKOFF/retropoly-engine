@@ -34,8 +34,8 @@ void printUsage(const char* exe)
         "  --theme dark|light   тема\n"
         "  --smoke              headless smoke: new project → import → build → run\n"
         "  --run-project        открыть --project и запустить target/эмулятор\n"
-        "  --emulator PATH      эмулятор для --run-project (PS1/Saturn)\n"
-        "  --smoke-platform P   target для smoke: pc|ps1|saturn (default pc)\n"
+        "  --emulator PATH      эмулятор для --run-project (PS1/Saturn/N64)\n"
+        "  --smoke-platform P   target для smoke: pc|ps1|saturn|n64 (default pc)\n"
         "  --work-dir DIR       каталог smoke-проекта\n"
         "  --samples DIR        каталог с cube.gltf/texture.png для импорта\n"
         "  --screenshot-dir DIR сохранить скриншоты smoke-сценария\n"
@@ -148,11 +148,22 @@ int main(int argc, char** argv)
         return 1;
     }
     if (!project_path.empty()) app.openProjectAtStartup(project_path);
+    if (!emulator_path.empty() && smoke) {
+        if (smoke_platform == Platform::Ps1) {
+            core.mutableSettings().emulator_ps1 = emulator_path;
+        } else if (smoke_platform == Platform::Saturn) {
+            core.mutableSettings().emulator_saturn = emulator_path;
+        } else if (smoke_platform == Platform::N64) {
+            core.mutableSettings().emulator_n64 = emulator_path;
+        }
+    }
     if (!emulator_path.empty() && core.hasProject()) {
         if (core.project().platform == Platform::Ps1) {
             core.mutableSettings().emulator_ps1 = emulator_path;
         } else if (core.project().platform == Platform::Saturn) {
             core.mutableSettings().emulator_saturn = emulator_path;
+        } else if (core.project().platform == Platform::N64) {
+            core.mutableSettings().emulator_n64 = emulator_path;
         }
     }
 

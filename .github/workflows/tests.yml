@@ -54,6 +54,9 @@ jobs:
       - name: "Build (canon: cmake --build --preset pc-debug)"
         run: cmake --build --preset pc-debug
 
+      - name: "N64 asset pipeline (host-only converter --platform n64)"
+        run: python3 scripts/verify_n64_assets.py --converter build/pc-debug/tools/asset_converter/asset_converter
+
       - name: "Test (canon: ctest --preset pc-debug)"
         run: ctest --preset pc-debug --output-on-failure
 
