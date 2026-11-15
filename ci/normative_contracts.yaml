@@ -224,6 +224,9 @@ release:
     - bios
     - roms
     - secrets
+    - jaguar
+    - emulator
+    - emulators
   required_sdk_components:
     - public_headers
     - pc_libraries

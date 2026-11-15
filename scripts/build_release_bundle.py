@@ -146,7 +146,7 @@ def copy_demos(demos_dir, target):
                 "# Demo images (optional)\n\n"
                 "Эти образы — только примеры для эмуляторов. Публичный релиз\n"
                 "состоит из `sdk/` и `ui/`; demo-образы не заменяют SDK/UI.\n"
-                "BIOS/ROM в payload не входят.\n")
+                "BIOS/ROM, Jaguar-артефакты и эмуляторы в payload не входят.\n")
     return sorted(
         os.path.relpath(os.path.join(d, n), target).replace(os.sep, "/")
         for d, _, names in os.walk(target) for n in names)

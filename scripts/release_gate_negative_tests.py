@@ -7,6 +7,7 @@
 #   missing sdk/ ui/ checksums/report → FAIL
 #   повреждённый checksum              → FAIL
 #   BIOS/ROM/секреты/build-каталог      → FAIL
+#   Jaguar-артефакты/эмулятор          → FAIL (v0.3.0 draft audit)
 #   demo-образ вне demos/              → FAIL
 #   отсутствует/повреждён N64 SDK       → FAIL (S45–46)
 #   report all_ok: false               → FAIL
@@ -125,6 +126,21 @@ def case_secrets(path):
     refresh_checksums(path)
 
 
+def case_jaguar(path):
+    os.makedirs(os.path.join(path, "jaguar"), exist_ok=True)
+    with open(os.path.join(path, "jaguar", "hello_triangle.j64"), "wb") as f:
+        f.write(b"not-a-real-jaguar-rom\x00")
+    refresh_checksums(path)
+
+
+def case_emulator(path):
+    target = os.path.join(path, "gopher64")
+    with open(target, "wb") as f:
+        f.write(b"\x7fELF not-a-real-emulator\x00")
+    os.chmod(target, 0o755)
+    refresh_checksums(path)
+
+
 def case_build_dir(path):
     os.makedirs(os.path.join(path, "build"), exist_ok=True)
     with open(os.path.join(path, "build", "CMakeCache.txt"), "w",
@@ -180,6 +196,8 @@ CASES = [
     ("bios", case_bios, "forbidden"),
     ("roms", case_rom, "forbidden"),
     ("secrets", case_secrets, "forbidden"),
+    ("jaguar", case_jaguar, "forbidden"),
+    ("emulator", case_emulator, "forbidden"),
     ("build-dir", case_build_dir, "forbidden"),
     ("demo-outside-demos", case_demo_outside_demos, "non-demo"),
     ("missing-n64-sdk", case_missing_n64_sdk, "n64"),

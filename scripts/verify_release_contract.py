@@ -13,7 +13,7 @@
 #   8. SDK: архивы + sidecar SHA-256, sdk_manifest.json, public headers,
 #      checksums.sha256 и clean consumer smoke (find_package RetroPolyEngine)
 #   9. UI: retro-engine-ui-* archive, ui_manifest.json, components,
-#      checksums, запрет BIOS/ROM/секретов/build-каталогов
+#      checksums, запрет BIOS/ROM/секретов/build-каталогов/Jaguar/эмуляторов
 #  10. Публикация результата как CI-artifact (release_contract_report.json)
 #
 # Вызов:

@@ -32,13 +32,16 @@ REQUIRED_TOP_LEVEL = [
 OPTIONAL_TOP_LEVEL = ["demos"]
 FORBIDDEN_DIR_PARTS = {
     ".git", ".svn", "build", "cmakefiles", "bios", "roms", "secrets",
-    "node_modules", ".cache",
+    "node_modules", ".cache", "jaguar", "emulator", "emulators",
 }
 FORBIDDEN_FILE_SUFFIXES = (
     ".rom", ".bios", ".key", ".pem", ".p12", ".pfx", ".jks", ".keystore",
+    ".j64", ".jag",
 )
 FORBIDDEN_FILE_NAMES = {
     "id_rsa", "id_dsa", "id_ecdsa", "id_ed25519", ".env",
+    "jaguar", "gopher64", "mupen64plus", "mednafen", "duckstation",
+    "retroarch", "project64", "virtualjaguar",
 }
 DEMO_ONLY_SUFFIXES = (".iso", ".cue", ".bin", ".elf", ".map", ".z64")
 
@@ -119,7 +122,8 @@ def _read_json(path):
 
 
 def _forbidden_entries(root, forbidden_dir_parts=None):
-    """BIOS/ROM/секреты/build-каталоги; demo-образы разрешены только в demos/."""
+    """BIOS/ROM/секреты/build-каталоги/Jaguar/эмуляторы; demo-образы
+    разрешены только в demos/."""
     dir_parts = set(FORBIDDEN_DIR_PARTS) | set(forbidden_dir_parts or [])
     forbidden = []
     for dirpath, dirnames, filenames in os.walk(root):
