@@ -40,7 +40,7 @@ cmake --preset pc-release && cmake --build --preset pc-release
 cmake --build build/pc-release --target sdk_package
 cmake --preset ui-release
 cmake --build build/ui-release --target retro_engine_ui
-python3 scripts/package_ui.py --build-dir build/ui-release --version 0.3.0
+python3 scripts/package_ui.py --build-dir build/ui-release
 
 # Проверить gate и собрать payload (см. docs/RELEASING.md)
 xvfb-run -a python3 scripts/verify_release_contract.py --w1-seconds 60 --skip-payload
@@ -139,7 +139,7 @@ cmake --build --preset ui-debug --target retro_engine_ui_tests
 # release-пакет
 cmake --preset ui-release
 cmake --build --preset ui-release --target retro_engine_ui
-python3 scripts/package_ui.py --build-dir build/ui-release --version 0.3.0
+python3 scripts/package_ui.py --build-dir build/ui-release
 ```
 
 Пакет: `dist/retro-engine-ui-<version>-<os>-<arch>.{tar.gz,zip}`;

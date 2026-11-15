@@ -66,7 +66,7 @@
   `docs/N64.md`, ADR-014, пины `ci/n64-{toolchain,libdragon,gopher64}`.
   Ручной gate 60 с — gopher64 1.2.1 (mupen64plus не грузит libdragon
   IPL3 r5+, mupen64plus-core#1185); PC regression 295/295. Remote CI —
-  после push; релизы по-прежнему draft-only до v0.9.x.
+  green; релизы по-прежнему draft-only до v0.9.x.
 - Спринт 41–42 — N64 HAL: VI 320×240 16-bit NTSC + идемпотентный
   lifecycle, ровно один `joypad_poll`/кадр с полным маппингом
   A/B/Z/Start/D-pad/C/L/R и deadzone, монотонное время, read-only DFS
