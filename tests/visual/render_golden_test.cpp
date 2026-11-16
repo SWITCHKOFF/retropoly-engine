@@ -605,12 +605,12 @@ TEST(W0Golden, AffineNumericConformanceOnSlantedPlane)
     w0_camera(&view, &proj);
     Mat4 mv;
     mat4_multiply(&mv, &view, &identity);
-    Mat4 mvp;
-    mat4_multiply(&mvp, &proj, &mv);
 
-    float mvp_gl[16]; // Граница бэкенда §4.4 — та же fixed_to_float.
+    // Бэкенд получает view-space вершины и ТОЛЬКО projection: model/view
+    // уже применены в mv (иначе — double-transform, S17–18 parity fix).
+    float proj_gl[16]; // Граница бэкенда §4.4 — та же fixed_to_float.
     for (uint32_t i = 0u; i < 16u; ++i) {
-        mvp_gl[i] = fixed_to_float(mvp.m[i]);
+        proj_gl[i] = fixed_to_float(proj.m[i]);
     }
 
     double qx[3];
@@ -627,7 +627,7 @@ TEST(W0Golden, AffineNumericConformanceOnSlantedPlane)
         const double vd[4] = {(double)fixed_to_float(view_p.x), (double)fixed_to_float(view_p.y),
                               (double)fixed_to_float(view_p.z), 1.0};
         double clip[4];
-        model_clip_from_view(mvp_gl, vd, clip);
+        model_clip_from_view(proj_gl, vd, clip);
         model_quantized_window(clip, &qx[v], &qy[v], &qw[v]);
         uu[v] = (double)uv_in[v][0] / 255.0;
         vv[v] = (double)uv_in[v][1] / 255.0;

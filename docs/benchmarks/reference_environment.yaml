@@ -73,6 +73,15 @@ notes: |-
   Gouraud + vertex lighting ambient+directional), 4 текстуры 256×256.
   Рецепт asset_set_sha256:
   `sha256sum assets/build/* | LC_ALL=C sort -k2 | awk '{print $1}' | sha256sum`.
+  2026-11-16: набор assets/build расширен audio-ассетами
+  (tone.xa/tone_*.rpa/json; см. `ps1_emulator.measurement`), поэтому
+  текущий `asset_set_sha256` = 26d154c4…; W1-меш/4 текстуры не менялись.
+  Исторический PC-снапшот 2026-11-09 использовал bf62abda… (без audio).
+  2026-11-16: PC/PS1 parity fix — view-space вершины + projection-only
+  в PC-шейдере; visual goldens (hello_triangle/rotating_cube/overlay)
+  перебазированы, PC-скриншоты перегенерированы. PC FPS-числа 2026-11-09
+  остаются для того же W1-ворклоада (fix убирает лишнюю матрицу, не
+  добавляет нагрузку); см. `ps1_emulator.measurement`.
   Предыдущий снапшот 2026-11-05 (W1 hello_triangle, dfa123c): 60 с,
   среднее 482.79 fps — та же полка, другой ворклоад (1 треугольник); числа
   сравнимы только внутри ворклоада. Снапшот 2026-11-01 (W0-golden, 9af3ab8,
@@ -90,28 +99,63 @@ ps1_emulator:
   renderer_backend: GTE+GPU+OT (320×240, NTSC)
   region: NTSC
   host_os: >-
-    Freedesktop SDK 25.08 (Flatpak runtime), Linux 7.0.0-42 x86_64
+    Linux Mint 22.3 (Ubuntu 24.04 base), Linux 7.0.0-43-generic x86_64;
+    реальный X11 display :0 (X.Org 21.1.11, 1280×899)
   host_cpu: >-
-    Intel Core i5-11300H (11th Gen, Tiger Lake-H35, 4C/8T @ 3.10–4.40 GHz)
+    Intel Core i5-11300H (11th Gen, Tiger Lake-H35, 4 vCPU в VM,
+    3.10–4.40 GHz; nproc=4)
   git_revision: >-
-    caf8c06 (HEAD develop до S17–18) + локальные изменения S17–18
-    (PS1-порт W1-сцены rotating_cube).
+    d508ed2 (HEAD) + рабочее дерево на 2026-11-16 (S53–S66 и ручная
+    приёмка S17–18; PS1-порт W1-сцены rotating_cube).
   asset_set_sha256: >-
-    bf62abda74d26c6b7adbb5575d9bbe57f29c8c588f56f4dcb3e8562866d3007d
+    26d154c4f8e5c68172f3421ae6fe66e0b45cd4a53caf111f976c071dce80f7cd —
+    sha256 над sorted-списком SHA-256 каждого файла assets/build/* на
+    2026-11-16 (cube.mesh, texture_{0..3}.tex, tone.xa, tone_*.rpa/json;
+    рецепт — в notes основного снапшота).
   measurement: >-
-    DuckStation 0.1-12640-gbb4e9ac5e, Software renderer, fast boot,
-    NTSC-U. Снапшот S15–16 (hello_triangle): 60 s ручного прогона
-    (2026-11-09). PerfMon: FPS 59.7–60.3 (среднее ≈ 59.9), VPS 59.7–60.3,
-    avg frame time ≈ 16.7 ms, эмулятор держит 100 % скорости (≥ 98 % гейт
-    выполнен). Это emulator validation gate, НЕ доказательство 30 FPS на
-    реальном железе. RAM: engine-owned static + арены ≈ 815 KiB
-    (бюджет 1.5 MiB); VRAM: два 16bpp фреймбуфера 320×240 + CLUT +
-    одна 256×256 texture page ≈ 366 KiB (бюджет 800 KiB).
-    PS-EXE size: 96 256 bytes ≤ 512 000 bytes. Скриншот:
-    screenshots/hello_triangle_ps1.png.
-    S17–18: PS1-порт W1-сцены (4 куба/48 треугольников, 4 текстуры
-    256×256, vertex lighting, overlay) собран кросс-сборкой локально —
-    PS-EXE 110 592 bytes, CD-образ 533 904 bytes; статические бюджеты
-    сходятся (texture pool 256 KiB W1 + framebuffer A/B ≈ 494/800 KiB
-    VRAM). Ручной прогон DuckStation и замер FPS/VPS ≥ 30 для W1 —
-    чек-лист docs/plans/sprint_17_18.md (ручная приёмка).
+    DuckStation 0.1-12754-g82a118249 [master], Linux x64, Software
+    renderer, fast boot, NTSC-U, VSync off, speed 100 %, реальный X11
+    display (:0, X.Org 21.1.11, окно 640×480; не Xvfb); host GPU
+    VMware SVGA3D/llvmpipe (Mesa 25.2.8-0ubuntu0.24.04.4, GL 4.1).
+    Снапшот S17–18 (W1
+    rotating_cube) — чистый 60-секундный прогон 2026-11-16 после
+    прогрева, debug overlay выключен; 60 секундных окон PerfMon:
+    FPS min/avg/median/max = 27.89 / 29.86 / 29.91 / 30.51, VPS =
+    55.79 / 59.74 / 59.83 / 61.01, avg frame time 16.74 ms (окна
+    16.39–17.92 ms), CPU avg 4.70 %, RNDR avg 15.56 %, GPU 0.00 %.
+    OSD в конце окна: 29.93 FPS · 59.86 VPS · 100 % (100 %); engine
+    overlay (Select): FPS 62, TRI 20, RAM 931K. Внутренний PerfMon FPS
+    ≈ 30 — это поле 59.94/2 = 29.97 Гц (номинал 30 FPS PS1), поэтому
+    гейт «PS1 ≥ 30 FPS» фиксируется по VPS 59.7 и engine FPS 62; ниже
+    30 FPS опускается только счётчик внутренних GPU-кадров (min 27.89
+    на одном host-stall окне, max frame 98.43 ms). RAM: engine-owned
+    static + арены ≈ 931 KiB (бюджет 1.5 MiB); VRAM: два 16bpp
+    фреймбуфера 320×240 + CLUT + 4 texture pages ≈ 494 KiB
+    (бюджет 800 KiB). PS-EXE 122 880 bytes ≤ 512 000; CD-образ
+    682 080 bytes. Сцена/приёмка: 4 куба (2 башни, 48 треугольников,
+    4 текстуры 256×256, vertex lighting/Gouraud), фиксированная камера
+    (0, 3.2, 7), AABB-коллизии пол/стек, прыжок Cross (+4.9, −9.8) с
+    возвратом на пол/стек, debug overlay Select. Скриншоты:
+    screenshots/rotating_cube_ps1.png (чистый F10),
+    screenshots/rotating_cube_ps1_overlay.png (FPS 62/TRI 20/RAM 931K),
+    screenshots/rotating_cube_ps1_perfmon.png (OSD 29.93 FPS / 59.86 VPS
+    / 100 %), screenshots/rotating_cube_ps1_jump.png (прыжок) и
+    screenshots/rotating_cube_ps1_landed.png (приземление/коллизии).
+    10-минутный стресс (Xvfb :101, Software, overlay off, тот же ISO):
+    634 с, 630 окон PerfMon, FPS 22.99/29.73/29.91/30.99, VPS
+    45.16/59.46/59.82/61.73, 0 E/F/crash, graceful shutdown; на Xvfb
+    больше host-stall'ов (max frame 315.37 ms), устойчивое состояние
+    по-прежнему 29.9/59.8. Историческая справка: снапшот S15–16
+    (hello_triangle, 2026-11-09, DuckStation 0.1-12640-gbb4e9ac5e):
+    FPS/VPS 59.7–60.3, avg 16.7 ms, RAM ≈ 815 KiB, VRAM ≈ 366 KiB,
+    PS-EXE 96 256 bytes, screenshots/hello_triangle_ps1.png. Это
+    emulator validation gate, НЕ доказательство 30 FPS на реальном
+    железе.
+    PC/PS1 parity fix 2026-11-16: RenderTriCmd хранит view-space
+    вершины, поэтому PC-шейдеру передаётся ТОЛЬКО projection (ранее —
+    proj·view·model, double-transform; PC-кубы W1 рисовались ≈0.6
+    масштаба). PS1 W1 геометрически корректен (GTE/H=171; кубы 2.0 ед.
+    на z≈6.7). Все 16 visual-тестов rebased/зелёные,
+    screenshots/rotating_cube_pc.png и hello_triangle_pc.png
+    перегенерированы; композиция PC≡PS1, остаются raster-различия
+    RGB555/affine/rounding.

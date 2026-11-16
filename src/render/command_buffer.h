@@ -29,13 +29,14 @@
 
 /**
  * Backend-neutral команда «draw one triangle» (PACK stage).
- * Хранит камера-space вершины (view-space, fixed 16.16) и MVP-матрицы,
- * нужные backend'у после SORT: PC — проекция на GPU (u_mvp), PS1 —
- * конвертация в GT3/GTE (Спринт 13–14).
+ * Хранит камера-space вершины (view-space, fixed 16.16) и PROJECTION-матрицу,
+ * нужную backend'у после SORT: PC — проекция view-space на GPU (u_mvp),
+ * PS1 — конвертация в GT3/GTE (Спринт 13–14). model/view здесь применять
+ * повторно НЕЛЬЗЯ: они уже учтены в x/y/z (double-transform bug S17–18).
  */
 typedef struct RenderTriCmd
 {
-    Mat4 mvp;                  /**< proj·view·model (fixed 16.16). */
+    Mat4 proj;                 /**< Projection (fixed 16.16; view-space vertices). */
     TextureHandle texture;     /**< Привязанная CI8-текстура. */
     uint32_t depth_key;        /**< ключ Painter's-сортировки (far→near). */
     uint32_t submission_index; /**< Порядок вставки (tie-breaker). */

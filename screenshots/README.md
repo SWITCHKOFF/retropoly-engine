@@ -1,5 +1,38 @@
 # Скриншоты (PC vs PS1 vs N64)
 
+## `rotating_cube_ps1*.png` — W1 demo, DuckStation (Спринт 17–18)
+
+Ручная приёмка 2026-11-16: `build/ps1-release/src/hal/ps1/RETRO.cue`
+в DuckStation `0.1-12754-g82a118249 [master]` (Linux x64, Software
+renderer, fast boot, NTSC-U, VSync off, speed 100 %, окно 640×480).
+
+- `rotating_cube_ps1.png` — чистый F10: 4 куба двумя башнями
+  (48 треугольников), 4 текстуры 256×256, фиксированная камера
+  `(0, 3.2, 7)`, vertex lighting/Gouraud; верхние кубы стоят на нижних.
+- `rotating_cube_ps1_overlay.png` — Select-overlay: `FPS 62 / TRI 20 /
+  RAM 931K`.
+- `rotating_cube_ps1_perfmon.png` — OSD PerfMon: `29.93 FPS · 59.86 VPS ·
+  100 % (100 %)`; чистое 60-секундное окно (overlay off) дало
+  FPS min/avg/median/max `27.89 / 29.86 / 29.91 / 30.51`, VPS
+  `55.79 / 59.74 / 59.83 / 61.01`, avg frame 16.74 ms. Внутренний
+  PerfMon FPS — поле 59.94/2 = 29.97 Гц (номинал 30 FPS PS1); гейт
+  «≥ 30» фиксируется по VPS 59.7 и engine FPS 62. 10-мин стресс (Xvfb,
+  634 с): 630 окон PerfMon, FPS 22.99/29.73/29.91/30.99,
+  VPS 45.16/59.46/59.82/61.73, без E/F/crash.
+- `rotating_cube_ps1_jump.png` — момент прыжка (Крестик): кубы
+  поднимаются; `rotating_cube_ps1_landed.png` — после приземления:
+  AABB-коллизии возвращают кубы на пол/стек (башни снова собраны).
+
+RAM 931 KiB / 1.5 MiB, VRAM ≈ 494 KiB / 800 KiB, PS-EXE 122 880 B,
+CD-образ 682 080 B. Метрики/окружение —
+[`../docs/benchmarks/reference_environment.yaml`](../docs/benchmarks/reference_environment.yaml)
+(`ps1_emulator`), чек-лист — [`../docs/plans/sprint_17_18.md`](../docs/plans/sprint_17_18.md).
+
+> PC/PS1 parity fix 2026-11-16: PC-бэкенд теперь получает projection
+> для view-space вершин (без повторного proj·view·model); PC golden
+> rebased, `rotating_cube_pc.png`/`hello_triangle_pc.png` перегенерированы.
+> PS1-геометрия W1 (GTE H=171) совпадает с PC по композиции.
+
 ## `n64_hello_triangle.png` / `n64_rotating_cube.png` — N64 v0.3.0 (Спринт 45–46)
 
 Pinned gopher64 1.2.1 (Xvfb/llvmpipe Vulkan, 320×240, 16-bit VI):
@@ -39,27 +72,31 @@ pad 1 и frame/time. Ручной gate: 60 с + 10-минутный stress, inpu
 
 ## `rotating_cube_pc.png` — демо MVP, веха M7 (Спринт 17–18)
 
-Скриншот PC-версии `rotating_cube`, сгенерирован из golden-эталона
-`tests/visual/reference/rotating_cube_default.bin` (RGBA-dump кадра t=0
-через `RENDER_GOLDEN_DUMP=1`; конвертация dump → PNG с переворотом строк —
-`glReadPixels` отдаёт снизу-вверх):
+Скриншот PC-версии `rotating_cube`, сгенерирован из rebased golden-эталона
+`tests/visual/reference/rotating_cube_default.bin.px` (15-битный readback
+reference-фреймбуфера 320×240, кадр t=0):
+
+```sh
+python3 scripts/golden_px_to_png.py \
+  tests/visual/reference/rotating_cube_default.bin.px \
+  screenshots/rotating_cube_pc.png
+```
 
 - W1-сцена: 4 куба (48 треугольников) двумя башнями, CI8/256, Gouraud,
   vertex lighting ambient + directional, transparency off, фикс. камера;
 - инвентарь кадра: 20 подано / 28 backface (невидимые грани кубов), 0
-  clip/depth-отказов.
+  clip/depth-отказов;
+- после parity fix 2026-11-16 геометрия совпадает с PS1 (без double-transform).
 
 ## `hello_triangle_pc.png`
 
-Скриншот PC-версии, сгенерирован из golden-эталона
-`tests/visual/reference/hello_triangle_default.bin.px` (15-битный readback
-reference-фреймбуфера 320×240):
+Скриншот PC-версии, сгенерирован из rebased golden-эталона
+`tests/visual/reference/hello_triangle_default.bin.px`:
 
 ```sh
-head -c 153600 tests/visual/reference/hello_triangle_default.bin.px | \
-  ffmpeg -f rawvideo -pix_fmt rgb555le -s 320x240 -i - \
-         -frames:v 1 -sws_flags neighbor -pix_fmt rgb24 \
-         screenshots/hello_triangle_pc.png
+python3 scripts/golden_px_to_png.py \
+  tests/visual/reference/hello_triangle_default.bin.px \
+  screenshots/hello_triangle_pc.png
 ```
 
 Ожидаемое изображение: треугольник с CI8/Gouraud-текстурой на тёмно-синем

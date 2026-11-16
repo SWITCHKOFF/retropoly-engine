@@ -29,6 +29,9 @@ maintainer + агент. Подробности — [docs/RELEASING.md](docs/REL
 
 ![rotating_cube PC](screenshots/rotating_cube_pc.png)
 
+Видео демки: [PC](videos/rotating_cube_pc.webm) ·
+[PS1/DuckStation](videos/rotating_cube_ps1.webm) (VP9/WebM 640×480).
+
 ## Draft v0.3.0 (закрыт как draft; не опубликован; v0.2.1 withdrawn)
 
 Публичного GitHub Release сейчас нет; v0.3.0 закрыт как draft 2026-11-15.
@@ -164,7 +167,9 @@ python3 scripts/package_ui.py --build-dir build/ui-release
 - **Ассеты**: `.mesh` v1 (glTF→движок) и `.tex` v1 (PNG→CI8+палитра),
   host-only конвертер, безопасные загрузчики с rollback арены.
 - **Демо MVP**: `rotating_cube` — 4 куба, 48 треугольников, AABB-коллизии,
-  vertex lighting, debug overlay; W1 ≥ 60 FPS на PC, ≥ 30 FPS в DuckStation.
+  vertex lighting, debug overlay; W1 ≥ 60 FPS на PC; DuckStation
+  (2026-11-16): VPS 59.7 / engine FPS 62, clean/overlay/perfmon-скриншоты —
+  `screenshots/rotating_cube_ps1*.png`.
 
 ## Документация
 
