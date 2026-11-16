@@ -98,7 +98,9 @@
       `_landed.png` (прыжок/приземление/коллизии)
 - [x] Видео демки (PC-прогон + PS1-прогон) для релиза/соцсетей —
       `videos/rotating_cube_pc.webm`, `videos/rotating_cube_ps1.webm`
-- [ ] PR в develop с закрытием спринта
+- [x] PR в develop с закрытием спринта — PR #6
+      (https://github.com/SWITCHKOFF/retropoly-engine/pull/6, open;
+      merge — после review)
 
 ## Результаты ручной приёмки (2026-11-16)
 
