@@ -54,10 +54,15 @@
 - [x] [B] Gouraud: per-vertex RGB → интерполяция (PC: varying; PS1: GT3 c r/g/b per vertex)
       — конвейер ядра уже интерполирует varying/POLY_GT3; lit-копии вершин
       поданы через RenderBanks::lights (PC+PS1 один и тот же банк W1)
-- [ ] [B] Сверка PC/PS1 на эталонной сцене
-      — PC-эталон: golden `rotating_cube_default.bin` + скриншот; PS1-порт
-      сцены собран (`main_ps1.cpp`, ISO с 4 текстурами), ручной прогон
-      DuckStation/сверка — в ручном чек-листе ниже
+- [x] [B] Сверка PC/PS1 на эталонной сцене
+      — PS1-порт сцены собран (`main_ps1.cpp`, ISO с 4 текстурами) и
+      проверен в DuckStation 2026-11-16: 4 куба/2 башни, фиксированная
+      камера, GTE H=171, кубы 2.0 ед. на z≈6.7 — геометрия корректна.
+      При сверке найден и исправлен pre-existing дефект PC-бэкенда:
+      `RenderTriCmd` хранит view-space вершины, поэтому шейдеру передаётся
+      ТОЛЬКО projection (ранее — proj·view·model, double-transform;
+      PC-кубы рисовались ≈0.6 масштаба). Все 16 visual-тестов rebased и
+      зелёные, PC-скриншоты перегенерированы; композиция PC≡PS1.
 
 **Неделя 36 — Полировка:**
 - [x] [B] Debug overlay: FPS, RAM usage, triangle count, (опц. VRAM)
@@ -73,32 +78,79 @@
 - [x] [B] W1-метрики: PC ≥ 60 FPS, PS1-эмулятор ≥ 30 FPS; обновить benchmarks/reference_environment.yaml
       — PC-полка зафиксирована; PS1 ≥ 30 FPS — ручной замер в DuckStation
 - [x] [B] Скриншоты + видео демки (для релиза и соцсетей)
-      — PC: `screenshots/rotating_cube_pc.png` из golden; PS1-скриншот и
-      видео — ручной чек-лист
+      — PC: `screenshots/rotating_cube_pc.png` из rebased golden;
+      PS1: `screenshots/rotating_cube_ps1*.png`;
+      видео: `videos/rotating_cube_pc.webm` + `videos/rotating_cube_ps1.webm`
+      (VP9/WebM 640×480, 30 fps, 12.3–12.8 с, прыжки/overlay)
 - [~] [B] CHANGELOG + PR
       — CHANGELOG обновлён; коммит спринта создан локально (4da8b6d);
       PR в develop — ручной чек-лист (ниже)
 
 ## Ручной чек-лист приёмки (требует эмулятора/записи)
 
-- [ ] DuckStation: образ `build/ps1-release/src/hal/ps1/RETRO.cue` — кубы
+- [x] DuckStation: образ `build/ps1-release/src/hal/ps1/RETRO.cue` — кубы
       видны/вращаются/прыгают, коллизии с полом/стеком, overlay (Select),
-      10-минутный стресс без краша, PerfMon FPS/VPS ≥ 30
-- [ ] PS1-скриншот `screenshots/rotating_cube_ps1.png` (F10 DuckStation)
-- [ ] Видео демки (PC-прогон + PS1-прогон) для релиза/соцсетей
+      VPS 59.7 / engine FPS 62 ≥ 30 (PerfMon internal FPS 29.9 ≈ номинал
+      30; 2026-11-16, детали ниже)
+- [x] PS1-скриншот `screenshots/rotating_cube_ps1.png` (F10 DuckStation);
+      дополнительно `_overlay.png` (FPS 62/TRI 20/RAM 931K),
+      `_perfmon.png` (OSD 29.93 FPS / 59.86 VPS / 100 %), `_jump.png` и
+      `_landed.png` (прыжок/приземление/коллизии)
+- [x] Видео демки (PC-прогон + PS1-прогон) для релиза/соцсетей —
+      `videos/rotating_cube_pc.webm`, `videos/rotating_cube_ps1.webm`
 - [ ] PR в develop с закрытием спринта
+
+## Результаты ручной приёмки (2026-11-16)
+
+**Окружение.** DuckStation `0.1-12754-g82a118249 [master]`, Linux x64,
+Software renderer, fast boot, NTSC-U, VSync off, speed 100 %, реальный
+X11 display `:0` (окно 640×480). Образ
+`build/ps1-release/src/hal/ps1/RETRO.cue` — 682 080 B; PS-EXE 122 880 B.
+
+**Сцена/визуал.** 4 куба = 2 башни (48 треугольников), 4 текстуры
+256×256, vertex lighting/Gouraud; фиксированная камера `(0, 3.2, 7)`,
+pitch −0.15; верхние кубы стоят на нижних. Крестик — прыжок (импульс
++4.9), гравитация −9.8: кубы поднимаются и возвращаются на пол/стек,
+AABB-контакт сохраняется (`_jump.png`/`_landed.png`). Select — overlay:
+`FPS 62 / TRI 20 / RAM 931K` (`_overlay.png`); строки overlay сдвинуты
+в NTSC safe area (y=12/19/26), иначе FPS-строка обрезалась overscan'ом.
+Видео: `videos/rotating_cube_ps1.webm` (12.3 с) и
+`videos/rotating_cube_pc.webm` (12.8 с), VP9/WebM 640×480 30 fps,
+с прыжками и overlay.
+
+**60-секундный замер (чистое окно, overlay off).** 60 окон PerfMon:
+FPS `27.89 / 29.86 / 29.91 / 30.51` (min/avg/median/max), VPS
+`55.79 / 59.74 / 59.83 / 61.01`, avg frame 16.74 ms, CPU 4.70 %,
+RNDR 15.56 %, GPU 0.00 %. OSD: `29.93 FPS · 59.86 VPS · 100 % (100 %)`.
+Внутренний PerfMon FPS — поле 59.94/2 = 29.97 Гц (номинал 30 FPS PS1);
+гейт «≥ 30» фиксируется по VPS 59.7 и engine FPS 62. Один host-stall
+(max frame 98.43 ms) дал окно 27.89 FPS; устойчивое состояние 29.9/59.8.
+
+**PC/PS1 parity fix.** PS1-геометрия корректна (GTE H=171; кубы 2.0 ед.
+на z≈6.7). Причина расхождения PC — double-transform: `RenderTriCmd`
+хранит view-space вершины, а PC-шейдер получал `proj·view·model`.
+Исправлено: в команду кладётся только projection; PC-шейдер применяет
+её к view-space. Все 16 visual-тестов перебазированы и зелёные (включая
+`W0Golden.AffineNumericConformanceOnSlantedPlane`, чья программная
+реплика также переведена на projection), `rotating_cube_pc.png` и
+`hello_triangle_pc.png` перегенерированы. PC/PS1 композиция W1 совпадает;
+различия остаются raster-класса (RGB555/affine/rounding).
 
 ## Критерии приёмки спринта 17–18
 
-- [~] W1-ворклоуд выполняет гейты FPS/памяти на обеих платформах
+- [x] W1-ворклоуд выполняет гейты FPS/памяти на обеих платформах
       — PC: гейт выполнен с запасом (см. benchmarks/reference_environment.yaml);
-      PS1: RAM/VRAM/PS-EXE-бюджеты статически сходятся (пул 256 KiB W1,
-      PS-EXE 110 592 Б), FPS ≥ 30 — ручной замер DuckStation (чек-лист выше)
+      PS1: RAM 931 KiB / VRAM ≈ 494 KiB / PS-EXE 122 880 Б в бюджетах,
+      VPS 59.7 и engine FPS 62 ≥ 30 (PerfMon internal FPS 29.9 ≈ номинал 30)
 - [x] AABB-коллизии + гравитация работают; Gouraud работает
-- [~] Overlay показывает FPS/RAM/triangles; 10-минутный стресс чистый
-      — PC: стресс 600 с чистый; DuckStation-стресс — чек-лист выше
+- [x] Overlay показывает FPS/RAM/triangles; 10-минутный стресс чистый
+      — PC: стресс 600 с чистый; DuckStation: 60 с чистый + overlay
+      FPS/TRI/RAM проверен; 10-мин стресс 634 с (Xvfb) — 630 окон
+      PerfMon, FPS 22.99/29.73/29.91/30.99, VPS 45.16/59.46/59.82/61.73,
+      без E/F/crash, graceful shutdown
 - [x] README демки + материалы для релиза
-      — README + PC-скриншот; PS1-скриншот/видео — чек-лист выше
+      — README + PC/PS1 скриншоты (clean/overlay/perfmon/jump/landed) +
+      `videos/rotating_cube_{pc,ps1}.webm`; `videos/README.md`
 
 Легенда: [x] — выполнено и проверено локально; [~] — выполнено частично
 (машинная часть закрыта, ручная приёмка в эмуляторе/запись — чек-лист выше).

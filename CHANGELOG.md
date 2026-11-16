@@ -6,6 +6,28 @@
 
 ### Changed
 
+- **S17–18 — ручная приёмка W1 rotating_cube в DuckStation (2026-11-16):**
+  `RETRO.cue` (PS-EXE 122 880 B, CD 682 080 B) прогнан в DuckStation
+  `0.1-12754-g82a118249` (Software, NTSC-U, speed 100 %): 4 куба/2 башни,
+  фиксированная камера, прыжок/гравитация/AABB-коллизии, overlay.
+  Чистое 60-с окно: FPS 27.89/29.86/29.91/30.51 (min/avg/median/max),
+  VPS 55.79/59.74/59.83/61.01, avg frame 16.74 ms; OSD 29.93 FPS /
+  59.86 VPS / 100 %; overlay FPS 62/TRI 20/RAM 931K. 10-мин стресс:
+  634 с, 630 окон PerfMon, FPS 29.73 avg (22.99–30.99), VPS 59.46 avg
+  (45.16–61.73), без E/F/crash, graceful shutdown. Скриншоты
+  `screenshots/rotating_cube_ps1*.png`, benchmark
+  `docs/benchmarks/reference_environment.yaml` обновлён. PS1-overlay
+  сдвинут в NTSC safe area (y=12/19/26). Видео:
+  `videos/rotating_cube_pc.webm` (12.8 с) и
+  `videos/rotating_cube_ps1.webm` (12.3 с), VP9/WebM 640×480 30 fps.
+- **PC/PS1 parity fix (S17–18):** `RenderTriCmd` хранит view-space
+  вершины, PC-шейдеру теперь передаётся только projection (ранее
+  `proj·view·model` давал double-transform; PC-кубы W1 рисовались
+  ≈0.6 масштаба). Обновлены `renderer.cpp`, `command_buffer.h`,
+  `render_backend.h`, программная реплика affine-теста; все 16 visual
+  golden перебазированы и зелёные, `rotating_cube_pc.png`/
+  `hello_triangle_pc.png` перегенерированы; добавлен
+  `scripts/golden_px_to_png.py` (RGB555 .bin.px → PNG).
 - **Atari Jaguar / Jaguar CD (v0.4.0, S47–52) — DEFERRED «до лучших
   времён»** ([ADR-016](docs/adr/ADR-016-jaguar-deferred.md)): поддержка
   платформы отложена; S47–52 не активируются, Jaguar-код/toolchain/

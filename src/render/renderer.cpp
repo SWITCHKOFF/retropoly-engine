@@ -337,10 +337,10 @@ void Render_EndFrame(void)
             verts[v].a = (float)cmd->attr[v * 6u + 5u] / 255.0f;
         }
 
-        float mvp_gl[16];
-        render_mat4_to_gl(&cmd->mvp, mvp_gl);
+        float proj_gl[16];
+        render_mat4_to_gl(&cmd->proj, proj_gl); // поле хранит projection
 
-        if (!hal_render_backend_draw_triangle(verts, mvp_gl, cmd->texture)) {
+        if (!hal_render_backend_draw_triangle(verts, proj_gl, cmd->texture)) {
             // Явная ошибка submission (не silent drop): маркер кадра.
             render_diag(RENDER_DIAG_BACKEND_FAIL);
             break;
@@ -508,8 +508,9 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count, const Triang
 
     Mat4 mv;
     mat4_multiply(&mv, &s_view, model); // view·model (column-major).
-    Mat4 mvp;
-    mat4_multiply(&mvp, &s_proj, &mv);  // proj·view·model — PACK-константа.
+    // Вершины ниже пакуются уже в VIEW-space. Бэкенду нужна ТОЛЬКО
+    // проекция: model/view применять повторно нельзя (это давало
+    // double-transform на PC: кубы W1 рисовались ≈0.6 масштаба).
 
     bool any_reject = false; // last_code сохраняет reject-код вызова.
     for (uint32_t t = 0u; t < index_count; ++t) {
@@ -568,7 +569,7 @@ void Render_DrawMesh(const Vertex* vertices, uint32_t vertex_count, const Triang
 
         // ---- PACK (per-tri команда; порядок вставки сохраняется) ---------
         RenderTriCmd cmd;
-        cmd.mvp = mvp;
+        cmd.proj = s_proj; // view-space вершины + projection (не proj·view·model)
         // s_bound_texture == INVALID — валидный нетекстурированный путь:
         // бэкенд рисует flat-Gouraud (u_has_texture = 0).
         cmd.texture = s_bound_texture;

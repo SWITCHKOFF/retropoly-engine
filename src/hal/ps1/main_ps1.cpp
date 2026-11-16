@@ -290,13 +290,15 @@ int main()
         game::RenderSystem::update(s_registry, banks);
         if (overlay_on) {
             char line[32];
+            // NTSC safe area: верхние ~9 строк уходят в overscan DuckStation/TV,
+            // поэтому строки overlay начинаются с y=12 (FPS/TRI/RAM видны).
             snprintf(line, sizeof(line), "FPS %u", (unsigned)fps_display);
-            Render_OverlayText(4, 4, 255, 255, 255, 1, line);
+            Render_OverlayText(4, 12, 255, 255, 255, 1, line);
             snprintf(line, sizeof(line), "TRI %u", (unsigned)frame_triangles);
-            Render_OverlayText(4, 11, 180, 255, 180, 1, line);
+            Render_OverlayText(4, 19, 180, 255, 180, 1, line);
             snprintf(line, sizeof(line), "RAM %uK",
                      (unsigned)(memory_profiler_total_used(MEMORY_PROFILER_RAM) / 1024u));
-            Render_OverlayText(4, 18, 180, 200, 255, 1, line);
+            Render_OverlayText(4, 26, 180, 200, 255, 1, line);
         }
         Render_EndFrame();
         s_frame_stack.reset_frame();  // стадия 6 §10: кадровые траты — в ноль

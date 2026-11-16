@@ -52,9 +52,9 @@ void hal_render_backend_shutdown(void);
  * Подача камеры в backend (ДО DrawMesh текущего кадра; вызывается ядром
  * из Render_SetCamera ПОСЛЕ валидации near/far).
  *
- * PC-backend: no-op — проекция выполняется на GPU через per-triangle
- * u_mvp (draw_triangle получает mvp_gl), состояние камеры backend'у
- * не нужно (контракт Спринтов 7–8).
+ * PC-backend: no-op — проекция view-space вершин выполняется на GPU через
+ * per-triangle u_mvp (draw_triangle получает projection), состояние камеры
+ * backend'у не нужно (контракт Спринтов 7–8; model/view уже в vertices).
  *
  * PS1-backend (Спринты 13–14): из proj (fixed 16.16) выводятся GTE-параметры
  * проекции (H = f·(height/2) в пикселях, OFX/OFY = центр фреймбуфера) и
@@ -117,7 +117,8 @@ void hal_render_backend_clear(uint8_t r, uint8_t g, uint8_t b);
  * false (явная ошибка кадра).
  *
  * @param vertices Ровно 3 вершины (view-space float + атрибуты).
- * @param mvp_gl Матрица proj·view·model (float, column-major, 16).
+ * @param mvp_gl Матрица ПРОЕКЦИИ (proj) для view-space вершин
+ *               (float, column-major, 16; model/view уже учтены в vertices).
  * @param texture Хэндл ядровой CI8-текстуры или RENDER_TEXTURE_INVALID.
  * @return true при успехе; false при GL-отказе/невалидной текстуре.
  */

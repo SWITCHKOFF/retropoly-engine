@@ -514,10 +514,10 @@ void hal_render_backend_destroy_texture(TextureHandle handle)
     }
 }
 
-bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], const float* mvp_gl,
-                                      TextureHandle texture)
+bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3],
+                                      const float* proj_gl, TextureHandle texture)
 {
-    if (!s_backend_inited || vertices == NULL || mvp_gl == NULL || texture > RENDER_TEXTURE_MAX) {
+    if (!s_backend_inited || vertices == NULL || proj_gl == NULL || texture > RENDER_TEXTURE_MAX) {
         return false;
     }
     // texture == RENDER_TEXTURE_INVALID — норма: нетекстурированный
@@ -543,7 +543,7 @@ bool hal_render_backend_draw_triangle(const HalRenderBackendVertex vertices[3], 
         // Flat-путь: юниты не перевязываются (ветка семпла не берётся).
         glUniform1i(s_emu_u_has_texture, 0);
     }
-    glUniformMatrix4fv(s_emu_u_mvp, 1, GL_FALSE, mvp_gl);
+    glUniformMatrix4fv(s_emu_u_mvp, 1, GL_FALSE, proj_gl); // projection view-space
 
     // Конверсия вершины в interleaved float-строку (pos3 uv2 rgba4).
     float packed[9 * 3];

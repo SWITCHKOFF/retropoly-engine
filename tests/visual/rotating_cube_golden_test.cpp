@@ -6,7 +6,7 @@
 // демки генерируется из этого эталона, паттерн hello_triangle S15–16).
 //
 // Кадр «default»: t = 0 — yaw всех кубов 0, позиции эталонной расстановки
-// (кубы стоят на полу), фиксированная камера (0, 2, 6.5) pitch −0.15;
+// (кубы стоят на полу), фиксированная камера (0, 3.2, 7) pitch −0.15;
 // ассеты через rc_load_assets (реальный пайплайна: 1 .mesh + 4 .tex),
 // сцена через общий examples/rotating_cube/scene.h, отрисовка через
 // game::RenderSystem. Golden НЕ дублирует константы сцены.
@@ -53,7 +53,7 @@ static StackAllocator s_frame_stack(s_frame_arena, sizeof(s_frame_arena));
 
 } // namespace
 
-//! Дефолтный кадр демо: камера (0, 2, 6.5) pitch −0.15, 4 куба на эталонной
+//! Дефолтный кадр демо: камера (0, 3.2, 7) pitch −0.15, 4 куба на эталонной
 //! расстановке (yaw=0, rest y), по текстуре-варианту на куб. Эталон:
 //! tests/visual/reference/rotating_cube_default.bin (+ px-партнёр).
 TEST(RotatingCubeGolden, DefaultSceneView)
